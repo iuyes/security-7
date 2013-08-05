@@ -1,0 +1,5 @@
+name = Fortified Main Pages	
+description = This Module creates a compound field that is used for Fortified Main Pages.
+package = Fortified
+core = 7.x 
+files[] = fr_pages.install

@@ -1,0 +1,58 @@
+name = Fortified
+description = Fortified - Foundation 3 framework.
+core = 7.x
+engine = phptemplate
+
+; Image appears on admin/appearance
+screenshot = images/screenshot.png
+
+; Foundation framework stylesheets
+stylesheets[all][] = css/foundation.min.css
+; Uncompressed uncomment for dev or as a reference
+;stylesheets[all][] = css/foundation.css 
+
+; Base theme specific CSS
+stylesheets[all][] = css/fortified.css
+
+; Icon CSS
+stylesheets[all][] = css/social_foundicons.css
+stylesheets[all][] = css/social_foundicons_ie7.css
+
+; Theme specific CSS
+stylesheets[all][] = css/app.css
+
+; Foundation framework scripts.
+scripts[] = js/ios-orientationchange-fix.js
+scripts[] = js/modernizr.foundation.js
+scripts[] = js/foundation.min.js
+scripts[] = js/app.js
+
+; Uncompressed uncomment for development or as a reference
+; scripts[] = js/jquery.foundation.accordion.js
+; scripts[] = js/jquery.foundation.alerts.js
+; scripts[] = js/jquery.foundation.buttons.js
+; scripts[] = js/jquery.foundation.clearing.js
+; scripts[] = js/jquery.foundation.forms.js
+; scripts[] = js/jquery.foundation.joyride.js
+; scripts[] = js/jquery.foundation.magellan.js
+; scripts[] = js/jquery.foundation.mediaQueryToggle.js
+; scripts[] = js/jquery.foundation.navigation.js
+; scripts[] = js/jquery.foundation.orbit.js
+; scripts[] = js/jquery.foundation.reveal.js
+; scripts[] = js/jquery.foundation.tabs.js
+; scripts[] = js/jquery.foundation.tooltips.js
+; scripts[] = js/jquery.placeholder.js
+
+; Regions are output in the page.tpl.php
+regions[header]          = Header
+regions[navigation]      = Navigation
+regions[content]         = Content
+regions[footer_first]    = Footer first
+regions[footer_last]     = Footer last
+regions[modal]           = Modal 
+
+; Hidden regions
+regions_hidden[] = Page top
+regions_hidden[] = Page bottom
+
+

@@ -1,0 +1,358 @@
+<?php
+
+//hook_field_info
+function fr_ipdatatel_field_info() {
+  return array(
+    'fr_ipdatatel' => array(
+      'label' => t('Fortified IpDatatel Fields'),
+      'description' => t("Fields for Profile2"),
+      'default_widget' => 'fr_ipdatatel_widget',
+      'default_formatter' => 'fr_ipdatatel_formatter',
+    ),
+  );
+}
+
+//hook_field_validate
+function fr_ipdatatel_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  foreach ($items as $delta => $item) {
+
+  }
+
+}
+
+// hook_field_is_empty
+function fr_ipdatatel_field_is_empty($item, $field) {
+  $is_empty = empty($item['wrapper']['account_type']) ? TRUE : FALSE;
+  return $is_empty;
+}
+
+//hook_field_widget_info
+function fr_ipdatatel_field_widget_info() {
+  return array(
+    'fr_ipdatatel_widget' => array(
+      'label' => t('IpDatatel Fields'),
+      'field types' => array('fr_ipdatatel'),
+    ),
+  );
+}
+
+
+
+
+
+//element for searching customers
+function fr_ipdatatel_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  //Default values
+  switch ($instance['widget']['type']) {
+  case 'fr_ipdatatel_widget':
+
+    drupal_add_js(drupal_get_path('module', 'fr_ipdatatel') .'/fr_ipdatatel.js', array('type' => 'file', 'scope' => 'header'));
+    drupal_add_css(drupal_get_path('module', 'fr_ipdatatel') .'/fr_ipdatatel.css', array('type' => 'file', 'scope' => 'header'));
+    $field_name = 'profile_customer[field_cust_ipdatatel]';
+    
+    //dpm($items);
+
+    $default_values = _fr_ipdatatel_build_default_values($items, $delta);
+    $element['wrapper'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'IpDatatel Information',
+      '#collapsed' => FALSE,
+      '#collapsible' => FALSE,
+      '#weight' => -100,
+    );
+
+    $element['wrapper']['account_type'] = array(
+      '#type' => 'radios',
+      '#default_value' => $default_values['account_type'],
+      '#title' => t('Account Type'),
+      '#options' => array(
+        1 => t('Single Alarm ( device ) and account'),
+        2 => t('Multiple alarms ( devices ) under one account. <strong>Use the users attatched to this account.</strong>'),
+        3 => t('Multiple alarms ( devices ) under one account. <strong>note: All users will have access to all devices</strong>'),
+        4 => t('Multiple alarms ( devices ) under different accounts.'),
+      ),
+      '#weight' => -100,
+    );
+    
+    $value = array(
+      array('value' => 1),
+      array('value' => 2),
+      array('value' => 3),
+      array('value' => 4),
+    );
+    $element['wrapper']['alarm_name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Alarm Title'),
+      '#description' => t('Give this alarm a name'),
+      '#weight' => -99,
+      '#size' => 50,
+      '#default_value' => $default_values['alarm_name'],
+      '#max_length' => 254,
+      '#states' => fr_ipdatatel_states('visible', ''.$field_name.'[und]['.$delta.'][wrapper][account_type]', $value),
+    );
+
+    $element['wrapper']['username'] = array(
+      '#type' => 'textfield',
+      '#title' => t('IpDatatel Username'),
+      '#description' => t('IpDatatel Username'),
+      '#weight' => -98,
+      '#size' => 50,
+      '#default_value' => $default_values['username'],
+      '#max_length' => 254,
+      '#states' => fr_ipdatatel_states('visible', ''.$field_name.'[und]['.$delta.'][wrapper][account_type]', $value),
+    );
+
+    $element['wrapper']['password'] = array(
+      '#type' => 'textfield',
+      '#title' => t('IpDatatel Password'),
+      '#description' => t('Password for this alarm account'),
+      '#weight' => -97,
+      '#size' => 50,
+      '#default_value' => $default_values['password'],
+      '#max_length' => 254,
+      '#states' => fr_ipdatatel_states('visible', ''.$field_name.'[und]['.$delta.'][wrapper][account_type]', $value),
+    );
+
+    $element['wrapper']['device_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Device Id'),
+      '#description' => t('The Device Id'),
+      '#weight' => -96,
+      '#size' => 50,
+      '#default_value' => $default_values['device_id'],
+      '#max_length' => 254,
+      '#states' => fr_ipdatatel_states('visible', ''.$field_name.'[und]['.$delta.'][wrapper][account_type]', $value),
+    );
+    
+    $element['wrapper']['attatched'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Attatched Users'),
+      '#collapsed' => FALSE,
+      '#collapsible' => TRUE,
+      '#weight' => -95,
+      '#states' => fr_ipdatatel_states('visible', ''.$field_name.'[und]['.$delta.'][wrapper][account_type]', $value),
+    );
+    
+    
+    
+    $amount_of_users = 0;
+    $device_values = array(
+      array('value' => 3),
+      array('value' => 4),
+    );
+    
+    if(empty($items[$delta]['account_type'])){
+      $element['wrapper']['attatched']['device_users_type'] = array(
+        '#type' => 'radios',
+        '#default_value' => 1,
+        '#title' => t('Device Users'),
+        '#options' => array(
+          1 => t('This Device Has Its Own Users.'),
+          3 => t('Use The Same Users For Each Device On This Account.'),
+          4 => t('Use The Same Users For Each Device And Has Additional Users.'),
+        ),
+        '#weight' => -100,
+    );
+      
+    }
+    
+    if(!empty($default_values['account_type'])){      
+      $default_values['attatched_users'] = explode(',', $default_values['attatched_users']);
+      $amount_of_users = count($default_values['attatched_users']);
+    }
+    
+    
+    $element['wrapper']['attatched']['add_more'] = array(
+      '#type' => 'item',
+      '#markup' => '<input type="button" class="form-submit" value="Add Another"/>',
+      '#weight' => 100,
+      '#prefix' => '<div class="add-more-users" attatched-value='.$amount_of_users.'>',
+      '#suffix' => '</div>',
+      '#states' => fr_ipdatatel_states('visible', ''.$field_name.'[und]['.$delta.'][wrapper][attatched][device_users_type]', $device_values),
+    );
+    
+    for($i=0; $i<=15; $i++){
+      $value = '';
+      $states = '';
+      switch($i){
+        case 0:
+          $class = '';
+          $states = fr_ipdatatel_states('visible', ''.$field_name.'[und]['.$delta.'][wrapper][attatched][device_users_type]', $device_values);
+          break;
+        default:
+        $class = 'add-user add-user-field-'.$i.'';
+          break; 
+      }
+      if(!empty($default_values['attatched_users'][$i])){
+        $class = '';
+        $value = $default_values['attatched_users'][$i];
+      }
+      $element['wrapper']['attatched']['attatched_users_'.$i.''] = array(
+          '#type' => 'textfield',
+          '#title' => t('Attatched Users'),
+          '#default_value' => $value,
+          '#size' => 50,
+          '#weight' => -95,
+          '#prefix' => '<div class="'.$class.'">',
+          '#suffix' => '</div>',
+          '#states' => $states,
+        );
+    }
+    
+    
+  }
+  return $element;
+
+}
+
+
+function build_attatched_users($default_value){
+  if(is_array($default_value)){
+    $attatched_users = array();
+    foreach($default_value as $key => $value){
+     
+       $attatched_users[$key] = array(
+          '#type' => 'textfield',
+          '#title' => t('Attatched Users'),
+          '#description' => t(''),
+          '#weight' => -94,
+          '#size' => 50,
+          '#default_value' => $value,
+          '#max_length' => 254,
+       );
+     }
+  }else{
+  $attatched_users = array(
+  '#type' => 'textfield',
+      '#title' => t('Attatched Users'),
+      '#description' => t('Users attatched to this account or device. <strong>Please Use a comma seperated list!</strong>'),
+      '#weight' => -94,
+      '#size' => 50,
+      '#default_value' => $default_value,
+      '#max_length' => 254,
+  );
+  }
+  return $attatched_users;
+}
+
+function fr_ipdatatel_states($type, $field, $args){
+  return array(
+    $type => array(
+      ':input[name="'.$field.'"]' => $args,
+    ),
+  );
+}
+
+
+
+function _fr_ipdatatel_build_default_values($items, $delta) {
+  //dpm($delta);
+  $default_values = array();
+  //dpm($items);
+  if(empty($items[$delta])){ return NULL; }else{
+    foreach($items[$delta] as $field => $value){
+      $default_values[$field] = $value;
+    }
+  }
+  return $default_values;
+
+}
+
+
+
+
+
+// Function to help save text_elementat elementat to database
+
+/**
+ * Implements hook_field_presave().
+ */
+function fr_ipdatatel_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+
+  foreach ($items as $delta => $value) {
+
+    _fr_ipdatatel_process($items[$delta], $delta, $field, $entity);
+
+  }
+}
+
+
+
+
+
+/**
+ * Prepares the item description and elementat for storage.
+ */
+function _fr_ipdatatel_process(&$item, $delta = 0, $field, $entity) {
+
+  $item = _fr_ipdatatel_flatten_values ($item);
+
+}
+
+
+
+
+function _fr_ipdatatel_flatten_values ($item) {
+  $items = array();
+  $user = array();
+  if(!empty($item['wrapper']['attatched'])){
+    foreach($item['wrapper']['attatched'] as $delta => $users){
+      if(!empty($users)){
+        $user[] = $users;
+      }
+    }
+        unset($item['wrapper']['attatched']);
+        $implode_users = implode(',', $user);
+        $items['attatched_users'] = $implode_users;
+        
+  }
+  
+  if(!empty($item['wrapper'])){
+    foreach($item['wrapper'] as $key => $value){
+      $items[$key] = $value;
+    }
+    unset($item['wrapper']);
+  }
+  
+  return $items;
+}
+
+
+
+
+
+// hook_field_elementatter_info()
+function fr_ipdatatel_field_formatter_info() {
+  return array(
+    'fr_ipdatatel_formatter' => array(
+      'label' => t('Fortified Ipdatatel'),
+      'field types' => array('fr_ipdatatel'),
+    ),
+  );
+}
+
+
+
+
+
+//hook_field_elementatter_view()
+function fr_ipdatatel_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+
+  switch ($display['type']) {
+  case 'fr_ipdatatel_formatter':
+
+    break;
+  }
+  return $element;
+}
+
+
+
+/*function fr_ipdatatel_node_submit($node, $form, &$form_state){
+  
+}
+
+function fr_ipdatatel_node_insert($node){
+  return $node;
+}*/

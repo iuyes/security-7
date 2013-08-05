@@ -1,0 +1,10 @@
+name = Ipdatatel api
+description = Functions for accessing Ipdatatels api.
+package = Fortified
+core = 7.x
+configure = admin/config/people/ipdatatel
+files[] = handler/ip_datatel_accounts.inc
+files[] = handler/ip_datatel_json.inc
+files[] = handler/ip_datatel_utility.inc
+files[] = handler/ip_datatel_event_log.inc
+

@@ -1,0 +1,6 @@
+name = Fortified IpDatatel Fields
+description = Creates a compound field used in the "Profile2 - Customer Form". 
+package = Fortified
+core = 7.x 
+files[] = fr_ipdatatel.install
+scripts[] = fr_ipdatatel.js

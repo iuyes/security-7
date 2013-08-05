@@ -1,0 +1,6 @@
+name = Fortified Slide Shows
+description = Creates the Front Page Slideshow and other page SLideshows.
+package = Fortified
+core = 7.x 
+
+files[] = handler/fr_slideshows_class.inc

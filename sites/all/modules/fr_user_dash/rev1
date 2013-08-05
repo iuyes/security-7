@@ -1,0 +1,524 @@
+<<<<<<< HEAD
+public function globalJsFiles(){
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_download.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_background.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_dragndrop.js', array('type' => 'file', 'scope' => 'footer'));
+	}
+	
+	
+	case'my_tours':
+		$dash = new dashboard;
+		$dash->constructDash($args);
+		$load_user = $dash->loadUsers();
+
+		if($dash->has_dvr == TRUE && $dash->has_tours == TRUE){
+			if($load_user == 0){
+			$content = array();
+				//$content = $dash->loadBlockSingle($user->uid, 'fortified_virtual_tours', 'My Virtual Tours');
+				$content['wrapper'] = array(
+					'#type' => 'container',
+					'#attributes'=> array(
+						'class' => array(''),
+					),
+				);
+					$content['wrapper']['save'] = array(
+						'#type' => 'markup',
+						'#markup' => 'Save File',
+						'#prefix' => '<div class="save-files four columns">',
+						'#suffix' =>'</div>',
+					);
+					$content['wrapper']['data'] = array(
+					'#type' => 'markup',
+						'#markup' => views_embed_view('view_virtual_tours', $display_id = 'block'),
+					);
+					$content = render($content);
+			}
+		}else{
+			$content = '';
+		}
+
+		$block['content'] = $content;
+
+		break;
+=======
+<?php
+
+	function fr_user_dash_block_info(){
+		// This example comes from node.module.
+  $blocks['my_menu'] = array(
+    'info' => t('User Dash'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  $blocks['my_tours'] = array(
+    'info' => t('My Virtual Tours'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  $blocks['my_events'] = array(
+    'info' => t('My Events'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  
+  return $blocks;
+	}
+	
+	function fr_user_dash_block_view($delta = ''){
+	global $user;
+	
+		switch($delta){
+			
+			case'my_menu':
+			
+				$block['content'] = drupal_render(fr_user_dash_build_dash());
+			
+			break;
+			
+			case'my_tours':
+			
+				$block['content'] = drupal_render(load_my_tours($user->uid));
+				
+			break;
+				
+			case'my_events':
+			
+				$block['content'] = drupal_render(load_my_events($user->uid));
+				
+		  break;
+		}
+		return $block;
+	}
+	
+	function _fr_menu_generate_list ($list_items) {
+  $list = array();
+
+  foreach ($list_items as $name => $list_item) {
+    $options = array();
+    $link = $list_item['path'];		
+    
+    	if (!empty($list_item['query'])) {
+    	  $options['query'] = $list_item['query'];
+    	}
+		
+    	if (!empty($list_item['fragment'])) {
+    	  $options['fragment'] = $list_item['fragment'];
+    	}
+    	$options['html'] = TRUE;
+    	switch($list_item['type']){
+	    	case'cam':
+	    	$path = '<a href="'.$link.'" class="user-dash-button" >'.$list_item['title'].'</a>';
+	    	break;
+	    	case'alarm':
+	    	$path = '<a href="'.$link.'" class="user-dash-button" data-reveal-id='.$list_item['id'].' >'.$list_item['title'].'</a>';
+	    	break;
+    	}
+    	if(empty($path)){
+	    	$path = '<a href="'.$link.'" class="user-dash-button" >'.$list_item['title'].'</a>';
+    	}
+    	$list[] = array(
+    	  'data' => $path,
+    	  'class' => $list_item['class'],
+    	  'data-reveal-id' => $list_item['id'],
+    	  );
+     }
+
+
+  return $list;
+}
+	
+	
+
+	
+	function fr_user_dash_build_dash(){
+		global $user;
+	$user_pro = profile2_load($user->uid, $reset = FALSE);
+	if($user_pro){
+	foreach($user_pro->field_cust_service_type['und'] as $key => $field){
+		$service = $user_pro->field_cust_service_type['und'][$key]['value'];
+			if($service == 'cam'){
+				$dvr = array(
+						'type' => 'cam',
+						'title' => t("My Cameras"),
+						'path' => "javascript:location.href=location.href+'?cameras=1'",
+						'query' => '',
+						'class' => array('button radius small reveal-link'),
+						'id' => 'myDvrModal',
+					);
+			}
+			if($service == 'alarm'){
+				$alarm = array(
+						'type' => 'alarm',
+						'title' => t("My Virtual Alarm"),
+						'path' => ''.$_SERVER['REQUEST_URI'].'#',
+						'query' => '',
+						'class' => array('button radius small reveal-link'),
+						'id' => 'myAlarmModal',
+					);		
+			}
+	}
+	
+  $menu_items = array();
+  
+  	$menu_items['account'] = array(
+  		'type' => 'account',
+      'title' => t("My Account Overview"),
+      'path' => 'user/'.arg(1).'/edit',
+      'query' => '',
+      'class' => array('button radius small'),
+      'id' => '',
+    );
+  	if(!empty($dvr)){
+  		$menu_items['dvr'] = $dvr;
+  	}
+  	if(!empty($alarm)){
+	  	$menu_items['alarm'] = $alarm;
+  	}
+        //dpm($menu_items);
+   $menu_list = _fr_menu_generate_list($menu_items);
+   //dpm($menu_list);
+   $menu = array(
+		'#theme' => 'item_list',
+    '#items' => $menu_list,
+    //'#title' => t('Sign Up Today'),
+    '#type' => 'ul',
+    '#attributes' => array('id' => 'navigation'),
+    '#container_id' => '',
+    '#prefix' => '<section>',
+    '#suffix' => '</section></nav>',
+	);
+		
+		return $menu;		
+	}
+}	
+	
+
+/** Authenticate via Rails/Devise site */
+/*
+function devise_login() {
+   $data = array(
+   'id' => '794f9060-779b-d984-90c0-5159cc580bf3',
+    'pass' => '123456',
+    'utility' => 'event_log',
+    'data' => array(
+    'device_type' => '2',
+    'mac' => '00:23:FB:00:B1:0B',
+    	),
+    );
+
+   //Pull the url out of the drupal settings
+   		$url = 'https://alarmdealer.com/api';
+     $response = drupal_http_request($url, array(
+       'method' => 'POST', 
+       'data' => json_encode($data), 
+       'max_redirects' => 0,
+       'headers' => array('Content-Type' => 'application/json', 'Accept' => 'application/json'))
+     );
+
+     return json_decode($response->data); 
+
+}
+
+dpm(devise_login());
+*/
+function fr_user_dash_page_alter(&$page){
+
+
+		global $user;
+		$user_pro = profile2_load($user->uid, $reset = FALSE);
+		if(arg(2) == 'dashboard') {
+	if($user_pro){
+		foreach($user_pro->field_cust_service_type['und'] as $key => $field){
+				$service = $user_pro->field_cust_service_type['und'][$key]['value'];
+				if($service == 'cam'){
+					$dvr = $user_pro->field_cust_dvr_url['und'][0]['safe_value'];
+					$dvr_output = array(
+						'#type' => 'markup',
+						'#markup' => '<div id="myDvrModal" class="reveal-modal xlarge"><button class="close-reveal-modal">Back</button><p><iframe scroll="yes" width="100%" height="700px" src="http://173.227.50.162:8888"></iframe></p></div>',
+					);
+				$page['modal']['dvr'] = $dvr_output;
+				}
+				if($service == 'alarm') {
+					$alarm_output = array(
+		    	'#type' => 'markup',
+		    	'#markup' => '<div id="myAlarmModal" class="reveal-modal xlarge"><button class="close-reveal-modal">Back</button><iframe width="100%" height="700px" src="http://alarmdealer.com"></iframe></div>');
+		    $page['modal']['alarm'] = $alarm_output;
+		    	
+		    	}
+				}
+			}
+			if(isset($_GET['cameras'])){
+				$page['#attatched'] = drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal.js', array('type' => 'file', 'scope' => 'footer'));
+			}
+			
+				//for dashbored files		
+			if(isset($_GET['nid'])){
+				$nid = $_GET['nid'];
+				$path = drupal_get_path('module', 'fr_user_dash');
+			  drupal_add_js($path . '/js/fr_user_dash_files.js', array('weight' => 1));	
+			  
+				$get_render = load_tour($nid);
+				
+				if($get_render == -1) {
+			
+			
+				}else{
+					$page['modal']['vt'] = $get_render;
+				}
+				$page['#attatched'] = drupal_add_js(drupal_get_path('module', 'fr_upload') .'/fr_upload.js', array('type' => 'file', 'scope' => 'footer'));				
+			}
+			$page['#attatched'] = drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash.js', array('type' => 'file', 'scope' => 'footer'));	
+		}
+  	return $page;
+	}
+	
+	
+function load_tour($nid){
+ 	global $user;
+	$node = node_load($nid);
+	$cust_uid = $node->field_vt_customer['und'][0]['target_id'];
+
+	if($user->uid == 1 || $cust_uid == $user->uid){
+	$view_vt = node_view($node, $view_mode = 'full', $langcode = NULL);
+	  $vt_output = array(
+	  	'#type' => 'markup',
+	  	'#markup' => '<div id="myVtModal" class="reveal-modal xlarge">
+	  	<button class="close-reveal-modal">Back</button>
+	  	<div class="manage-vt-buttons"><a class="lead button radius small" href="http://70.167.202.230/node/'.$nid.'/edit">Edit</a>
+	  	<a class="lead button radius small" href=".http://70.167.202.230/node/'.$nid.'/delete">Delete</a></div>
+	  	<div class="vt-tour-revealed">'.drupal_render($view_vt).'</div></div>');
+	  	return $vt_output;	    
+	}else{
+		return -1;
+		
+	}
+	
+}
+
+function load_my_tours($user){
+	
+
+	//dpm($user);
+	$query = new EntityFieldQuery;
+	$query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', 'fortified_virtual_tours')
+  ->propertyCondition('status', 1)
+  ->fieldCondition('field_vt_customer', 'target_id', $user, '=');
+  $result = $query->execute();
+  //dpm($result);
+  $folder = array();
+  if(!empty($result)){
+   foreach($result['node'] as $nid => $node){
+   	$node_load = node_load($nid);
+   	$upload_date = $node_load->field_vt_tour_date['und'][0]['value'];
+   	$new_date = date_create($upload_date);
+	  $date = date_format($new_date, 'Y-m-d');
+	  $year = date_format($new_date, 'Y');
+	  $folder[$year][$node_load->title]['id'] = $node_load->nid;
+	  $folder[$year][$node_load->title]['name'] = $node_load->field_vt_folder_title['und'][0]['value'];
+	  $folder[$year][$node_load->title]['date'] = $date;
+
+	  }
+	}
+	   	  //dpm($folder); 
+				
+	$folder_names = array();
+  $orginize_files = orginize_files($folder);   		   
+  	return $orginize_files;
+}
+
+
+
+
+
+function load_my_events($user){
+	
+	// For Virtual Tours
+	$files = array();
+
+	$query = new EntityFieldQuery;
+	$query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', 'fortified_events')
+  ->fieldCondition('field_vt_customer', 'target_id', $user, '=');
+  $result = $query->execute();
+  $folder = array();
+  if(!empty($result)){
+   foreach($result['node'] as $nid => $node){
+   	$node_load = node_load($nid);
+   	$upload_date = $node_load->field_vt_tour_date['und'][0]['value'];
+   	$new_date = date_create($upload_date);
+	  $date = date_format($new_date, 'Y-m-d');
+	  $year = date_format($new_date, 'Y');
+	  $folder[$year][$node_load->title]['id'] = $node_load->nid;
+	  $folder[$year][$node_load->title]['name'] = $node_load->field_vt_folder_title['und'][0]['value'];
+	  $folder[$year][$node_load->title]['date'] = $date;
+
+	}
+	
+
+	    
+				
+	$folder_names = array();
+
+	$folder_names = array();
+  		$orginize_files = orginize_files($folder);   		   
+  	return $orginize_files;
+  }
+}
+
+
+
+
+function orginize_files($folder){
+	$folder_items = array();
+	$files = array();
+	$folders_month = array();
+	$folders_day = array();
+	
+	$files['file_wrapper'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'class' => array('file-manager', 'twelve', 'columns')
+		),
+	);
+	
+	$files['file_wrapper']['folders'] = array(
+				'#type' => 'fieldset',
+				'#title' => t('My Virtual Tours'),
+				 '#attached' => array(
+				 'js' => array(
+          'misc/form.js',
+          'misc/collapse.js',
+          ),
+        ),
+				'#attributes' => array('class' => array('collapsible')),
+				);
+				
+			$headers = array(
+       	'Files',
+       	'<a id="deleteFile" href="#">Delete</a>',
+       	'Edit',
+       	'Download',
+       	'File #'
+       ); 
+//dpm($folder);
+	foreach($folder as $year => $content){
+		foreach($content as $name => $contents){
+		$upload_date = $contents['date'];
+		$new_date = date_create($upload_date);
+		$month_date = date_format($new_date, 'm-Y');
+		$daily_date = date_format($new_date, 'm-d-Y');
+		$day = date_format($new_date, 'd');
+		//$folders[$daily_date] = $content[];
+		//dpm($contents);
+		
+			$path = '<a class="file-path" href="?nid='.$contents['id'].'">'.$contents['name'].' - '.$contents['date'].'</a>';
+				$class = array('file-list-item');
+				$style = array('');
+				$id = 'myVtModal';
+				$rows = array(
+				'data' => array(
+        array(
+          'data' => $path,
+          'data-reveal-id' => $id, 
+          'style' => $style,
+          'class' => $class,
+          ),
+        array(
+          'data' => '<input type="checkbox" class="manage-file" value="'.$contents['id'].'"/>',
+          'style' => $style,
+          'class' => $class,
+          ),
+        array(
+          'data' => '<a href="?edit">Edit</a>',
+          'style' => $style,
+          'class' => $class,
+          ),
+          array(
+          'data' => '<a href="?download">Download</a>',
+          'style' => $style,
+          'class' => $class,
+          ),
+          array(
+          'data' => $contents['id'],
+          'style' => $style,
+          'class' => $class,
+          ),
+        ),
+      //'style' => $styles['table'],
+      //'class' => array(''),
+     );
+				$folders_day[$year][$month_date][$daily_date][] = $rows;
+	}
+}
+	//dpm($folders_day);
+
+
+				
+		foreach($folders_day as $year => $months){		
+			//dpm($days);
+				$files['file_wrapper']['folders'][$year] = array(
+					'#type' => 'fieldset',
+					'#title' => t($year),
+					'#attached' => array(
+				 		'js' => array(
+          		'misc/form.js',
+          		'misc/collapse.js',
+          	),
+          ),
+          '#attributes' => array('class' => array('collapsible', 'collapsed')),
+				);
+
+				foreach($months as $weeks => $day){
+					//dpm($day);
+					$files['file_wrapper']['folders'][$year][$weeks] = array(
+						'#type' => 'fieldset',
+						'#title' => t($weeks),
+						'#attached' => array(
+							'js' => array(
+								'misc/form.js',
+								'misc/collapse.js',
+							),
+						),
+						'#attributes' => array('class' => array('collapsible', 'collapsed')),
+					);
+					foreach($day as $date => $data){
+					
+					$files['file_wrapper']['folders'][$year][$weeks][$date] = array(
+						'#type' => 'fieldset',
+						'#title' => t($date),
+						'#attached' => array(
+							'js' => array(
+								'misc/form.js',
+								'misc/collapse.js',
+							),
+						),
+						'#attributes' => array('class' => array('collapsible', 'collapsed')),
+					);
+					
+						$files['file_wrapper']['folders'][$year][$weeks][$date][] = array(
+							'#theme' => 'table',
+							'#header' => $headers,
+							'#rows' => $data,
+							'#weight' => 12,
+							'#empty' => t('No $itemss available with the selected parameters.'), 
+						);	
+					}
+     			/*	
+     $files['file_wrapper']['folders'][$year_date][$month][$day] = array(
+        '#theme' => 'table',
+        '#header' => $headers,
+        '#rows' => $rows,
+        '#weight' => 12,
+        '#empty' => t('No $itemss available with the selected parameters.'), 
+       );	*/
+    }
+    }
+    
+      //dpm($files);
+   return $files;
+   }
+
+
+
+
+
+>>>>>>> 4734146d5f8b82e07e91c1cf3ef3d45465d3cd97

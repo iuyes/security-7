@@ -1,0 +1,48 @@
+<?php
+function fr_ipdatatel_field_schema($field) {
+  switch($field['type']) {
+    case 'fr_ipdatatel':
+
+      // Build out three (3) Media Block Fields for the DataBase
+        $columns['account_type'] = array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        ); 
+        $columns['device_users_type'] = array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        );   
+        $columns['alarm_name'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['username'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['password'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['device_id'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['attatched_users'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );              
+      break;
+      }
+  return array(
+  'columns' => $columns,
+  'indexes' => array(),
+  );
+}

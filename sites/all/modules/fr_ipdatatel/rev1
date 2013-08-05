@@ -1,0 +1,470 @@
+<?php
+//hook_field_info
+function fr_upload_field_info() {
+  return array(
+    'fr_upload' => array(
+      'label' => t('Fortified Virtual Tours'),
+      'description' => t("Virtual Tours"),
+      'default_widget' => 'fr_upload_widget',
+      'default_formatter' => 'fr_upload_formatter', 
+    ),
+  );
+}
+
+//hook_field_validate
+function fr_upload_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  foreach ($items as $delta => $item) {
+  
+  }
+
+}
+
+// hook_field_is_empty
+function fr_upload_field_is_empty($item, $field) {
+
+  $is_empty = empty($item['tour_files']['upload_type']) ? TRUE : FALSE;
+  return $is_empty;
+}
+
+//hook_field_widget_info
+function fr_upload_field_widget_info() {
+  return array(
+    'fr_upload_widget' => array(
+      'label' => t('Virtual Tours'),
+      'field types' => array('fr_upload'),
+    ),
+  );
+}
+
+
+//element for searching customers
+function fr_upload_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  //Default values
+  $process = array('fr_upload_ignore_parent');
+  switch ($instance['widget']['type']) {
+    case 'fr_upload_widget':
+    
+     if($instance['bundle'] == 'fortified_events') {
+	     $field_name = 'field_event_files';
+     }else {
+	     $field_name = 'field_vt_virtual_tour';
+     }
+	  $default_values = _fr_upload_build_default_values($items, $delta);
+	 $element['tour_files'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Tour Files',
+    '#collapsed' => FALSE,
+    '#collapsible' => FALSE,
+    '#tree' => TRUE,
+    '#weight' => -100,        
+  );     
+	$element['tour_files']['upload_type'] = array(
+		'#type' => 'radios',
+		'#title' => t('Upload Type'),
+		'#default_value' => $default_values['upload_type'],
+		'#weight' => -95,
+		'#options' => array(
+			'video' => 'Video',
+			'pic' => 'Snap / Picture',
+		),
+	);
+  $element['tour_files']['tour_pic'] = array(
+ 		'#type' => 'managed_file',
+    '#title' => t('Tour Picture'),
+    '#weight' => '-90',
+    '#description' => t('Allowed extensions: gif png jpg jpeg'),
+    '#default_value' => $default_values['tour_pic'],
+    '#upload_location' => 'private://',
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('gif png jpg jpeg bmp'),
+      // Pass the maximum file size in bytes
+      //'file_validate_size' => array(MAX_FILE_SIZE*1024*1024),
+     ),      
+     '#states' => array(
+     		'visible' => array(
+     			':input[name="'.$field_name.'[und]['.$delta.'][tour_files][upload_type]"]' => array('value' => 'pic'),
+     		),
+     	),      
+   );
+  $element['tour_files']['tour_video'] = array(
+ 		'#type' => 'managed_file',
+    '#title' => t('Tour Video'),
+    '#weight' => '-90',
+    '#description' => t('Allowed extensions: gif png jpg jpeg'),
+    '#default_value' => $default_values['tour_video'],
+    '#upload_location' => 'private://',
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('gif png jpg jpeg mp4 avi'),
+      // Pass the maximum file size in bytes
+      //'file_validate_size' => array(MAX_FILE_SIZE*1024*1024),
+     ),      
+     '#states' => array(
+     		'visible' => array(
+     			':input[name="'.$field_name.'[und]['.$delta.'][tour_files][upload_type]"]' => array('value' => 'video'),
+     		),
+     	),      
+   );
+ 
+	
+	}
+ return $element;
+ 
+}
+
+
+function _fr_upload_build_default_values($items, $delta) {
+//dpm($delta);
+  $default_values = array();
+ //dpm($items);
+ 	if(empty($items[$delta])){ return NULL; }else{
+  	foreach($items[$delta] as $field => $value){
+	  	$default_values[$field] = $value;
+	  }
+	}
+  return $default_values;
+ 
+}
+
+// Function to help save text_elementat elementat to database
+
+/**
+ * Implements hook_field_presave().
+ */
+function fr_upload_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+
+  foreach ($items as $delta => $value) {
+  /*dpm($value);
+	for($i=1; $i<=3; $i++) {
+    	if(!empty($value['media_'.$i.'']['image_'.$i.'']['obj_'.$i.'_img'])){
+  		$image = $value['media_'.$i.'']['image_'.$i.'']['obj_'.$i.'_img'];
+	  	// Load the file via file.fid.
+		$file = file_load($image);
+		// Change status to permanent.
+		$file->status = FILE_STATUS_PERMANENT;
+		// Save.
+		file_save($file);
+		// Record that the module (in this example, user module) is using the file. 
+		file_usage_add($file, 'fr_upload', 'field', $entity->nid);
+		}
+	 }*/
+    _fr_upload_process($items[$delta], $delta, $field, $entity);
+    
+  }
+}
+ 
+/**
+ * Prepares the item description and elementat for storage.
+ */
+function _fr_upload_process(&$item, $delta = 0, $field, $entity) {
+  $item = _fr_upload_flatten_values ($item);
+}
+
+function _fr_upload_flatten_values ($item) {
+//dpm($item);
+  
+  $item['upload_type'] = $item['tour_files']['upload_type'];
+  $item['tour_pic'] = $item['tour_files']['tour_pic'];
+  $item['tour_video'] = $item['tour_files']['tour_video'];
+  unset($item['tour_files']);
+
+
+//dpm($item);
+  return $item;
+}
+
+// hook_field_elementatter_info()
+function fr_upload_field_formatter_info() {
+  return array(
+    'fr_upload_formatter' => array(
+      'label' => t('Virtual Tours formatter'),
+      'field types' => array('fr_upload'),
+    ),
+  );
+}
+
+
+
+
+
+//hook_field_elementatter_view()
+function fr_upload_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+ 
+  switch ($display['type']) {
+    case 'fr_upload_formatter':
+    
+    
+    $objects = array();
+    $customer_uid = $entity->field_vt_customer['und'][0]['target_id'];
+    global $user;
+    
+    if($user->uid != 1 && $user->uid != $customer_uid){
+	    drupal_access_denied();
+	    exit();
+    }
+
+    	foreach($items as $delta => $fields){
+    		foreach($fields as $item => $value){
+	    		switch($item){
+		    		
+		    		case'tour_pic':
+		    		if(!empty($value)){
+		    			$load_file = file_load($value);
+		    			$file_name = $load_file->filename;
+		    			$stream = file_create_url($load_file->uri);
+		    			$view_file = fr_upload_file_view($value);
+		    		  $view = $view_file['image'];
+		    			$objects['tour_pic_'.$delta.''] = array(
+		    					'#theme' => 'link',
+	  	  					'#text' => $view,
+	  	  					'#path' => $stream,
+	  	  					'#weight' => -50,
+	  	  					'#options' => array(
+	  	  					'attributes' => array('target' => '_blank', 'class' => array('vt_tour_pic', 'four', 'columns', 'mobile-four')),
+	  	  					'html' => TRUE,
+	  	  					),								  	  				
+		    			);
+		    			}
+		    		break;
+					
+		    		case'tour_video':
+		    		$num = $delta + 1;
+		    		if($value){
+		    			// load and stram the video
+		    			$load_file = file_load($value);
+		    			$file_name = $load_file->filename;
+		    			$stream = file_create_url($load_file->uri);
+		    			$config[] = array(
+		    				'path' => $stream,
+		    				'empty' => 'Play: Video '.$num.'',
+		    				'http' => 'HTTP streaming',
+		    				'em' => ' - '.$load_file->filemime.'',
+		    			);		    	                             
+					
+		    		}
+		    		break;
+	    		}
+	    	}
+    	}   
+    break;
+   }
+  if(!(empty($config))){
+     		
+		$objects['video_wrapper'] = array(
+		  '#type' => 'container',
+		  '#attributes' => array(
+		  'class' => array('clips', 'eight', 'columns'),
+		  ),
+		  '#weight' => -100,
+		);
+		$objects['video_wrapper']['links_wrapper'] = array(
+		  '#type' => 'container',
+		  '#attributes' => array(
+		  'class' => array('links_wrapper eight columns'),
+		  ),
+		);
+		$objects['video_wrapper']['links_wrapper']['video_activate'] = array(
+	  	'#type' => 'markup',
+	  	'#markup' => '<button class="activate-button">Start Video</button>',
+	  	'#prefix' => '<div class="start-video">',
+	  	'#suffix' => '</div>',
+	  );
+	  
+   dpm($config);
+   	foreach($config as $delta => $configs){
+   	
+	  	$objects['video_wrapper']['links_wrapper']['video'.$delta] = array(
+	  	'#type' => 'markup',
+	  	'#markup' => '
+	  	<a href="'.$configs['path'].'" class="first">'.$configs['empty'].'<span class="http">'.$configs['http'].'</span><em class="em">'.$configs['em'].'</em></a>',
+	  	'#prefix' => '<div class="playlist-wrapper">',
+	  	'#suffix' => '</div>',
+	  	'weight' => 100,
+	    );	  	
+   	}
+	$objects['video_wrapper']['links_wrapper']['tour_video'] = array(
+	  	'#type' => 'markup',
+	  	'#markup' => '',
+	  	'#prefix' => '<a class="flowplayer" id="player"  style="float:left">',
+	  	'#suffix' => '</a>',
+	  );
+	  theme('flowplayer', array(
+         'id' => 'player',
+         'autoPlay' => false,
+         'config' => array(
+         	'playlist' => true,
+         	'autoPlay' => FALSE,
+         	'autoHide' => true,
+         ),
+         //'playlist' => 'playlist'
+         )); 
+   }
+   
+   $element[] = $objects;
+   return $element;
+}
+
+function fr_upload_file_view($value){
+	$uri = file_load($value);
+	$url = $uri->uri;
+	$file = fr_upload_file_download($url);
+	if($file == -1){
+		drupal_access_denied();
+	  exit();
+	}else{	
+		$file['path'] = $url;
+
+		$view_file = theme('image', $file);
+	}
+	return array('image' => $view_file);
+}
+
+function fr_upload_file_download($uri) {
+
+    $file = file_load(fr_upload_get_fid_by_uri($uri));
+    $headers = file_get_content_headers($file);
+    return $headers;
+}
+
+function fr_upload_get_fid_by_uri($uri) {
+    $sql = "SELECT fid FROM {file_managed}
+            WHERE uri = :uri";
+    $result = db_query($sql, array(':uri' => $uri));
+    foreach ($result as $record) {
+        return $record->fid;
+    }
+    return -1;
+}
+
+
+function fr_upload_node_submit($node, $form, &$form_state){
+	if($node->nid){
+	$positions = array();
+	switch($node->type){
+		case 'fortified_virtual_tours':
+		case'fortified_incident_reports':
+		case'fortified_events':
+			
+			dpm($node);
+		if($node->field_vt_notifications['und'][0]['value'] == 'email'){
+		 $module = 'fr_upload';
+    $key = 'key';
+    $language = language_default();
+    $params = array();
+    $from = NULL;
+    $send = FALSE;
+    $message = drupal_mail($module, $key, 'csechols38@gmail.com', $language, $params, $from, $send);
+    $message['subject'] = 'hello';
+    $message['body'] = array();
+    $message['body'][] = 'line1';
+
+
+    // Retrieve the responsible implementation for this message.
+    $system = drupal_mail_system($module, $key);
+
+
+    // Format the message body.
+    $message = $system->format($message);
+
+
+    // Send e-mail.
+    $message['result'] = $system->mail($message);
+
+    dpm($message);
+			
+		}
+			$pages = ($node->field_vt_virtual_tour[$node->language]) ? $node->field_vt_virtual_tour[$node->language] : NULL ;
+				if(!empty($pages)){
+					foreach($pages as $page) {
+						if(!empty($page['tour_files']['upload_type'])){
+							if(!empty($page['tour_files']['tour_pic'])){
+									$file = $page['tour_files']['tour_pic'];
+							}elseif(!empty($page['tour_files']['tour_video'])){ 
+									$file = $page['tour_files']['tour_video'];
+							}
+							     
+								// Load the file via file.fid.
+								$file_save = file_load($file);
+								$file_save->uid = $node->field_vt_customer['und'][0]['target_id'];
+								// Change status to permanent.
+								$file_save->status = FILE_STATUS_PERMANENT;
+								// Save.
+								file_save($file_save);
+								// Record that the module (in this example, user module) is using the file. 
+								file_usage_add($file_save, 'fr_upload', 'field', $node->nid);  	
+					}
+				}		
+			}
+		break;
+		}			
+	}
+}	
+
+function fr_upload_node_insert($node){
+	if($node->nid){
+	$positions = array();
+	switch($node->type){
+		case 'fortified_virtual_tours':
+		case'fortified_incident_reports':
+		case'fortified_events':
+	
+			dpm($node);
+		if($node->field_vt_notifications['und'][0]['value'] == 'email'){
+		 $module = 'fr_upload';
+    $key = 'key';
+    $language = language_default();
+    $params = array();
+    $from = NULL;
+    $send = FALSE;
+    $message = drupal_mail($module, $key, 'csechols38@gmail.com', $language, $params, $from, $send);
+    $message['subject'] = 'hello';
+    $message['body'] = array();
+    $message['body'][] = 'line1';
+
+
+    // Retrieve the responsible implementation for this message.
+    $system = drupal_mail_system($module, $key);
+
+
+    // Format the message body.
+    $message = $system->format($message);
+
+
+    // Send e-mail.
+    $message['result'] = $system->mail($message);
+
+    dpm($message);
+			
+		}
+			$pages = ($node->field_vt_virtual_tour[$node->language]) ? $node->field_vt_virtual_tour[$node->language] : NULL ;
+			dpm($pages);
+				if(!empty($pages)){
+					foreach($pages as $page) {		
+						if(!empty($page['tour_files']['upload_type'])){
+							if(!empty($page['tour_files']['tour_pic'])){
+									$file = $page['tour_files']['tour_pic'];
+							}elseif(!empty($page['tour_files']['tour_video'])){ 
+									$file = $page['tour_files']['tour_video'];
+							}
+								// Load the file via file.fid.
+								$file_save = file_load($file);
+								$file_save->uid = $node->field_vt_customer['und'][0]['target_id'];
+								// Change status to permanent.
+								$file_save->status = FILE_STATUS_PERMANENT;
+								// Save.
+								file_save($file_save);
+								// Record that the module (in this example, user module) is using the file. 
+								file_usage_add($file_save, 'fr_upload', 'field', $node->nid);  	
+					}
+				}		
+			}
+		break;
+		}			
+	}
+}	
+
+		
+		
+
+
+

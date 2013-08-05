@@ -1,0 +1,14 @@
+<?php
+
+function fr_pages_menu_menu(){
+$menu_items = variable_get('fortified_pages');
+  foreach($menu_items as $key => $value){
+    foreach($value as $delta => $item){
+      $items[$item] = array(
+        'access callback' => TRUE,
+        'type' => MENU_NORMAL_ITEM,
+      );
+    }
+  }
+return $items;
+}

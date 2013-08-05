@@ -1,0 +1,40 @@
+<?php
+function fr_virtual_field_schema($field) {
+  switch($field['type']) {
+    case 'fr_virtual':
+    	$columns = array();
+      // Build out three (3) Media Block Fields for the DataBase
+  
+        $columns['upload_type'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        );
+        $columns['image_file_path'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        );
+        $columns['video_file_path'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        );   
+        $columns['image_files'] = array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        );
+        $columns['video_files'] = array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        );
+                        
+      break;
+      }
+  return array(
+  'columns' => $columns,
+  'indexes' => array(),
+  );
+}

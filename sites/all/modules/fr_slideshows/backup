@@ -1,0 +1,162 @@
+<?php
+
+/*
+*
+*@hook_block_info
+*
+*/
+function fr_slideshows_block_info(){
+  // This example comes from node.module.
+  $blocks['front_slideshow'] = array(
+    'info' => t('Front Slide Show'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  $blocks['front_featured_content'] = array(
+    'info' => t('Front Page Featured'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+
+
+
+
+/*
+*
+*@hook_blck_view
+*
+*/
+function fr_slideshows_block_view($delta = ''){
+  switch($delta){
+  case'front_slideshow':
+
+    /*$field_conditions = array(
+      'field_name' => 'field_main_page_featured_image',
+      'target' => 'fid',
+      'argument' => '',
+      'operator' => '=',
+    );*/
+    $arguments = array(
+      'propertyCondition' => array('status' => 1),
+      'range' => array(0 => 10),
+    );
+    $block['content'] = fr_slideshows_front_page_build_slideshows('node', 'main_pages', NULL, $arguments);
+
+    break;
+    
+    case'front_featured_content':
+      $content = fr_slideshows_front_page_featured_slideshow('node', 'front_page_text', NULL, NULL);
+      $block['content'] = $content;
+      break;
+  }
+
+  return $block;
+}
+
+
+
+function fr_slideshows_front_page_build_slideshows($entity_type, $bundle, $field_conditions, $arguments){
+  $content = '';
+  $Slideshow = new FrSlideshow();
+  $query = $Slideshow->querySlideshowData($entity_type, $bundle, $field_conditions, $arguments);
+  if(!empty($query['node'])){
+    $images = $Slideshow->getSlideshowImages($query['node'], 'node', 'field_main_page_featured_image', 'field_main_page_image_map');
+    $structure_images = $Slideshow->listImages($images);
+    $content = fr_slideshow_render_images($structure_images);
+  }
+  return $content;
+}
+
+function fr_slideshow_render_images($images){
+  $content = array();
+  $content['wrapper'] = array(
+     '#theme' => 'item_list',
+      '#items' => $images,
+      '#type' => 'ul',
+      '#attributes' => array('data-orbit' => '', 'class' => array('slideshow-wrapper', 'large-8', 'small-12', 'columns')),
+    );
+    return $content;
+}
+
+
+function fr_slideshows_front_page_featured_slideshow($entity_type, $bundle, $field_conditions, $arguments){
+  $Slideshow = new FrSlideshow();
+  $arg = arg();
+  $query = $Slideshow->querySlideshowData($entity_type, $bundle, $field_conditions, $arguments);
+  if(!empty($query['node'])){
+    $args = array(
+      'body',
+      'field_f_page_custom_link',
+      'field_help_images',
+    );
+    $markup = $Slideshow->getHighlightedMarkup($query['node'], 'node', $args);
+    $items = array();
+    $content = array();
+    $content['wrapper'] = array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'class' => array('featured-content-wrapper'),
+      ),
+    );
+    $count_items = count($markup);
+    foreach($markup as $key => $node){
+      if(empty($node['field_help_images'])){
+        $node['field_help_images'] = '<div class="empty"></div>';
+      }
+        $items[] = array('data' => drupal_render($node), 'class' => array('li-featured-content', 'large-2', 'medium-2', 'columns', 'large-centered', 'medium-centered'));
+      if(( $key + 1 ) != $count_items){
+        $items[] = array('data' => '<div class="divider"></div>', 'class' => array('li-divider'));
+      }
+    }
+    
+    if($arg[0] == 'node' && empty($arg[1])){
+      drupal_add_js(drupal_get_path('module', 'fr_slideshows') .'/fr_slideshows.js', array('type' => 'file', 'scope' => 'header'));
+    }
+    
+    //$adjuster = ($count_items * 112.555);
+    $data_tool = 450;
+    if($count_items <= 3){
+      $data_tool = 450 + 150;
+    }
+    if (preg_match('/(up.browser|up.link|mmp|symbian|smartphone|midp|wap|phone|android)/i', strtolower($_SERVER['HTTP_USER_AGENT']))) {
+      $data_tool = 800;
+    }
+    $width = ($count_items * $data_tool);
+    
+    
+    $content['wrapper']['item_container'] = array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'class' => array('featured-content-item-container', 'columns', 'large-centered'),
+        'data-max' => $width,
+        'data-tool' => $data_tool,
+      ),
+    );
+    
+    $content['wrapper']['item_container']['item_list'] = array(
+     '#theme' => 'item_list',
+      '#items' => $items,
+      '#type' => 'ul',
+      '#attributes' => array(
+      'class' => array('featured-content'),
+        'style' => array('width:'.$width.'px;'),
+      ),
+    );
+    $content['right'] = array(
+      '#type' => 'markup',
+      '#markup' => '<span></span>',
+      '#prefix' => '<div class="front-featured-right">',
+      '#suffix' => '</div>',
+    );
+    $content['left'] = array(
+      '#type' => 'markup',
+      '#markup' => '<span></span>',
+      '#prefix' => '<div class="front-featured-left">',
+      '#suffix' => '</div>',
+    );
+    return $content;
+    //$structure = $Slideshow->structureHighlightedMarkup($markup);
+    //dpm($structure);
+  }
+}

@@ -1,0 +1,4 @@
+name = Fortified Pages Menu Updater
+description = Update the sub pages belonging to the "Fortified Pages" Content type module.
+package = Fortified
+core = 7.x 

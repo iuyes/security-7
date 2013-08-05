@@ -1,0 +1,340 @@
+<?php
+
+function fr_file_browser_block_info(){
+  $blocks['file_browser'] = array(
+    'info' => t('File Browser'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+function fr_file_browser_block_view($delta = ''){
+  switch($delta){
+  case'file_browser':
+
+    $block['content'] = '';
+
+    break;
+  }
+  return $block;
+}
+
+
+
+/*
+ * Implements hook_menu()
+ *
+ */
+function fr_file_browser_menu() {
+  $items['file-browse/%/all'] = array(
+    'page callback' => 'fr_file_browser_view_all',
+    'page arguments' => array(1, 2),
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['file-browse/file/%'] = array(
+    'page callback' => 'fr_file_browser_view_node_files',
+    'page arguments' => array(1, 2),
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['fr_file_browser'] = array(
+    'access callback' => TRUE,
+    'page callback' => 'fr_file_browser_view',
+    'type' => MENU_CALLBACK
+  );
+  $items['fr_file_browser_resize'] = array(
+    'access callback' => TRUE,
+    'page callback' => 'fr_file_browser_resize',
+    'type' => MENU_CALLBACK
+  );
+
+  return $items;
+}
+
+
+function fr_file_browser_view(){
+  $files = $_POST['file'];
+  $actions = '<div id="file-preview" class="">
+  <img class="managed-image" data-image-id="'.$files.'" src="../../system/files/'.$files.'">
+  </div>';
+  $file = array('status' => $actions);
+  drupal_json_output($file);
+  drupal_exit();
+}
+
+
+function fr_file_browser_view_all($uid){
+}
+
+
+
+
+function fr_file_browser_view_node_files($file, $nid){
+  $default_message = 'Sorry, no images attatched to this file';
+  $files = new fileBrowser($nid);
+  if(!empty($files->image_files)){
+   $load_images = $files->buildFiles();
+  }
+  $images = empty($load_images) ? $default_message : $load_images;
+  return $images;
+}
+
+
+class fileBrowser{
+
+  public $images = array();
+  public $image_name = array();
+  public $content = array();
+  public $items = array();
+
+  public function __construct($nid){
+    global $user;
+    
+    $this->node = node_load($nid);
+    if(!empty($this->node->field_vt_customer['und'][0]['target_id'])){
+      $node_owner = $this->node->field_vt_customer['und'][0]['target_id'];
+      $auth = array('administrator', 'supervisor', 'guard');
+		if($user->uid != $node_owner && !array_intersect($auth, $user->roles)){
+        drupal_not_found();
+        drupal_exit();
+      }
+    }
+    $this->title = $this->node->title;
+    $this->image_files = NULL;
+    if(!empty($this->node->field_vt_tour_files['und'][0]['image_files'])){
+      $image_files = $this->node->field_vt_tour_files['und'][0]['image_files'];
+      $this->image_files = explode(',', $image_files);
+    }
+  }
+
+  public function buildFiles(){
+    $images_array = $this->image_files;
+    $i = 1;
+    foreach($images_array as $key => $value){
+      $images[$key] = $this->loadFiles($value, $i);
+      $i++;
+    }
+    $image_content = $this->renderArrays();
+    return $image_content;
+  }
+
+  private function loadFiles($fid, $i){
+    $file_path = array();
+    $file = file_load($fid);
+    $url = $file->filename;
+    $file_path['image-'.$i.''] = $url;
+
+    $img_url = $file->uri;
+    $img = file_create_url($img_url);
+    $images = array();
+    $images = array(
+      'path' => $img,
+      'attributes' => array(
+        'class' => array('large-12', 'columns', 'view-file'),
+        'data-id' => $url,
+      ),
+    );
+    $view = theme('image', $images);
+
+    $this->files[] = $file_path;
+    $this->images[] = $view;
+
+  }
+
+
+  private function renderArrays(){
+    drupal_add_js(drupal_get_path('module', 'fr_file_browser') .'/js/fr_file_browser.js', array('type' => 'file', 'scope' => 'footer'));
+    $files = $this->files;
+    if(is_array($files)){
+      $title = $this->title;
+      foreach($files as $delta => $image){
+        foreach($image as $name => $path){
+          $items[] = array(
+            'data' => $name,
+            'class' => array('view-file'),
+            'id' => $path,
+            'data-id' => $path,
+          );
+        }
+      }
+      $images = $this->images;
+      //main wrapper
+      $content['wrapper'] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'class' => array('file-browser-wrapper', 'large-12', 'columns'),
+        ),
+        '#weight' => -99,
+      );
+      //links wrapper
+      $content['wrapper']['images'] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'class' => array('file-browser-links', 'large-2', 'columns'),
+        ),
+        '#weight' => -99,
+      );
+      $content['wrapper']['images']['files'] = array(
+        '#theme' => 'item_list',
+        '#title' => $title,
+        '#items' => $items,
+        '#attributes' => array(
+          'class' => array('file-list', 'large-12', 'columns'),
+        ),
+      );
+      //image preview
+      $content['wrapper']['image_preview'] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'class' => array('file-preview', 'large-9', 'columns'),
+          'data-id' => '',
+        ),
+        '#weight' => -98,
+      );
+      $content['wrapper']['image_preview']['file'] = array(
+        '#theme' => 'item_list',
+        '#title' => t('Images'),
+        '#items' => $images,
+        '#attributes' => array(
+          'class' => array('file-preview', 'large-12', 'columns'),
+          'id' => 'file-preview',
+        ),
+        '#weight' => -98,
+      );
+      //actions wrapper
+      $tools = array(
+        'delete' => array(
+          'data' => 'Delete Image',
+          'class' => array('file-actions', 'delete-image', 'button', 'radius', 'small'),
+          'id' => 'delete',
+        ),
+        'resize' => array(
+          'data' => 'Resize Image',
+          'class' => array('file-actions', 'resize-image', 'button', 'radius', 'small'),
+          'id' => 'resize',
+        ),
+        'view_all' => array(
+          'data' => 'View All',
+          'class' => array('file-actions', 'view-all', 'button', 'radius', 'small'),
+          'id' => 'refresh',
+        ),
+
+      );
+      $content['wrapper']['actions_wrapper'] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'class' => array('file-actions-wrapper', 'large-12', 'columns'),
+        ),
+        '#weight' => -100,
+      );
+      $content['wrapper']['actions_wrapper']['actions'] = array(
+        '#theme' => 'item_list',
+        '#items' => $tools,
+        '#attributes' => array(
+          'class' => array('file-actions-wrapper', 'large-12', 'columns'),
+        ),
+        '#weight' => -100,
+      );
+    }
+    return $content;
+  }
+}
+
+
+
+function fr_file_browser_resize(){
+  $data = $_POST['type'];
+  $utility = new fileUtility($data);
+  switch($utility->utility){
+  case'resize':
+    $file = $utility->file;
+    $size = $utility->percent;
+    $newData = $utility->resizeImage($file, $size);
+
+    break;
+  case'delete':
+
+    $newData = 1;
+
+    break;
+  }
+  $status = array('status' => $newData);
+  drupal_json_output($status);
+  drupal_exit();
+}
+
+class fileUtility{
+  public function __construct($data){
+    $this->utility = $data['type'];
+    switch($this->utility){
+    case'resize':
+      $this->file = $data['file']['file'];
+      $this->percent = $data['file']['percent'];
+      break;
+    }
+  }
+
+  public function resizeImage($file, $size, $crop=FALSE){
+    //@todo move the image to public directory, resize image, then move image back to private directory
+    $view = array();
+    
+    
+    $image = drupal_realpath('private://'.$file.'');
+    
+      $contents = file_get_contents('private://' . $file);
+      $save = file_save_data($contents, 'public://' . $file, FILE_EXISTS_REPLACE);
+      $new_file = file_load($save->fid);
+      $url = file_create_url($new_file->uri);
+      $new_img_path = drupal_realpath($new_file->uri);
+      $convert = exec('convert '.$new_img_path.' -resize '.$size.' '.$new_img_path.'');
+      
+      $new_contents = file_get_contents('public://' . $file);
+      $save_image = file_save_data($new_contents, 'private://' . $file, FILE_EXISTS_REPLACE);
+      $view_path = file_create_url($save_image->uri);
+      
+      $delete_moved_file = file_delete($new_file);
+       
+    /*$image = drupal_realpath('private://'.$file.'');
+    $view_path = file_create_url('private://'.$file.'');*/
+    $view['path'] = $view_path;
+    $image = theme('image', $view);
+    return $image;
+
+  }
+
+
+
+
+  /*public function resizeImage($file, $w, $h, $crop=FALSE){
+    //@todo move the image to public directory, resize image, then move image back to private directory
+      $contents = file_get_contents('private://' . $file);
+      $save = file_save_data($contents, 'public://' . $file, FILE_EXISTS_RENAME);
+      $new_file = file_load($save->fid);
+      $url = file_create_url($save->uri);
+      $path = drupal_realpath($save->uri);
+      $new = '/var/www/fort.dev/sites/default/files/'.$save->filename.'.png';
+     $convert = exec('convert '.$path.' -'.$new.'');
+     $new_path = file_create_url('public://' . $save->filename.'.png') ;
+     return '<img src="'.$new_path.'">';
+  }*/
+}
+
+
+function fr_file_browser_page_alter(&$page){
+  $arg = arg();
+  if($arg[0] == 'file-browse'){
+    $content = array();
+    $content['modal'] = array(
+      '#type' => 'markup',
+      '#markup' => '<div class="resize-form-header">Resize Image</div>
+  		  <label for="size">%</label><input type="text" id="resize-percent" placeholder="Percent %" size="20" name="percent"/>
+  		  <input type="button" value="resize" name="resize" id="form-resize"/>',
+      '#prefix' => '<div id="resizeModal" class="reveal-modal large">',
+      '#suffix' =>'</div>',
+    );
+    $page['modal'] = $content;
+  }
+
+  return $page;
+}

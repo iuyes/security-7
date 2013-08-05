@@ -1,0 +1,50 @@
+<?php
+
+function fr_front_formatter_field_info_alter(&$info){
+	$info['fr_front_page']['default_formatter'] = 'fr_front_formatter';
+	return $info;
+}
+
+function fr_front_formatter_field_formatter_info() {
+  return array(
+    'fr_front_formatter' => array(
+      'label' => t('Fortified Tabs Formatter'),
+      'field types' => array('fr_front_page'),
+    ),
+  );
+}
+	
+
+function fr_front_formatter_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, &$items, $display){
+	if(!empty($items)){
+	$object = array();
+	
+	$object['img_wrapper'] = array(
+			'#type' => 'container',
+      '#attributes' => array(
+      'class' => array('view_slide_wrapper'),
+		  ),
+		);
+		foreach($items as $key => $field) {
+			if(!empty($field['img_1'])){
+				$img_1 = $field['img_1'];
+				$file_object = file_load($img_1);
+	  	  $img_uri = $file_object->uri;
+	  	  $variables = array(
+					'path' => image_style_url('large', $img_uri),
+				);
+				$img =  theme('image', $variables);
+				$object['img_wrapper']['img_'.$field['img_1']] = array(
+					'#type' => 'markup',
+		  	  '#markup' => $img,
+		  	  '#prefix' => '<div class="tab_featured_img">',
+		  	  '#suffix' => '</div>',
+				);
+
+			}	
+
+		}
+		$items = $object;
+	}
+	return $items;
+}

@@ -1,0 +1,24 @@
+.time-wrapper{
+	width:40%;
+	float:left;
+	padding:none !important;
+}
+.time-item{
+	width:12%;
+	float:left;
+	padding:none !important;
+} 
+.fieldset-legend{
+	margin:none !important;
+}
+#tour_times{
+
+}
+.tour-times{
+	display:none;
+	width:7%;
+	float:left;
+}
+.tour-times-wrapper{
+	display:none;
+}

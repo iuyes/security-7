@@ -1,0 +1,81 @@
+<?php
+function fr_pages_field_schema($field) {
+  switch($field['type']) {
+    case 'fr_pages':
+
+      // Build out three (3) Media Block Fields for the DataBase
+        $columns['page_highlight'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['page_meta_t'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['page_meta_d'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal',
+        );
+        $columns['page_meta_d_f'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal',
+        );  
+        $columns['page_media_type'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );     
+        $columns['page_desc'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal',
+        );  
+        $columns['page_desc_format'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal',
+        );                         
+        $columns['page_video'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );  
+           
+        for($i = 1; $i<4; $i++) {
+	      $columns['image_'.$i] = array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        );
+        $columns['image_'.$i.'_link'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal'
+        );
+        $columns['image_'.$i.'_alt'] = array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        );   
+        $columns['image_'.$i.'_link_new_window'] = array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,          
+        );      
+        $columns['image_'.$i.'_cap'] = array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        );
+        }                   
+      break;
+      }
+  return array(
+  'columns' => $columns,
+  'indexes' => array(),
+  );
+}

@@ -1,0 +1,7 @@
+name = Fortified Virtual
+description = This Module creates a form for uploading Virtual Guard Tours RV1.
+package = Fortified
+core = 7.x 
+files[] = fr_virtual.install
+files[] = phpmailer/class.phpmailer.php
+;scripts[] = flowplayer.playlist-3.2.10.js

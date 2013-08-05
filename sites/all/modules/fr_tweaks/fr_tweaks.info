@@ -1,0 +1,5 @@
+name = Fortified Tweaks
+description = This module contains misc tweaks for Fortified.
+package = Fortified
+core = 7.x 
+files[] = ./fr_virtual/phpmailer/class.phpmailer.php

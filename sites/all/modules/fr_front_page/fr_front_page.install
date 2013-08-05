@@ -1,0 +1,71 @@
+<?php
+function fr_front_page_field_schema($field) {
+  switch($field['type']) {
+    case 'fr_front_page':
+
+      // Build out three (3) Media Block Fields for the DataBase
+        $columns['media_type'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );   
+        $columns['highlight'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal',
+        );
+        $columns['desc'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal',
+        );  
+        $columns['desc_format'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal',
+        );                         
+        $columns['map'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );  
+        $columns['video'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );  
+           
+        for($i = 1; $i<4; $i++) {
+	      $columns['img_'.$i] = array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        );
+        $columns['img_'.$i.'_link'] = array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'normal'
+        );
+        $columns['img_'.$i.'_alt'] = array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        );   
+        $columns['img_'.$i.'_link_new_window'] = array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,          
+        );      
+        $columns['img_'.$i.'_cap'] = array(
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        );
+        }                   
+      break;
+      }
+  return array(
+  'columns' => $columns,
+  'indexes' => array(),
+  );
+}

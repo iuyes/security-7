@@ -1,0 +1,526 @@
+<?php
+
+function fr_menu_block_info(){
+	// This example comes from node.module.
+	$blocks['front_page_menu'] = array(
+		'info' => t('Front Page Menu'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	$blocks['footer'] = array(
+		'info' => t('Footer'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+	return $blocks;
+}
+
+
+function fr_menu_block_configure($delta = '') {
+	$form = array();
+	drupal_add_library('system', 'drupal.collapse');
+	switch($delta){
+	case'footer':
+		$form['wrapper'] = array(
+			'#type' => 'vertical_tabs',
+		);
+
+		for($i = 1; $i<=4; $i++){
+			$title = variable_get('vert_title'.$i.'');
+			$links = variable_get('links'.$i.'');
+			
+
+			$form['vertical_links'.$i.''] = array(
+				'#type' => 'fieldset',
+				'#title' => 'Vertical Links '.$i.'',
+				'#group' => 'wrapper',
+				/*'#attributes' => array(
+				'class' => array('vert_links_wrapper'),
+			),*/
+			);
+			$form['vertical_links'.$i.'']['vert_title'.$i.''] = array(
+				'#type' => 'textfield',
+				'#title' => t('Vertical Link Header '.$i.''),
+				'#default_value' => $title,
+				'#group' => 'wrapper',
+			);
+			$form['vertical_links'.$i.'']['links'.$i.''] = array(
+				'#type' => 'textfield',
+				'#title' => t('Referenced Page'),
+				'#default_value' => $links,
+				'#group' => 'wrapper',
+				'#autocomplete_path' => 'fr_menu_links',
+			);
+		}
+		break;
+	}
+	return $form;
+}
+
+
+function fr_menu_block_save($delta = '', $edit = array()) {
+	switch($delta){
+
+	case'footer':
+		for($i = 1; $i<=4; $i++){
+			variable_set('vert_title'.$i.'', $edit['vert_title'.$i.'']);
+			variable_set('links'.$i.'', $edit['links'.$i.'']);
+		}
+		break;
+
+	}
+	return ;
+}
+
+
+
+function fr_menu_block_view($delta = ''){
+	switch($delta){
+	case'front_page_menu':
+		$menu = new menu;
+		$content = $menu->queryItems();
+		$block['content'] = drupal_render($content);
+
+		break;
+
+	case'footer':
+
+		$block['content'] = query_footer_content();
+
+		break;
+	}
+	//dpm($delta);
+	return $block;
+}
+
+
+
+
+function query_footer_content(){
+	$nid = '';
+	$content = array();
+	
+	$content['wrapper'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('vert-footer-wrapper'),
+			),
+		);
+		
+	for($i = 1; $i<=4; $i++){
+		$title = variable_get('vert_title'.$i.'');
+		$links = variable_get('links'.$i.'');
+
+		if (preg_match("/.+\((\d+)\)/", $links, $matches)) {
+			$nid = $matches[1];
+		}
+		$query = new EntityFieldQuery();
+		$query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', 'main_pages')
+		->entityCondition('entity_id', $nid, '=');
+		$result = $query->execute();
+		$options = array();
+		if (isset($result['node'])) {
+			$content['wrapper'][] = build_footer_content($result, $title);
+		}
+	}
+	return $content;
+}
+
+
+
+
+function build_footer_content($results, $title){
+	$nodes = array();
+	$content['link_wrapper'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('link-wrapper', 'large-3', 'small-12', 'medium-6', 'columns'),
+			),
+		);
+		
+	foreach($results['node'] as $key => $node){
+		$nodes = node_load($node->nid);
+		$highlights = $nodes->field_main_page_highlights['und'];
+		if(is_array($highlights)){
+			foreach($highlights as $key => $highlight){
+				$link = $highlight['page_highlight'];
+				$url = build_footer_path($link, $type = '');
+				$path = build_footer_path($nodes->title, $type = 'services');
+				
+				
+				$options = array(
+				'#attributes' => array(
+					'class' => array('large-12', 'small-4', 'columns'),
+				),
+				'query' => array(
+					'page' => $url,
+					'delta' => ($key + 1),
+				),
+			);
+			
+				$items[] = l($link, $path, $options);
+			}
+		}
+	}
+	
+	$title_options = array(
+	 'attributes' => array('class' => array('white')),
+	);
+	$title = l($title.':', menu::escape($title), $title_options);
+	
+	$content['link_wrapper']['items'] = array(
+			'#theme' => 'item_list',
+			'#type' => 'ul',
+			'#title' => $title,
+			'#items' => $items,
+			'#attributes' => array(
+				'class' => array('vert-links'),
+			),
+			'#weight' => 100,
+		);
+	return $content;
+}
+
+
+
+
+function build_footer_path($link, $type){
+	$escape = strtolower(str_replace(' / ', ' ', $link));
+	$escape = strtolower(str_replace('/', ' ', $escape));
+	$clean_url = strtolower(str_replace(' ', '-', $escape));
+	$url = $clean_url;
+	if(!empty($type)){
+		$url = $type.'/'.$clean_url;
+	}
+	return $url;
+}
+
+
+
+
+function fr_menu_links(){
+	$query = new EntityFieldQuery();
+	$query->entityCondition('entity_type', 'node')
+	->entityCondition('bundle', 'main_pages')
+	->propertyCondition('title', '%'.$string.'%', 'like');
+	$result = $query->execute();
+	$options = array();
+	if (isset($result['node'])) {
+		$nids = array_keys($result['node']);
+		$nodes =  entity_load('node', $nids);
+		foreach($nodes as $nid => $node){
+			$label = $node->title;
+			$entity_id = $node->nid;
+			$string = array('"'.$label.' ('.$entity_id.')"' => $label);
+			$key = "$label ($entity_id)";
+			// Labels containing commas or quotes must be wrapped in quotes.
+			if (strpos($key, ',') !== FALSE || strpos($key, '"') !== FALSE) {
+				$key = '"' . str_replace('"', '""', $key) . '"';
+			}
+			$options[$key] = $label;
+		}
+	}else{
+		$options[0] = 'No '. $string . ' created';
+	}
+	drupal_json_output($options);
+	exit();
+}
+
+
+
+
+
+
+class menu{
+
+	public function queryItems(){
+
+		$query = new EntityFieldQuery;
+		$query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', 'main_pages')
+		->propertyCondition('status', 1);
+		$results = $query->execute();
+		if(!empty($results)){
+			$this->results = $results;
+			$content = $this->loadNodes($results);
+			return $content;
+		}
+	}
+
+	private function loadNodes($results){
+		$node = array();
+		$build_content = array();
+		$content = array();
+		$items = array();
+		$content['bar_wrapper'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('menu-bar-wrapper'),
+			),
+		);
+		foreach($results['node'] as $key => $value){
+
+			$node = node_load($value->nid);
+			switch($node->title){
+			default:
+				if(!empty($node->field_main_pages_teasert['und'][0]['value'])){
+					$build = $this->build($node, $value, '');
+				}
+				break;
+			}
+
+			$items[$value->nid] = $build['items'];
+			$content['bar_wrapper']['dropdown_'.$value->nid.''] = array(
+				'#type' => 'container',
+				'#attributes' => array(
+					'class' => array('f-dropdown', 'large'),
+					'data-dropdown-content' => '',
+					'id' => $value->nid,
+				),
+			);
+			$content['bar_wrapper']['dropdown_'.$value->nid.'']['description'] = $build['content'];
+			$content['bar_wrapper']['dropdown_'.$value->nid.'']['links'] = $build['links'];
+		}
+		//for contact us webform
+		$build = $this->buildWebform();
+		$items['9000'] = $build['items'];
+		$content['bar_wrapper']['dropdown_9000']['description'] = $build['content'];
+
+		//for search bar
+		/*$content['bar_wrapper']['search'] = array(
+			'#type' => 'markup',
+			'#markup' => render($this->load_search()),
+			'#prefix' => '<div class="search-menu-item">',
+			'#suffix' => '</div>',
+		);*/
+
+		$items[]['data'] = render($this->load_search());
+
+		$content['bar_wrapper']['wrapper'] = array(
+			'#theme' => 'item_list',
+			'#items' => $items,
+			'#attributes' => array(
+				'class' => array('menu-wrapper', 'large-12', 'large-centered', 'columns'),
+			),
+			'#weight' => -100,
+		);
+		
+		$content['hidden'] = $this->markup('', '', 'm-hidden', 99);
+
+		return $content;
+	}
+
+	private function build($node, $value, $webform){
+		$desc = $node->field_main_pages_teasert['und'][0]['value'];
+		$links = array();
+		$title = $node->title;
+		$path = '#';
+		$learn_more = 'Learn More:';
+
+		$options = array(
+			'attributes' => array(
+				'class' => array('header-bottom-item'),
+				'data-dropdown' => array($value->nid),
+			),
+		);
+		
+		
+		$content['header_wrapper'] = $this->container(array('dropdown-header-wrapper', 'large-12', 'columns'));
+		$content['header_wrapper']['title_desc'] = $this->container(array('title-desc-wrapper', 'large-7', 'columns'));
+
+		$items = l($title, $path, $options);
+		$content['header_wrapper']['title_desc']['markup'] = $this->markup($desc, '', 'menu-desc row', 99);
+		$path = drupal_lookup_path('alias', 'node/'.$node->nid.'');
+		if(!empty($node->field_main_pages_teaser_image['und'][0])){
+		  $image = array();
+  		$teaser_image = $node->field_main_pages_teaser_image['und'][0];
+  		$image = array(
+  			'path' => file_create_url($teaser_image['uri']),
+  			 'attributes' => array(
+  			   'class' => array('dropdown-feat-image'),
+  			 ),
+  			);
+  		$title_image = theme('image', $image);
+  		$title_img_options = array(
+			'attributes' => array(
+				'class' => array('large-5', 'columns'),
+			),
+			'html' => TRUE,
+		);
+		$content['header_wrapper']['title_image'] = array(
+  		'#theme' => 'link',
+	  	    '#text' => $title_image,
+	  	    '#path' => $path,
+	  	    '#options' => $title_img_options,
+	  	    '#weight' => -101,
+	  	  );
+  		//$content['title_image'] = $this->markup($title_image, '', 'menu-desc-image large-5 columns', -101);
+		}
+		//dpm($node);
+		if(!empty($node->field_main_page_highlights['und'])){
+		  $learn_more = array();
+		  $node_id = $node->nid;
+			$target = $node->field_main_page_highlights['und'];
+			$load_links = $this->loadTargets($target, $node);
+			
+			$learn_more['wrapper'] = $this->container(array('menu-learn-more-wrapper', 'row', 'columns'));
+			$learn_more['wrapper']['learn_more'] = $load_links;
+		}
+		$title_options = array();
+		$content['header_wrapper']['title_desc']['header'] = $this->markup(l($title, $path, $title_options), '', 'menu-desc-header', -100);
+		return array('items' => $items, 'content' => $content, 'links' => $learn_more);
+	}
+	
+	
+	
+	private function container($class){
+  	return array(
+  	 '#type' => 'container',
+		  '#attributes' => array(
+		    'class' => $class,
+		  ),
+  	);
+	}
+	
+	public static function escape($string){
+  	$escape_1 = strtolower(str_replace(' / ', ' ', $string));
+		$escape_2 = strtolower(str_replace('/', ' ', $escape_1));
+		$escape_3 = strtolower(str_replace(' ', '-', $escape_2));
+		return $escape_3;
+	}
+	
+
+	private function loadTargets($targets, $node){
+		$links = array();
+		$teaser_images = array();
+		$nid = $node->nid;
+		$teaser_images['title'][$nid] = $this->markup('Learn More:', '', 'learn-more-title row', -101);
+		$teaser_images['wrapper'][$nid] = $this->container(array('learn-more-link-wrapper', 'row'));
+		$i=1;
+		foreach($targets as $key => $value){
+		//dpm($nid);
+			$head = $value['page_highlight'];
+			
+			$clean_url = self::escape($head);
+			
+			$options = array(
+				'attributes' => array(
+					'class' => array('menu-desc-link'),
+				),
+				'query' => array(
+					'page' => $clean_url,
+					'delta' => ($key + 1),
+				),
+			);
+			if($i <= 3){
+  			$group = 1;
+			}elseif($i > 3 && $i <= 6){
+  			$group = 2;
+			}else{
+  			$group = 3;
+			}
+			if(!empty($teaser_images['wrapper'][$nid][$group])){
+  			$teaser_images['wrapper'][$nid][$group] = $teaser_images['wrapper'][$nid][$group];
+  		}else{
+    		$teaser_images['wrapper'][$nid][$group] = $this->container(array('learn-more-title-group-img-wrapper', 'large-12', 'columns'));
+  		}
+  		$teaser_images['wrapper'][$nid][$group][$key] = $this->container(array('learn-more-title-img-wrapper', 'large-4', 'columns'));
+			$path_alias = drupal_lookup_path('alias', 'node/'.$node->nid.'');
+			$links = l($head, $path_alias, $options);
+			if(!empty($value['image_3'])){
+  			$teaser_image = $value['image_3'];
+  			$load_img = file_load($teaser_image);
+  			$image_path = array(
+  			'path' => file_create_url($load_img->uri),
+  			 'attributes' => array(
+  			   'class' => array('learn-more-link-image'),
+  			 ),
+  			);
+  			//$thumb_image = array('path' => image_style_url('medium', $load_img->uri));
+  			$image = theme('image', $image_path);
+  			$teaser_images['wrapper'][$nid][$group][$key]['links'][] = $this->markup($links, '', 'learn-more-link', -99);
+  			$teaser_images['wrapper'][$nid][$group][$key]['images'][] = array(
+	  	    '#theme' => 'link',
+	  	    '#text' => $image,
+	  	    '#path' => $path_alias,
+	  	    '#options' => array(
+	  	    'attributes' => array(
+					   'class' => array('menu-desc-link'),
+					 ),
+					   'query' => array(
+					     'page' => $clean_url,
+					     'delta' => ($key + 1),
+					   ),
+					 'html' => TRUE,
+	  	    ),
+	  	    '#weight' => -99,
+	  	  );
+			}else{
+  			$teaser_images['wrapper'][$nid][$group][$key]['links'][] = $this->markup($links, '', 'learn-more-link', 100);
+			}
+			$i++;
+		}
+		return $teaser_images;
+	}
+
+
+	private function buildWebform(){
+		$content = array();
+		$desc = module_invoke('webform', 'block_view', 'client-block-5');
+		$desc = $desc['content'];
+		$learn_more = '';
+		$title = 'Contact Us';
+		$path = '#';
+		$options = array(
+			'attributes' => array(
+				'class' => array('header-bottom-item'),
+				'data-dropdown' => array('9000'),
+			),
+		);
+		$content['dropdown_9000'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('f-dropdown', 'large'),
+				'data-dropdown-content' => '',
+				'id' => '9000',
+			),
+		);
+
+		$items[] = l($title, $path, $options);
+		$content['dropdown_9000']['header'] = $this->markup(l($title, $path, $options), '', 'menu-desc-header', -100);
+		$content['dropdown_9000']['description'] = $this->markup($desc.'<div class="menu-desc-learn-more">'.$learn_more.'</div><br/>', '', 'menu-desc', 99);
+		return array('items' => $items, 'content' => $content);
+	}
+
+	private function load_search(){
+		$block = module_invoke('search', 'block_view', 'search');
+		$content = $block['content'];
+		$items = array(
+			'data' => $content,
+		);
+		return $content;
+	}
+	
+	
+	
+	private function markup($markup, $args, $class, $weight){
+  	return array(
+  	 '#type' => 'markup',
+			'#markup' => $markup,
+			'#prefix' => '<div class="'.$class.'">',
+			'#suffix' => '</div>',
+			'#weight' => $weight,
+  	);
+	}
+}
+
+
+// Hook_menu() for autocomplete fields
+function fr_menu_menu() {
+	$items['fr_menu_links'] = array(
+		'page callback' => 'fr_menu_links',
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
+	return $items;
+}

@@ -1,0 +1,4 @@
+name = Fortified File Browser
+description = Allows User to browse file related to there account.
+package = Fortified
+core = 7.x 

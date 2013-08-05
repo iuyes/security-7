@@ -1,0 +1,4 @@
+name = Main Pages Formatter
+description = This Module Formatts Fortified Main Pages.
+package = Fortified
+core = 7.x 

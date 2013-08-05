@@ -1,0 +1,659 @@
+@import "base";
+@import "compass/css3/border-radius";
+@import "compass/css3/images";
+
+/* ==========================================================================
+   Table of Contents
+   ==========================================================================
+:: Global styles
+:: Header Styles
+:: Footer Styles
+:: Navigation Styles
+:: Main Content
+:: Front Page Template One
+:: Front Page Template Two
+:: Front Page Template Three
+
+*/
+
+/* -----------------------------------------
+   Global Styles
+   ----------------------------------------- */
+   body.html{
+	   background: $backgroundColor;
+	   border-top: 20px solid $topBorderColor;
+	   line-height: 1.4;
+   }
+   h1{
+	   font-size: ms(12);
+   }
+   h2{
+	   font-size: ms(6);
+   }
+   h3{
+	   font-size: ms(4);
+   }
+   span.indent{
+	   padding-left: 40px;
+   }
+  .header-color{
+	  color: $h1FontColor !important;
+  }
+  
+/* -----------------------------------------
+   Header Styles
+   ----------------------------------------- */
+   
+   .sub-header{
+	   font-weight: normal;
+	   margin-top: 5px;
+	   margin-bottom: 5px;
+   }
+
+/* -----------------------------------------
+   Footer Styles
+   ----------------------------------------- */
+   #footer-first{
+	   padding: 6px 0 0 0;
+	   margin-top: 25px;
+	   @include background-image(radial-gradient(center center, circle cover, #a4a4a2 30%, $backgroundColor 100%)); 
+	   
+	   .block-menu-menu-footer{
+	   		background: $backgroundColor;
+	   }
+  
+	   .menu{
+		   text-align: center;
+		   padding: 10px 0;
+		   margin: 0;
+		   li{
+			   display: inline-block;
+			   padding: 0 5px;
+			   a{
+				   color: $footerColor;
+			   }
+		   }
+	   }
+   }
+   #footer-last{
+	   padding-bottom: 20px;
+	   color: $footerColor;
+   }
+/* -----------------------------------------
+   Cover Styles
+   ----------------------------------------- */
+   .block-hr-covers-hr-covers-header{
+	   float: right;
+	   padding-top: 5px;
+   }
+   @media only screen and (max-width: 768px) and (max-width: 768px) {
+   .block-hr-covers-hr-covers-header{
+	   float: right;
+	   padding-top: 5px;
+	   padding-bottom: 5px;
+   }
+   }   
+   @media only screen and (max-width: 767px) {
+	   .block-hr-covers-hr-covers-header{
+		   display: none;
+		   visibility: hidden;
+	   }
+   }
+   @for $i from 1 through 3 {
+	   .hr_cover_#{$i} { 
+	   		//width: 30% !important;
+	   		padding: 0 !important; 
+	   	}
+   }
+
+/* -----------------------------------------
+   Navigation Styles
+   ----------------------------------------- */      
+   @media only screen and (min-width: 770px) {
+   #main-nav{
+	   background: $navTopBarBgColor;
+	   position: relative;
+	   
+	   .top-bar { margin: 0;
+
+    /* topbar global <ul> styles */
+    ul { margin-left: 0; display: inline; height: $topBarHeight; line-height: $topBarHeight; list-style: none;
+
+      /* Main Navigation links style */
+      &>li {
+      	
+        a:not(.button) { color: $topBarLinkColor; display: block; font-size: $topBarLinkSize; font-weight: $topBarLinkWeight; height: $topBarHeight; line-height: $topBarHeight; padding: 0 22px; margin-top: 5px;
+	        &.active{
+		       // color: darken($topBarLinkColor, 15%); @include border-top-radius(10px); background: $white;
+	        }
+        }
+        &:hover, &.active { background: darken($topBarBgColor, 15%);
+          a { color: darken($topBarLinkColor, 15%); @include border-top-radius(10px); background: $white;}
+        }
+
+        /* Put a button in an <li> but give is a class */
+        &.has-button {
+          a.button { margin: 0 $topBarHeight / 4; }
+          &:hover { 
+            a { color: #fff;}
+          }
+        }
+
+        /* Put a search bar or text input in the bar */
+        &.search { padding: 0;
+          form { display: inline-block; margin-bottom: 0; vertical-align: middle; width: $topBarSearchWidth;
+            input[type=text] { @include border-right-radius(0); float: left; font-size: ms(0) - 1; margin-top: -1px; height: $topBarHeight / 2; //28px margin-bottom: 0; width: $topBarSearchWidth - 70px;
+              &+.button { border-left: none; @include border-left-radius(0); float: left; font-size: ms(0) - 2; margin-top: -1px; padding: 5px 12px 4px; }
+            }
+            input[type=search] { font-size: 16px; margin-bottom: 0; }
+          }
+          &:hover { background: $topBarBgColor; }
+        }
+        &.home-link{
+	        margin-left: 8px;
+        }
+      }
+    }
+
+    .js-generated { display: none; }
+  }
+   }
+   }
+
+   @media only screen and (max-width: 769px) {
+   		.block-hr-menu-hr-nav-menu{
+	   position: relative;
+	   
+	   .top-bar { margin: 0; background: #dedede !important;
+
+    /* topbar global <ul> styles */
+    ul { margin-left: 0; display: inline; height: $topBarHeight; line-height: $topBarHeight; list-style: none;
+
+      /* Main Navigation links style */
+      &>li {
+      	
+        a:not(.button) { color: $topBarLinkColor; display: block; font-size: $topBarLinkSize; font-weight: $topBarLinkWeight; height: $topBarHeight; line-height: $topBarHeight; padding: 0 22px; margin-top: 0;
+	        &.active{
+
+	        }
+        }
+        &:hover, &.active { background: darken($topBarBgColor, 15%);
+          a { color: darken($topBarLinkColor, 15%); }
+        }
+
+        /* Put a search bar or text input in the bar */
+        &.search { padding: 0;
+          form { display: inline-block; margin-bottom: 0; vertical-align: middle; width: $topBarSearchWidth;
+            input[type=text] { @include border-right-radius(0); float: left; font-size: ms(0) - 1; margin-top: -1px; height: $topBarHeight / 2; //28px margin-bottom: 0; width: $topBarSearchWidth - 70px;
+              &+.button { border-left: none; @include border-left-radius(0); float: left; font-size: ms(0) - 2; margin-top: -1px; padding: 5px 12px 4px; }
+            }
+            input[type=search] { font-size: 16px; margin-bottom: 0; }
+          }
+          &:hover { background: $topBarBgColor; }
+        }
+        &.home-link{
+	        margin-left: 0;
+        }
+        
+      }
+    }
+    ul#navigation{
+	    li{
+		    @include background-image(linear-gradient($white, #ebebeb));
+		    border-bottom: 2px solid #d7d7d7;	
+	    }
+    }
+    .js-generated { display: none; }
+  }
+
+  .menu-search{
+	  padding: 10px;
+	  @include background-image(linear-gradient($white, #ebebeb));
+	  border-bottom: 2px solid #d7d7d7;
+	  input.form-text{
+		  margin: 0;
+	  }
+	  input.form-submit{
+		  top: 17px !important;
+		  right: 20px !important;
+	  }
+  }
+	   		#scope-list{
+		   		li{
+			   		&.name{
+				   		float: left;
+				   		background: #6f6f6f !important;
+				   		width: 100px;
+				   		color: $white !important;
+				   		a{
+					   		color: $white !important;
+					   		text-transform: uppercase;
+				   		}
+			   		}
+			   		&.toggle-topbar{
+				   		width: 100px !important;
+				   		left: 0 !important;
+				   		a{
+					   		right: 10px !important;
+					   		margin-top: -4px !important;
+				   		}
+			   		}
+			   		&.social{
+				   		float: right;
+				   		a{
+					   		padding: 0 7px !important;
+					   		margin: 0;
+					   		font-size: 25px;
+					   		color: $mainColor;
+				   		}
+				   		&.twitter{
+					   		a{
+						   		padding-right: 10px !important;
+					   		}
+				   		}
+			   		}
+			   		a{
+				   		margin-top: 0 !important;
+			   		}
+		   		}
+	   		}
+   		}
+   }   
+
+   @media only screen and (min-width: 769px) and (max-width: 1005px) {   
+   		.block-hr-menu-hr-nav-menu{
+	   		width: 65%;
+	   		float: left;
+	   		ul{
+		   		li{
+			   		a{
+				   		font-size: 13px !important;
+				   		padding: 0 15px !important;
+			   		}
+		   		}
+	   		}
+   		}   
+   		.block-hr-menu-hr-nav-search-share{
+	   		width: 35%;
+	   		float: right;
+	   		.search-form{
+		   		float: left;
+		   		margin: 0;
+		   		width: 80%;
+	   		}
+	   		.icon-list{
+	   			padding-left: 3px !important;
+		   		a{
+			   		padding: 0 !important;
+		   		}
+	   		}
+   		}
+   }   
+
+   @media only screen and (min-width: 769px) {   
+   		.block-hr-menu-hr-nav-menu{
+	   		width: 65%;
+	   		float: left;
+   		}   
+   		.block-hr-menu-hr-nav-search-share{
+	   		width: 35%;
+	   		float: right;
+	   		.search-form{
+	   			position: relative;
+		   		float: left;
+		   		margin: 0;
+		   		width: 80%;
+		   		.form-wrapper{
+			   		background: white;
+			   		@include border-top-radius(10px);
+			   		height: $topBarHeight;
+			   		padding: 10px;
+			   		margin-top: 5px;
+			   		input.form-text{
+				   		float: left;
+				   		width: 100%;
+				   		margin: 0;
+				   		padding-right: 35px;
+			   		}
+			   		input.form-submit{
+				   		display: none;
+				   		visibility: hidden;
+			   		}
+		   		}
+		   		input.form-submit{
+			   		position: absolute;
+			   		top: 22px;
+			   		right: 20px;
+			   		height: 20px;
+			   		width: 20px;
+		   		}
+	   		}
+		   	.icon-list{
+		   	    width: 20%;
+		   	    float: right;
+		   	    padding-top: 7px;
+		   	    padding-left: 5px;
+		   	    ul{
+		   	    	margin: 0;
+			   	    li{
+				   	    float: left;
+				   	    list-style: none;
+				   	    a{
+				   	    	padding: 0 0 0 7px;
+				    		i{
+				    		    font-size: 25px;
+				    		    &:hover{
+				    		    	@include single-transition(color, 0.2s, ease-in-out, 0);
+				    		    	color: #0caee3;	
+				    		    }
+				    		}	
+				    	}			   	    
+			   	    }
+		   	    }
+			    
+		   	}   		
+   		}
+   }
+   .menu-search{
+	   position: relative;
+	   padding: 0 20px;
+	   .form-text{
+		   	padding-right: 35px;
+	   }	
+	   .form-submit{
+		   	position: absolute;
+			top: 7px;
+			right: 30px;
+			height: 20px;
+			width: 20px;
+	   }
+   }
+/* -----------------------------------------
+   Main Content
+   ----------------------------------------- */
+   #main-content{
+	   background: white;
+	   border-left: 2px solid $navTopBarBgColor;
+	   border-bottom: 2px solid $navTopBarBgColor;
+	   border-right: 2px solid $navTopBarBgColor;
+	   #main{
+		   padding: 10px;
+	   }
+   }
+
+/* -----------------------------------------
+   Front Page Template One
+   ----------------------------------------- */
+   //Below 480px
+   @media only screen and (max-width: 480px) {
+     @for $i from 1 through 7 {
+       .t1-p#{$i} { width: 100% !important; }
+     }
+     .t1-p1,
+     .t1-p2{
+	   margin-bottom: 10px;
+	 }
+   }
+   //Between 480 and 767px
+   @media only screen and (min-width: 480px) and (max-width: 767px) {
+   		  .t1-p1{
+	   		  margin-bottom: 10px;
+   		  }
+	      .t1-p1,
+	      .t1-p4,
+	      .t1-p7{
+		      width: 100% !important;
+	      }
+	      .t1-p2,
+	      .t1-p3,
+	      .t1-p5,
+	      .t1-p6{
+		      width: 50% !important;
+	      }
+
+   }
+
+   .t1-p2{
+
+   }
+
+/* -----------------------------------------
+   Front Page Template Two
+   ----------------------------------------- */
+   
+   
+/* -----------------------------------------
+   Front Page Template Three
+   ----------------------------------------- */  
+   
+/* -----------------------------------------
+   Article Pages
+   ----------------------------------------- */  
+   .article-featured-img{
+	   margin-bottom: 20px;
+   } 
+   .art-posted-on{
+	   color: $artPostDateColor;
+	   margin-bottom: 10px;
+   }
+   .article-title{
+	   margin: 0 0 5px 0;
+	   color: $h1FontColor;
+   }
+   .art-author{
+	   text-transform: uppercase;
+	   color: $author;
+	   margin-bottom: 10px;
+	   .art-author-label{
+		   padding-right: 3px;
+	   }
+   }      
+   .art-bio{
+   	   margin: 15px 0 10px;
+	   padding-top: 10px;
+	   border-top: 1px dashed #333;
+   }
+
+   #pager-list{
+   	   margin-top: 20px;
+	   li{
+		   display: inline-block;
+		   margin: 0 5px 0 0;
+		   a{
+			   	padding: 5px 10px;
+			   	background: #e8f7f4;
+			   	border: 1px solid #eee;
+			   	color: #666;
+			   	@include border-radius(7px, 7px);
+		   }
+	   }
+   }
+   @for $i from 1 through 3 {
+     .obj_#{$i}_img_cap {
+         float: left;
+         font-size: ms(-1);
+     }
+     .obj_#{$i}_img_credit {
+         float: right;
+         font-size: ms(-1);
+     }
+   }
+   @for $i from 1 through 3 {
+	   .obj_#{$i}_img_wrapper{
+		   margin-bottom: 25px;
+	   }
+	   .obj_#{$i}_video_wrapper{
+		   margin-bottom: 25px;
+	   }	   
+	   .obj_#{$i}_map_wrapper{
+		   margin-bottom: 25px;
+	   }
+	   .obj_#{$i}_html_wrapper{
+		   margin-bottom: 25px;
+	   }	   
+   }
+   .see-more-like-this-article{
+	   color: $h1FontColor;
+	   font-weight: bold;
+	   margin-bottom: 10px;
+   }
+
+/* -----------------------------------------
+   Auto Reviews
+   ----------------------------------------- */   
+   .group_auto_review{
+   	   .group_auto_review_image{
+   	   	   margin-bottom: 20px;
+		   .image-credit,
+		   .image-cap{
+		       font-size: ms(-1);
+		   }
+		   .image-cap{
+		       text-align: right;
+		   }
+	   }
+	   h1.auto-review-header{
+		   margin: 0 0 5px 0;
+		   color: $h1FontColor;
+	   }
+	   .auto-review-posted-on{
+	       color: $artPostDateColor;
+	       margin-bottom: 10px;
+	   }	
+	   .auto-review-author{
+	       text-transform: uppercase;
+	       color: $author;
+	       margin-bottom: 10px;
+	       .auto-review-author-label{
+	    	   padding-right: 3px;
+	       }
+	   }
+	   .field-name-field-auto-rev-bio{
+	   	   margin: 15px 0 10px;
+	       padding-top: 10px;
+	       border-top: 1px dashed #333;
+	   }
+	   .field-name-field-auto-rev-cta{
+	       margin-bottom: 20px;
+	   }	    	      
+   } 
+   .group-auto-specs{
+	   padding: 0 0 0 2px;
+	   margin-bottom: 20px;
+	   
+	   @include background-image(linear-gradient($white, #a4a4a2, $white));	   
+	   .field{
+		   background: $white;
+		   padding-left: 25px;
+	   }
+	   h4{
+		   margin: 0;
+		   background: $white;
+		   padding: 10px 0 15px 25px;
+		   color: $h1FontColor;
+		   
+	   }
+	   .field-name-field-auto-rev-base-price,
+	   .field-name-field-auto-rev-price-test{
+		   padding-bottom: 10px;
+		   font-weight: bold;
+	   }
+	   .field-name-field-auto-rev-dislikes{
+		   padding-bottom: 10px;
+		   font-weight: bold;
+	   }
+	   .group-auto-fuel-economy{
+		   font-weight: bold;
+		   padding-bottom: 10px;
+		   background: $white;
+		   .field-name-field-auto-rev-fuel-highway{
+			   text-indent: 105px;
+		   }
+	   }
+	   .auto-likes,
+	   .auto-dislikes{
+		   font-weight: bold;
+		   padding-bottom: 10px;
+		   ul{
+			   margin: 0 0 0 15px;
+		   }
+	   }
+   }
+   .competes-with{
+	   color: $h1FontColor;
+	   font-weight: bold;
+	   margin-bottom: 10px;
+   }
+   .auto-review-media{
+	   @for $i from 1 through 3 {
+	     .obj_#{$i}_img_cap {
+	         float: left;
+	         font-size: ms(-1);
+	     }
+	     .obj_#{$i}_img_credit {
+	         float: right;
+	         font-size: ms(-1);
+	     }
+	   }
+	   @for $i from 1 through 3 {
+	       .obj_#{$i}_img_wrapper{
+	    	   margin-bottom: 25px;
+	       }
+	       .obj_#{$i}_video_wrapper{
+	    	   margin-bottom: 25px;
+	       }	   
+	       .obj_#{$i}_map_wrapper{
+	    	   margin-bottom: 25px;
+	       }
+	       .obj_#{$i}_html_wrapper{
+	    	   margin-bottom: 25px;
+	       }	   
+	   }	   
+   }
+
+/* -----------------------------------------
+   Event Styles
+   ----------------------------------------- */
+   .group-event{
+	   
+   }
+   .group-event-details{
+   		.group-event-details-inner{
+		   @include background-image(linear-gradient(white, #aaaaaa));
+		   padding-left: 4px; 
+		   .field{
+		       background: $white;
+		       font-weight: bold;
+		       padding: 15px 0 0 15px;
+		   }	   		
+		   .field-label{
+			   font-weight: normal;
+		   }
+		   .field-name-field-event-url{
+			   padding-bottom: 30px;
+		   }
+		   .field-name-field-event-not-map-location{
+			   padding-top: 30px !important;
+		   }
+   		}
+   }   
+/* -----------------------------------------
+   Search Styles
+   ----------------------------------------- */   
+   .page-search{
+	   .block-views-exp-search-travel-page,
+	   .block-views-exp-search-auto-page{
+		   float: left;
+		   width: 33.33333%;
+	   }
+	   .block-views-exp-search-auto-reviews-page{
+		   float: right;
+		   width: 33.33333%;
+	   }
+	   .block-views-exp-search-travel-page{
+		   .views-exposed-widget{
+			   width: 100%;
+			   
+		   }
+	   }
+   }

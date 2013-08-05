@@ -1,0 +1,1037 @@
+#admin-menu-wrapper {
+	font-size:13px;
+}
+
+#main {
+	background:#fff;
+}
+
+.html {
+}
+
+.sf-menu {
+	margin-bottom:0!important;
+	z-index:1!important;
+}
+
+#superfish-2 {
+	display:none;
+}
+
+.header-number {
+	font-size:25px!important;
+	text-align:center!important;
+	/*font-family:Impact,Charcoal,sans-serif!important;*/
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+}
+
+.main-nav.active-fixed {
+	position:fixed;
+	top:0;
+	margin-left:16.1em;
+	z-index:500;
+}
+
+.block.block-nodeblock.block-nodeblock-10.header {
+	float:left;
+	width:60%;
+}
+
+.block.block-nodeblock.contextual-links-region.block-nodeblock-10.header {
+	float:left;
+	width:60%;
+}
+
+/*      Header       */
+.field.field-name-field-logo.field-type-image.field-label-hidden.field-wrapper img {
+}
+
+/*   Search bar  */
+.block.block-search.block-search-form.header {
+	position:relative!important;
+	float:right;
+	width:37%;
+	min-width:300px;
+}
+
+#search-block-form {
+	padding-top:30px;
+}
+
+.block.block-search.contextual-links-region.block-search-form.header {
+	position:relative!important;
+	float:right;
+	padding-top:3%;
+	width:37%;
+	min-width:300px;
+}
+
+/*    End Search Bar     */
+.block-nodeblock-28.header {
+	cursor:pointer;
+	width:40%;
+	float:right;
+}
+
+.ds-1col.node.node-social-icons.view-mode-full.social-icon-wrapper.clearfix {
+	float:right;
+	border:1px solid #000;
+	cursor:pointer;
+	width:30%;
+}
+
+.field.field-name-field-header-social-icon img {
+	width:45px!important;
+	cursor:pointer!important;
+	height:45px!important;
+	padding:2px!important;
+}
+
+.field.field-name-field-header-social-icon.field-type-image.field-label-hidden.field-wrapper img {
+	width:45px;
+	cursor:pointer;
+	height:45px;
+	padding:2px;
+}
+
+header {
+	box-shadow:inset 0 -2px 1px #d0d0d0;
+	background:#e4e3e3;
+}
+
+.main-nav {
+	padding-top:.2em;
+	/*background:url(../images/gray_background_1.jpg) transparent!important;*/
+}
+
+/*     menu     */
+ul.menu {
+	list-style-type:none;
+}
+
+.menu {
+	padding-right:0%;
+	float:right;
+	width:40%;
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+}
+
+.menu li {
+	float:right;
+	padding-left:2%;
+	list-style-type:none!important;
+	list-style-image:none!important;
+	color:#fff!important;
+	font-size:15px;
+}
+
+/*   end   */
+/*     End header     */
+/*    Navigation Front Page      */
+nav.columns.twelve {
+	border-radius:5px;
+	border:none;
+}
+
+/* End Navigation front page */
+/* Slideshow */
+
+.slide-front{
+	z-index:500;
+	float:right;
+	position:absolute;
+	top:10px;
+}
+
+.block.block-views.contextual-links-region.block-views-slide-show-block {
+	width:100%;
+	padding-top:5px;
+}
+
+.view.view-slide-show.view-id-slide_show.view-display-id-block {
+}
+
+.block.block-views.contextual-links-region.block-views-slide-show-block .slide-show img {
+	width:100%;
+	height:100%;
+}
+
+.block.block-views.contextual-links-region.block-views-slide-show-block .view.view-slide-show.view-id-slide_show {
+	box-shadow:0 -5px 5px #eee;
+	border-radius:5px;
+	padding:5px;
+	background:#fff;
+}
+
+.skin-default {
+	background:url(../images/gray1.jpg) bottom right transparent;
+	box-shadow:0 5px 5px 5px #888;
+	padding:15px;
+}
+
+.views-field-counter {
+	float:left;
+	margin:0 2px 5px;
+	height:12px;
+	text-indent:-999px;
+	width:12px;
+	display:inline-block;
+	background:url(../images/slide.png) right bottom transparent;
+}
+
+.views-slideshow-pager-field-item.views_slideshow_pager_field_item.views_slideshow_active_pager_field_item.views-row-odd.active .views-field-counter {
+	background:url(../images/slide.png) right top transparent;
+}
+
+.views-slideshow-pager-field-item.views_slideshow_pager_field_item.views-row-even.active .views-field-counter {
+	background:url(../images/slide.png) right top transparent;
+}
+
+.views-slideshow-pager-field-item.views_slideshow_pager_field_item.views-row-odd.active .views-field-counter {
+	background:url(../images/slide.png) right top transparent;
+}
+
+.block-title {
+	display:none;
+}
+
+.block-menu-menu-head-nav li {
+	padding-top:10px;
+}
+
+.quicktabs-ui-wrapper.qt-ui-tabs-processed-processed.ui-tabs ui-widget.ui-widget-content.ui-corner-all {
+	box-shadow:0 -5px 10px #888;
+}
+
+/* end slideshow */
+/* Footer CSS */
+.block.block-nodeblock.contextual-links-region.block-nodeblock-6 .block-title {
+	display:none;
+}
+
+.main-page-content {
+}
+
+.field-label {
+	text-align:center;
+	display:inline;
+	float:none!important;
+}
+
+.field-label-inline {
+}
+
+.block.block-nodeblock.block-nodeblock-6 .block-title {
+	display:none;
+}
+
+.block-title {
+	font-size:18px;
+	font-weight:700;
+	color:purple;
+	text-align:center;
+}
+
+#footer-first {
+	font-size:16px!important;
+	padding:10px 0;
+	text-align:center;
+	color:#999;
+	border-top:1px solid #d0d0d0;
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+}
+
+.footer-wrapper {
+	padding-top:2%;
+	text-align:center;
+}
+
+.footer-item.field a {
+	font-size:15px!important;
+}
+
+footer {
+		box-shadow:0px -2px 2px #d0d0d0;
+		background:#e4e3e3;
+	
+}
+
+.field.field-name-field-footer-links.field-type-text-long.field-label-hidden.field-wrapper {
+	text-align:center;
+}
+
+.ds-3col.node.node-footer.contextual-links-region.view-mode-full.footer-wrapper.clearfix {
+	padding-left:10%;
+}
+
+.footer-ul,.footer-ul li {
+	list-style-type:none;
+	display:inline;
+}
+
+.field.field-name-field-footer-address.field-type-text.field-label-hidden.field-wrapper {
+	height:50px;
+}
+
+/* End Footer Css*/
+/* quick tabs*/
+.tabs-text {
+	font-size:17px!important;
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+}
+.tabs-text{
+	color:#666 !important;
+	font-weight:bold !important;
+}
+
+.flex-video {
+	position:relative;
+	padding-top:25px;
+	padding-bottom:67.5%;
+	height:0;
+	margin-bottom:16px;
+	overflow:hidden;
+	z-index:50;
+}
+
+.flex-video-overlay {
+	z-index:51;
+}
+
+.ui-tabs-panel.ui-widget-content.ui-corner-bottom {
+	font:#000;
+}
+
+.quicktabs-tabs.quicktabs-style-sky {
+	padding-left:5px !important;
+}
+
+.quicktabs-tabs.quicktabs-style-sky li {
+	border-left:1px solid #d0d0d0;
+}
+
+.quicktabs_main.quicktabs-style-sky {
+	border:none;
+	padding:5px 5px 0!important;
+	border-radius:5px;
+	background:#fff;
+	box-shadow:0 -5px 5px #eee;
+}
+
+/* hr_front_page Css  */
+/* Front page tabs css */
+.main-page-content {
+}
+
+.field-label {
+	font-weight:700;
+	padding-bottom:5px;
+}
+
+button {
+	
+}
+
+.read-more {
+	font:#2ba6cb!important;
+}
+
+/*    end front pages inside tabs     */
+.front-page-content-wrapper {
+	background:url(../images/gray2.jpg) bottom left transparent;
+	padding:10px;
+	box-shadow:0 5px 5px 5px #888;
+	min-width:320px;
+}
+
+.tab_highlight {
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+	text-align:left;
+	padding-left:1%;
+	font-weight:700;
+	color:#444;
+	width:290px;
+	padding-bottom:1em;
+	border-bottom:1px dotted #eee;
+	background:url(../images/arrow.jpg) no-repeat right transparent!important;
+	padding-top:2%;
+	font-size:18px;
+}
+
+.tab_highlight.active {
+	background:url(../images/arrow_green.jpg) no-repeat right transparent!important;
+	border-bottom:1px dotted #000!important;
+}
+
+.tab_highlight.hovered {
+	background:url(../images/arrow_green.jpg) no-repeat right transparent!important;
+	border-bottom:1px dotted #000!important;
+}
+
+.tab_desc {
+	text-align:left;
+	width:100%;
+	padding-left:50px;
+	padding-right:50px;
+	padding-bottom:2%;
+}
+
+.tabs-img-wrapper{
+	float:left !important;
+}
+
+.tab_desc_head{
+	text-align:center;
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+	color:black;
+	font-size:18px;
+	padding-top:10px;
+	padding-bottom: 5px;
+}
+
+.desc_wrapper {
+	padding-top:2%;
+	display:none;
+	padding-right:1%;
+	width:100%;
+	border-radius: 5px;
+	-moz-box-shadow: inset 0 0 15px #888;
+	-webkit-box-shadow: inset 0 0 15px #888;
+	box-shadow: inset 0 0 15px #888;
+	background:#f9f4f4;
+}
+
+.field.field-name-field-front-page-sub-header {
+	background:url(../images/gray_background.jpg) repeat right;
+	border-bottom:1px dotted #888;
+	height:70px;
+	text-align:center;
+}
+
+.tab_sub_header a {
+	color:#fff!important;
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+	font-size:22px;
+}
+
+.tab_sub_header {
+	color:#fff!important;
+	font-family:"Times New Roman",Times,serif;
+	font-size:22px;
+}
+
+ul.tab_head_wrapper {
+}
+
+ul.tab_head_wrapper li {
+	list-style-type:none;
+}
+
+.recently_asked_questions {
+	color:#fff!important;
+	font-size:13px;
+	float:left;
+	padding-top:0!important;
+}
+
+.recently_asked_questions a {
+	color:#fff!important;
+	padding-left:10px;
+}
+
+.field.field-name-field-front-page-sub-header a:hover {
+	text-decoration:underline;
+}
+
+.quicktabs-tabs.quicktabs-style-sky .field-label {
+	display:none!important;
+}
+
+.img_wrapper {
+	float:right;
+	width:200px;
+	padding:2%;
+	text-align:center;
+	padding-bottom:2%;
+}
+
+.tab_img_cap {
+	float:right;
+	padding-left:1%;
+	float:left;
+}
+
+.tab_map_wrapper {
+	float:right;
+	width:35%;
+}
+
+.video_wrapper {
+	float:right;
+	width:35%;
+}
+
+.learn-more a {
+	color:#fff;
+}
+.learn-more{
+	padding-bottom:10px;
+	padding-left:35px;
+}
+
+/*	Slide_show inside tabs	*/
+
+area.active{
+	background:black;
+}
+
+
+
+.field.field-name-field-fr-page-slide-show.field-type-viewreference.field-label-hidden.field-wrapper {
+	text-align:center!important;
+	min-width:250px;
+	float:right;
+	width:60%;
+	padding-right:5%;
+}
+
+.field.field-name-slide-show-div.field-type-ds.field-label-hidden.field-wrapper {
+	height:100px;
+	width:185px;
+	float:left;
+}
+
+.left-div {
+	display:none;
+}
+
+.views-slideshow-controls-text-next.views_slideshow_controls_text_next.views-slideshow-controls-text-next-processed a {
+	display:block;
+	position:absolute;
+	z-index:10;
+	background:url(../images/next.png) no-repeat left top transparent;
+	right:-2%;
+	top:40%;
+	text-indent:-9000px;
+	height:55px;
+	width:26px;
+}
+
+.views-slideshow-controls-text-next.views_slideshow_controls_text_next.views-slideshow-controls-text-next-processed a.active {
+	display:block;
+	position:absolute;
+	z-index:10;
+	background:url(../images/next.png) no-repeat left top transparent;
+	right:4%;
+	top:70%;
+	text-indent:-9000px;
+	height:55px;
+	width:26px;
+}
+
+.views-slideshow-controls-text-previous.views_slideshow_controls_text_previous.views-slideshow-controls-text-previous-processed a.active {
+	display:block;
+	position:absolute;
+	z-index:10;
+	background:url(../images/previous.png) no-repeat left top transparent;
+	left:38%;
+	top:70%;
+	text-indent:-9000px;
+	height:55px;
+	width:26px;
+}
+
+.views-slideshow-controls-text-previous.views_slideshow_controls_text_previous.views-slideshow-controls-text-previous-processed a {
+	display:block;
+	position:absolute;
+	z-index:10;
+	background:url(../images/previous.png) no-repeat left top transparent;
+	left:-2%;
+	top:40%;
+	text-indent:-9000px;
+	height:55px;
+	width:26px;
+}
+
+.views-slideshow-controls-text-pause.views_slideshow_controls_text_pause.views-slideshow-controls-text-pause-processed {
+	display:none;
+}
+
+/*  End */
+/*  Main Pages   */
+.field-name-field-main-page-highlights {
+	width:100%;
+	float:left;
+}
+
+.field-type-fr-pages {
+}
+
+.title {
+	text-align:center;
+	font-family:Impact,Charcoal,sans-serif;
+	font-weight:700;
+}
+
+.page_menu {
+}
+
+.page_menu .first {
+/*background:#d3e9f7;*/
+}
+
+.page_menu a.active {
+}
+
+.page_menu a {
+}
+
+.page_menu li {
+	font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+	font-size:16px;
+	padding-top:20px;
+	padding-top:15px;
+	font-weight:bold;
+} 
+
+/*.page_menu li.active{
+	background:#d3e9f7;
+	zoom:1;
+}
+.page_menu li.activeli{
+	background:#d3e9f7;
+	zoom:1;
+}
+*/
+.page-home {
+}
+
+.page_head_wrapper {
+}
+
+.node-main-pages {
+}
+
+.page_desc_wrapper {
+	width:100%;
+	border-top:none;
+	padding:15px;
+}
+
+.page_highlight {
+	height:40px;
+	padding-top:1%;
+	font-weight:700;
+	font-size:20px;
+	text-align:center;
+}
+
+.page_desc_subheader {
+	font-weight:700;
+	font-size:22px;
+	text-align:center;
+	font-family:Impact,Charcoal,sans-serif;
+	padding-bottom:10px;
+	padding-top:none!important;
+}
+
+.page_desc {
+	float:left;
+}
+
+.page_description {
+}
+
+.page_img {
+}
+
+.page_image_wrapper {
+	float:right;
+}
+
+.page_video_wrapper {
+}
+
+/* User Dashboard */
+.user-dash-button {
+	color:#fff!important;
+}
+
+/* END*/
+/*   end   */
+/*   Webform   */
+.webform-client-form {
+	width:80%;
+}
+
+/* CSS for jQuery  Plugin
+ * Maintained for Foundation. foundation.zurb.com
+ * Free to use under the MIT license.
+ * http://www.opensource.org/licenses/mit-license.php
+ */
+/* Reveal Modals ---------------------- */
+/* line 9, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal-bg {
+	position:fixed;
+	height:100%;
+	width:100%;
+	background:#000;
+	background:rgba(0,0,0,0.45);
+	z-index:40;
+	display:none;
+}
+
+/* line 11, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal {
+	background:#fff;
+	display:none;
+	top:100px;
+	left:50%;
+	margin-left:-260px;
+	width:520px;
+	position:absolute;
+	z-index:41;
+	padding:30px;
+	-webkit-box-shadow:0 0 10px rgba(0,0,0,0.4);
+	-moz-box-shadow:0 0 10px rgba(0,0,0,0.4);
+	box-shadow:0 0 10px rgba(0,0,0,0.4);
+}
+
+/* line 12, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal .close-reveal-modal {
+	font-size:11px;
+	padding:7px 14px 8px;
+	color:#fff;
+	background-color:#2284a1;
+	width:auto;
+	background:#2ba6cb;
+	border:1px solid #1e728c;
+	-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.5) inset;
+	-moz-box-shadow:0 1px 0 rgba(255,255,255,0.5) inset;
+	box-shadow:0 1px 0 rgba(255,255,255,0.5) inset;
+	color:#fff;
+	cursor:pointer;
+	display:inline-block;
+	font-family:inherit;
+	font-size:14px;
+	font-weight:700;
+	line-height:1;
+	margin:0;
+	outline:none;
+	padding:10px 20px 11px;
+	position:relative;
+	text-align:center;
+	text-decoration:none;
+	-webkit-transition:background-color .15s ease-in-out;
+	-moz-transition:background-color .15s ease-in-out;
+	-o-transition:background-color .15s ease-in-out;
+	transition:background-color .15s ease-in-out;
+}
+
+/* line 23, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal.small {
+	width:30%;
+	margin-left:-15%;
+}
+
+/* line 24, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal.medium {
+	width:40%;
+	margin-left:-20%;
+}
+
+/* line 25, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal.large {
+	width:80%!important;
+	margin-left:-40%;
+}
+
+/* line 26, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal.xlarge {
+	width:80%!important;
+	margin-left:-40%!important;
+}
+.reveal-modal.xxlarge {
+	width: 130%!important;
+	margin-left: -65%!important;
+	top:-500px !important;
+}
+
+/* line 27, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal.expand {
+	width:90%;
+	margin-left:-45%;
+}
+
+/* line 28, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal .row {
+	min-width:0;
+	margin-bottom:10px;
+}
+
+/* line 29, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal > :first-child {
+	margin-top:0;
+}
+
+/* line 30, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/zurb-foundation-3.2.0/scss/foundation/components/modules/_reveal.scss */
+.reveal-modal > :last-child {
+	margin-bottom:0;
+}
+
+/* VIRTUAL TOURS */
+.playlist-wrapper {
+	float:right;
+}
+.tour-header{
+	padding:15px;
+}
+.tour-images{
+	padding:15px;
+}
+.tour-video{
+	padding:15px;
+}
+
+.play-list.playing {
+	background:#d0d0d0!important;
+}
+
+.video_links {
+	float:right;
+}
+
+.start-video {
+	float:right;
+	padding-bottom:10px;
+	padding-right:15%;
+}
+
+.playlist-wrapper a {
+	padding-left:10px;
+}
+
+.http {
+	display:none;
+}
+
+.vt-desc-wrapper {
+}
+
+.clips {
+}
+
+.sticky-enabled.tableheader-processed.sticky-table thead {
+	background:#d3e9f7;
+}
+
+.fieldset-wrapper {
+	width:100%;
+}
+
+.sticky-enabled.tableheader-processed.sticky-table {
+	width:100%;
+}
+
+/*USER DASHBOARD FILE MANAGER*/
+.folder-name {
+}
+
+#folder-wrapper li {
+	float:left;
+	cursor:pointer;
+}
+
+#folder-wrapper li:hover {
+	color:#000!important;
+}
+
+#folder-wrapper {
+	list-style-image:url(../images/folder-root.png);
+}
+
+/*     480 Media query     */
+@media only screen and (max-width: 480px) {
+
+	.tab_desc {
+		text-align:left;
+		width:100%;
+		padding-left:3px !important;
+		padding-right:3px !important;
+		padding-bottom:2%;
+	}
+
+	.block.block-nodeblock.block-nodeblock-10.header {
+		float:left;
+		width:100%;
+	}
+	
+	.block.block-nodeblock.contextual-links-region.block-nodeblock-10.header {
+		float:left;
+		width:100%;
+	}
+	
+	.block.block-search.block-search-form.header {
+		padding-right:6%;
+	}
+	
+	.block.block-search.contextual-links-region.block-search-form.header {
+		padding-right:6%;
+	}
+	
+	.quicktabs-tabs.quicktabs-style-sky {
+		padding-left:0!important;
+	}
+	
+	.quicktabs-tabs.quicktabs-style-sky li.first {
+		display:none!important;
+	}
+	
+	.quicktabs-tabs.quicktabs-style-sky li.last {
+		display:none!important;
+	}
+	
+	.flex-video {
+		position:relative;
+		padding-top:25px;
+		padding-bottom:67.5%;
+		height:200px!important;
+		margin-bottom:16px;
+		overflow:hidden;
+		z-index:50;
+	}
+	
+	.desc_wrapper {
+		padding-top:2%;
+		display:none;
+		border-bottom:1px dotted #888;
+		width:100%;
+	}
+}
+
+@media only screen and (max-width: 768px) {
+	.flex-video {
+		position:relative;
+		padding-top:25px;
+		padding-bottom:67.5%;
+		height:350px!important;
+		margin-bottom:16px;
+		overflow:hidden;
+		z-index:50;
+	}
+	
+	.tab_highlight {
+		font-family: Copperplate, "Copperplate Gothic Light", fantasy !important;
+		text-align:center;
+		width:100%;
+		font-weight:700;
+		color:#444;
+		width:290px;
+		padding-bottom:1em;
+		border-bottom:1px dotted #eee;
+		background:url(../images/arrow.jpg) no-repeat right transparent!important;
+		padding:20px;
+		font-size:18px;
+	}
+	
+	.field.field-name-field-front-page-sub-header {
+		background:url(../images/gray_background.jpg) repeat right;
+		border-bottom:1px dotted #888;
+		height:100px;
+		text-align:center;
+	}
+	
+	.quicktabs-tabs.quicktabs-style-sky {
+		padding-left:0!important;
+	}
+	
+	.quicktabs-tabs.quicktabs-style-sky li.first {
+		display:none!important;
+	}
+	
+	.quicktabs-tabs.quicktabs-style-sky li.last {
+		display:none!important;
+	}
+	
+	.flex-video {
+		width:50%;
+		padding-bottom:10px!important;
+		margin-bottom:none!important;
+	}
+	
+	.block.block-nodeblock.block-nodeblock-10.header {
+		width:100%;
+	}
+	
+	.block.block-nodeblock.contextual-links-region.block-nodeblock-10.header {
+		float:left;
+		width:100%;
+	}
+	
+	.menu {
+		width:100%!important;
+	}
+	
+	.block.block-nodeblock.block-nodeblock-10.header {
+		float:left;
+		width:100%;
+	}
+	
+	.block.block-nodeblock.contextual-links-region.block-nodeblock-10.header {
+		float:left;
+		width:100%;
+	}
+	
+	#search-block-form {
+		padding-top:5px;
+		padding-right:30px!important;
+	}
+	
+	#superfish-2 {
+		display:block;
+		position:relative!important;
+	}
+	
+	#superfish-1 {
+		display:none;
+	}
+	
+	#superfish-2 li {
+		width:100%;
+	}
+	
+	#superfish-2 ul {
+		width:100%!important;
+		background:#404055;
+	}
+	
+	#superfish-2 ul li {
+		width:100%!important;
+		background:#999;
+		text-align:center;
+	}
+	
+	.main-nav.active-fixed {
+		position:fixed!important;
+		margin-left:0!important;
+		float:left;
+	}
+	
+	.sf-mobile {
+		background:#333;
+		color:#f1f1f1;
+	}
+	
+	.main-nav {
+		width:100%;
+		position:relative!important;
+	}
+	
+	.block.block-nodeblock.block-nodeblock-10.header {
+		width:100%;
+	}
+	
+	.block.block-nodeblock.contextual-links-region.block-nodeblock-10.header {
+		width:100%;
+	}
+}

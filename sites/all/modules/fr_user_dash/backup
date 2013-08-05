@@ -1,0 +1,1705 @@
+<?php
+
+/***
+*
+*hook_block_info
+*
+**/
+function fr_user_dash_block_info(){
+	// This example comes from node.module.
+	$blocks['my_menu'] = array(
+		'info' => t('Dashboard'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	$blocks['my_tours'] = array(
+		'info' => t('Virtual Tours'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	$blocks['my_events'] = array(
+		'info' => t('Events'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	$blocks['my_reports'] = array(
+		'info' => t('My Incident Reports'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	$blocks['admin'] = array(
+		'info' => t('Dashboard'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+	return $blocks;
+}
+
+
+
+
+
+/***
+*
+* hook_blck_view
+*
+**/
+function fr_user_dash_block_view($delta = ''){
+	global $user;
+
+	$args = array(
+		'uid' => $user->uid,
+		'name' => $user->name,
+		'roles' => $user->roles,
+	);
+
+	switch($delta){
+
+	case'my_menu':
+
+		$block['content'] = drupal_render(fr_user_dash_build_dash());
+
+		break;
+
+	case'my_tours':
+		$dash = new dashboard;
+		$dash->constructDash($args);
+		$load_user = $dash->loadUsers();
+
+		if($load_user == 0){
+			$content = $dash->loadBlockSingle($user->uid, 'fortified_virtual_tours', 'My Virtual Tours');
+		}else{
+			$content = $dash->loadBlockMulti($user->uid, 'fortified_virtual_tours', 'My Virtual Tours');
+		}
+		$build = $content;
+
+		$block['content'] = drupal_render($build);
+
+		break;
+
+	case'my_events':
+		$dash = new dashboard;
+		$dash->constructDash($args);
+		$load_user = $dash->loadUsers();
+		if($load_user == 0){
+			$content = $dash->loadBlockSingle($user->uid, 'fortified_events', 'My Events');
+		}else{
+			$content = $dash->loadBlockMulti($user->uid, 'fortified_events', 'My Events');
+		}
+		$build = $content;
+
+		$block['content'] = drupal_render($build);
+
+		break;
+
+	case'my_reports':
+		$dash = new dashboard;
+		$dash->constructDash($args);
+		$load_user = $dash->loadUsers();
+		if($load_user == 0){
+			$content = $dash->loadBlockSingle($user->uid, 'fortified_incident_reports', 'My Incident Reports');
+		}else{
+			$content = $dash->loadBlockMulti($user->uid, 'fortified_incident_reports', 'My Incident Reports');
+		}
+		$build = $content;
+
+		$block['content'] = drupal_render($build);
+		break;
+		
+		/*case'admin':
+		//This is thr admin dashbored we only display to admins
+		if(in_array('administrator', $user->roles)){
+
+			//dpm($user);
+			$admin = new dashboard;
+			//authentiate the current user
+			$admin->constructDash($args);
+			// load this users customers
+			$load_users = $admin->loadUsers();
+
+			//dpm($admin);
+			$block['content'] = drupal_render($admin->displayUsers());
+		}else{
+			$block['content'] = '';
+			//dpm($admin);
+		}
+
+		break;*/
+
+
+	case'admin':
+		//This is thr admin dashbored we only display to admins
+		if(in_array('administrator', $user->roles)){
+
+		$view = views_embed_view('admin_users_dash', $display_id = 'block');
+		$block['content'] = $view;
+
+		}else{
+			$block['content'] = '';
+		}
+
+		break;
+
+	}
+	//dpm($block);
+	return $block;
+
+}
+
+
+/***
+*
+*Class for building the user and admin dashboards
+*
+**/
+
+class dashboard{
+
+	/*function __construct($args){
+		foreach($args as $key => $argument){
+			$this->$key = $argument;
+		}
+		$user_rolls = $this->roles;
+		if(in_array('administrator', $user_rolls)){
+			$this->auth = 'admin';
+			unset($this->roles);
+			$this->loadUsers();
+			$this->userInfo();
+		}
+	}*/
+
+	/***
+*
+* Constructor functions for admins
+*
+**/
+
+	public function constructDash($args){
+		foreach($args as $key => $argument){
+			$this->$key = $argument;
+		}
+		$user_rolls = $this->roles;
+		if(in_array('administrator', $user_rolls)){
+			$this->auth = 'admin';
+			unset($this->roles);
+		}else{
+			$this->auth = 'user';
+		}
+	}
+
+
+
+	/***
+*
+*Loads the users
+*
+**/
+
+	public function loadUsers(){
+
+		if($this->auth == 'admin'){
+			$this->query = new EntityFieldQuery;
+			$query = $this->query;
+			$query->entityCondition('entity_type', 'user');
+			$this->result = $query->execute();
+			$results = $this->result['user'];
+			$this->usrs = array();
+			foreach($results as $key => $id){
+				//$this->users = $result->ordered_results[$key]['entity_id'];
+				$this->usrs[] = profile2_load_by_user($id->uid, $type_name = NULL);
+			}
+			$this->userInfo();
+			$has_multi = 0;
+		}else{
+			$has_multi = $this->loadProfile();
+		}
+		return $has_multi;
+	}
+
+
+
+
+
+	/***
+*
+* gathers the users info
+*
+**/
+	private function userInfo(){
+
+		$users = $this->usrs;
+		$this->dvrs = array();
+		$output = array();
+		$has_tours = FALSE;
+		$tour_times = FALSE;
+		foreach($users as $customer => $profile){
+			foreach($profile as $key => $fields){
+				foreach($fields->field_cust_service_type['und'] as $type => $value){
+					if($value['value'] == 'cam'){
+						if(!empty($fields->field_cust_virtual_tours['und'][0]['value']) && $fields->field_cust_virtual_tours['und'][0]['value'] == 'yes'){
+							$has_tours = $fields->field_cust_virtual_tours['und'][0]['value'];
+							$tour_times = $this->hasTours($fields->field_cust_name['und'][0]['safe_value'], $fields->field_cust_vt_times);
+						}
+						$this->dvrs[$fields->field_cust_name['und'][0]['safe_value']] = array(
+							'dvr' => $fields->field_cust_dvr_url['und'][0]['value'],
+							'name' => $fields->field_cust_name['und'][0]['safe_value'],
+							'uid' => $fields->uid,
+							'has_tours' => $has_tours,
+							'tour_times' => $tour_times,
+						);
+					}
+				}
+			}
+		}
+	}
+
+
+
+	private function hasTours($name, $fields){
+		$cust = array();
+		if(!empty($name) && !empty($fields)){
+			foreach($fields as $field){
+				$cust[$name] = $fields;
+			}
+			return $cust;
+		}
+	}
+
+
+
+
+
+	/***
+*
+*Loads the profile data for users
+*
+**/
+	private function loadProfile(){
+		$uid  = empty($this->profile_uid) ? $this->uid : $this->profile_uid;
+		$profile_load = profile2_load_by_user($uid, $type_name = NULL);
+		$profile = $profile_load;
+		$multiple = $profile['customer']->field_cust_multiple_cameras;
+		$accounts = $profile['customer']->field_cust_account;
+
+		if(!empty($multiple) && !empty($accounts)){
+			$mult_cameras = $profile['customer']->field_cust_multiple_cameras['und'][0]['value'];
+			if($mult_cameras == 'yes'){
+				foreach($accounts['und'] as $key => $value){
+				//dpm($value);
+					$profiles = profile2_load_by_user($value['target_id'], $type_name = NULL);
+					$this->profile_userss[] = array(
+						'name' => $name = $profiles['customer']->field_cust_name['und'][0]['safe_value'],
+						'dvr' => $dvr = $profiles['customer']->field_cust_dvr_url['und'][0]['safe_value'],
+						'uid' => $profiles['customer']->uid,
+					);
+					foreach($profiles as $keys => $values){
+						$cust_name = $values->field_cust_name['und'][0]['safe_value'];
+						$dvr = $values->field_cust_dvr_url['und'][0]['safe_value'];
+						$this->profile_users[] = array(
+							'uid' => $value['target_id'],
+							'name' => $cust_name,
+							'dvr' => $dvr,
+						);
+					}
+				}
+			}
+			$has_multi = 1;
+		}else{
+			$has_multi = 0;
+		}
+		return $has_multi;
+	}
+
+
+
+
+
+	/***
+*
+* helper function for grouping customers with multi users
+*
+**/
+	private function loadProfileUsers($uid){
+		$this->profile_uid = $uid;
+		$this->loadProfile();
+		if(!empty($this->profile_userss)){
+			$multi_account = $this->profile_userss;
+			return $multi_account;
+		}
+
+	}
+
+
+
+
+
+	/***
+*
+*Base function for users with one dvr.
+*
+**/
+	public function loadBlockSingle($user, $bundle, $content_type){
+
+		if(empty($this->has_multi)){
+			$this->single_user = $user;
+			$this->single_bundle = $bundle;
+			$this->content_type = $content_type;
+
+			$result = $this->singleQuery();
+
+			$folder = array();
+			if(!empty($result)){
+				foreach($result['node'] as $nid => $node){
+					$node_load = node_load($nid);
+					$upload_date = $node_load->field_vt_tour_date['und'][0]['value'];
+					$new_date = date_create($upload_date);
+					$date = $this->formatDates($upload_date);
+					$year = date_format($new_date, 'Y');
+					$folder[$year][$node_load->title]['id'] = $node_load->nid;
+					$folder[$year][$node_load->title]['name'] = $node_load->field_vt_folder_title['und'][0]['value'];
+					$folder[$year][$node_load->title]['date'] = $date;
+				}
+			}
+			// build the dashboared
+			if(!empty($folder)){
+				$organize = $this->fileOrganizer($folder);
+				return $organize;
+			}
+		}
+	}
+
+
+
+
+	/***
+*
+*Base function for users with multi dvrs.
+*
+**/
+	public function loadBlockMulti($user, $bundle, $content_type){
+
+		$multi_user = $this->profile_users;
+		foreach($multi_user as $key => $user){
+			$users[] = $user['uid'];
+		}
+		//$bundles = array('fortified_incident_reports', 'fortified_events', 'fortified_virtual_tours');
+		foreach($users as $key => $user){
+			$indavidual_user = profile2_load_by_user($user, $type_name = NULL);
+			$cust_name = $indavidual_user['customer']->field_cust_name['und'][0]['safe_value'];
+			$this->multi_user = $user;
+			$result = $this->multiQuery($bundle);
+
+			if(!empty($result['node'])){
+				$names = array();
+				foreach($result['node'] as $nid => $node){
+					$node_load = node_load($nid);
+					$upload_date = $node_load->field_vt_tour_date['und'][0]['value'];
+					$new_date = date_create($upload_date);
+					$date = $this->formatDates($new_date);
+					$year = date_format($new_date, 'Y');
+					$folder[$cust_name][$year][$node_load->title]['id'] = $node_load->nid;
+					$folder[$cust_name][$year][$node_load->title]['name'] = $node_load->field_vt_folder_title['und'][0]['value'];
+					$folder[$cust_name][$year][$node_load->title]['date'] = $date;
+					$names[] = $cust_name;
+				}
+				$name = $content_type;
+				// build the dashboared
+				$organize = $this->multiFileRender($folder, $names);
+			}
+		}
+		if(!empty($organize)){
+			return $organize;
+		}
+	}
+	
+	public function formatDates($dates){
+		$tz = new DateTimeZone('America/Phoenix');
+		$date = $dates;
+		$date_offset = $tz->getOffset(new DateTime($date));
+		$new_date = strtotime($date) + $date_offset;
+		$datetime2 = date('Y-m-d H:i:s', $new_date);
+		$correct_dates = $datetime2;
+			return $correct_dates;
+	}
+
+
+
+
+
+	/***
+*
+*run the query to get all the tour info for customers with multi accounts
+*
+**/
+	private function multiQuery($bundles){
+
+		$user = $this->multi_user;
+
+		$query = new EntityFieldQuery;
+		$query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', $bundles)
+		->propertyCondition('status', 1)
+		->fieldCondition('field_vt_customer', 'target_id', $user, '=');
+		$result = $query->execute();
+		if(!empty($result)){
+			return $result;
+		}
+	}
+
+
+
+
+	/***
+*
+*run the query to get all the tour info for customer
+*
+**/
+	private function singleQuery(){
+
+		$bundle = $this->single_bundle;
+		$user = $this->single_user;
+
+		$query = new EntityFieldQuery;
+		$query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', $bundle)
+		->propertyCondition('status', 1)
+		->fieldCondition('field_vt_customer', 'target_id', $user, '=');
+		$result = $query->execute();
+		if(!empty($result['node'])){
+			return $result;
+		}
+	}
+
+
+
+
+
+	/***
+*
+* breaks down the multi files into a more usable array
+*
+**/
+	private function orginizeMultiFiles($folder){
+		$names = array();
+		foreach($folder as $name => $contents){
+			$names[$name] = $name;
+			$build[$name] = $contents;
+		}
+		$buildFiles = $this->multiFileRender($contents, $names);
+		return $buildFiles;
+	}
+
+
+
+
+
+	/***
+*
+* Builds the rows that go in the tables for the tours
+*
+**/
+	private function buildRows($contents){
+
+		$this->headers = array(
+			'File',
+			'<button class="deleteFile">Delete</button>',
+			'Download',
+			'Reference #'
+		);
+		$path = '<a class="file-path" href=../../node/'.$contents['id'].'>'.$contents['name'].'</a>';
+		$class = array('file-list-item '.$contents['id'].'');
+		$style = array('');
+		$id = 'myVtModal';
+		$rows = array(
+			'data' => array(
+				array(
+					'data' => $path,
+					'data-reveal-id' => $id,
+					'style' => $style,
+					'class' => $class,
+				),
+				array(
+					'data' => '<input type="checkbox" class="manage-file" id="'.$contents['id'].'" value="'.$contents['id'].'"/>',
+					'style' => $style,
+					'class' => $class,
+				),
+				array(
+					//'data' => '<a href="../../node/'.$contents['id'].'/pdf">Download</a>',
+					'data' => '<input type="button" class="downloadFile" value="Download"/>
+					<input type="hidden" id="download_'.$contents['id'].'" value="'.$contents['id'].'"/>',
+					'style' => $style,
+					'class' => $class,
+				),
+				array(
+					'data' => $contents['id'],
+					'style' => $style,
+					'class' => $class,
+				),
+			),
+			//'style' => $styles['table'],
+			//'class' => array(''),
+		);
+		return $rows;
+
+	}
+
+
+
+
+
+	/***
+*
+* Render the tours for the users with one dvr
+*
+**/
+	private function fileOrganizer($folder){
+		foreach($folder as $year => $content){
+			foreach($content as $name => $contents){
+
+				$upload_date = $contents['date'];
+				$new_date = date_create($upload_date);
+				$month_date = date_format($new_date, 'm-Y');
+				$daily_date = date_format($new_date, 'm-d-Y');
+				$day = date_format($new_date, 'd');
+				//$folders[$daily_date] = $content[];
+
+				$rows = $this->buildRows($contents);
+				$folders_day[$year][$month_date][$daily_date][] = $rows;
+			}
+		}
+
+		foreach($folders_day as $year => $months){
+			$files['file_wrapper']['folders'][$year] = array(
+				'#type' => 'fieldset',
+				'#title' => t($year),
+				'#attached' => array(
+					'js' => array(
+						'misc/form.js',
+						'misc/collapse.js',
+					),
+				),
+				'#attributes' => array('class' => array('collapsible', '')),
+			);
+			$current_months = array();
+			foreach($months as $weeks => $day){
+
+				$current_months = array_keys($day);
+				$new = strtotime($current_months[0]);
+				//$current_month = date_format($current_month, 'Y-m');
+				$current = (date('m-Y'));
+				$new = date( 'd-Y', $new);
+				$collapsed = $new == $current ? '' : 'collapsed';
+				$files['file_wrapper']['folders'][$year][$weeks] = array(
+					'#type' => 'fieldset',
+					'#title' => t($weeks),
+					'#attached' => array(
+						'js' => array(
+							'misc/form.js',
+							'misc/collapse.js',
+						),
+					),
+					'#attributes' => array('class' => array('collapsible', $collapsed)),
+				);
+				foreach($day as $date => $data){
+
+					$files['file_wrapper']['folders'][$year][$weeks][$date] = array(
+						'#type' => 'fieldset',
+						'#title' => t($date),
+						'#attached' => array(
+							'js' => array(
+								'misc/form.js',
+								'misc/collapse.js',
+							),
+						),
+						'#attributes' => array('class' => array('collapsible', 'collapsed')),
+					);
+					$files['file_wrapper']['folders'][$year][$weeks][$date][] = array(
+						'#theme' => 'table',
+						'#header' => $this->headers,
+						'#rows' => $data,
+						'#weight' => 12,
+						'#empty' => t('No $itemss available with the selected parameters.'),
+					);
+				}
+				/*
+     $files['file_wrapper']['folders'][$year_date][$month][$day] = array(
+        '#theme' => 'table',
+        '#header' => $headers,
+        '#rows' => $rows,
+        '#weight' => 12,
+        '#empty' => t('No $itemss available with the selected parameters.'),
+       );	*/
+			}
+		}
+		return $files;
+	}
+
+
+
+
+
+	/***
+*
+* Render the tours for users who own multiple dvrs
+*
+**/
+	private function multiFileRender($folder, $names){
+
+
+		foreach($folder as $name => $content){
+			foreach($content as $years => $data){
+				foreach($data as $year => $contents){
+					//$year = date_create($contents['date']);
+					//$year = date_format($year, 'Y');
+					$year = $years;
+					$upload_date = $contents['date'];
+					$new_date = date_create($upload_date);
+					$month_date = date_format($new_date, 'm-Y');
+					$daily_date = date_format($new_date, 'm-d-Y');
+					$day = date_format($new_date, 'd');
+					//$folders[$daily_date] = $content[];
+
+					$rows = $this->buildRows($contents);
+					$folders_day[$name][$year][$month_date][$daily_date][] = $rows;
+				}
+			}
+		}
+
+		foreach($folders_day as $name => $years){
+			$files['file_wrapper']['folders'][$name] = array(
+				'#type' => 'fieldset',
+				'#title' => t($name),
+				'#attached' => array(
+					'js' => array(
+						'misc/form.js',
+						'misc/collapse.js',
+					),
+				),
+				'#attributes' => array('class' => array('collapsible', '')),
+			);
+			$current_months = array();
+			foreach($years as $year => $months){
+				$current_months = array_keys($months);
+				$new = strtotime($current_months[0]);
+				//$current_month = date_format($current_month, 'Y-m');
+				$current = (date('m-Y'));
+				$new = date( 'd-Y', $new);
+				$collapsed = $new == $current ? '' : 'collapsed';
+				$files['file_wrapper']['folders'][$name][$year] = array(
+					'#type' => 'fieldset',
+					'#title' => t($year),
+					'#attached' => array(
+						'js' => array(
+							'misc/form.js',
+							'misc/collapse.js',
+						),
+					),
+					'#attributes' => array('class' => array('collapsible', $collapsed)),
+				);
+				foreach($months as $weeks => $days){
+
+					$files['file_wrapper']['folders'][$name][$year][$weeks] = array(
+						'#type' => 'fieldset',
+						'#title' => t($weeks),
+						'#attached' => array(
+							'js' => array(
+								'misc/form.js',
+								'misc/collapse.js',
+							),
+						),
+						'#attributes' => array('class' => array('collapsible', 'collapsed')),
+					);
+					foreach($days as $key => $day){
+						$files['file_wrapper']['folders'][$name][$year][$weeks][$key] = array(
+							'#type' => 'fieldset',
+							'#title' => t($key),
+							'#attached' => array(
+								'js' => array(
+									'misc/form.js',
+									'misc/collapse.js',
+								),
+							),
+							'#attributes' => array('class' => array('collapsible', 'collapsed')),
+						);
+						$files['file_wrapper']['folders'][$name][$year][$weeks][$key][] = array(
+							'#theme' => 'table',
+							'#header' => $this->headers,
+							'#rows' => $day,
+							'#weight' => 12,
+							'#empty' => t('No $itemss available with the selected parameters.'),
+						);
+					}
+				}
+				/*
+     $files['file_wrapper']['folders'][$year_date][$month][$day] = array(
+        '#theme' => 'table',
+        '#header' => $headers,
+        '#rows' => $rows,
+        '#weight' => 12,
+        '#empty' => t('No $itemss available with the selected parameters.'),
+       );	*/
+			}
+		}
+		return $files;
+
+	}
+
+
+
+
+
+	/***
+*
+* Display a list of all users to the admin
+*
+**/
+	public function displayUsers(){
+
+		$output = array();
+		$this->output = array();
+
+		$output['wrapper'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('Customers'),
+			'#attached' => array(
+				'js' => array(
+					'misc/form.js',
+					'misc/collapse.js',
+				),
+			),
+			'#attributes' => array('class' => array('collapsible', '')),
+		);
+
+		foreach($this->dvrs as $key => $value){
+		
+			$output['wrapper']['customer'][$value['uid']] = array(
+				'#type' => 'fieldset',
+				'#title' => t($value['name']),
+				'#attached' => array(
+					'js' => array(
+						'misc/form.js',
+						'misc/collapse.js',
+					),
+				),
+				'#attributes' => array('class' => array('collapsible', 'collapsed')),
+			);
+
+
+
+			$options = array(
+				'attributes' => array(
+					'class' => array('button', 'radius', 'small'),
+				),
+			);
+
+
+			$this->uid = $value['uid'];
+			$this->loadProfile();
+			if(!empty($this->profile_userss)){
+				$profiles = $this->profile_userss;
+				foreach($profiles as $num => $profile){
+
+					unset($output['wrapper']['customer'][$profile['uid']]);
+
+					$name = $profile['name'];
+					
+					$output['wrapper']['customer'][$value['uid']][$name] = array(
+						'#type' => 'fieldset',
+						'#title' => t($name),
+						'#attached' => array(
+							'js' => array(
+								'misc/form.js',
+								'misc/collapse.js',
+							),
+						),
+						'#attributes' => array('class' => array('collapsible', 'collapsed')),
+					);
+					$options_dvr = array(
+						'attributes' => array(
+							'class' => array('button', 'radius', 'small', 'reveal-link'),
+							'data-reveal-id' => array($profile['uid']),
+						),
+					);
+
+					$output['wrapper']['customer'][$value['uid']][$name]['dvr'] = array(
+						'#type' => 'markup',
+						'#markup' => '<a class="button radius small"  href="?customers='.$profile['uid'].'&dvr='.$profile['dvr'].'">Cameras</a>',
+					);
+
+					$output['wrapper']['customer'][$value['uid']][$name]['edit'] = array(
+						'#type' => 'markup',
+						'#markup' => l('Edit Account', 'user/'.$profile['uid'].'/edit', $options),
+						//'#prefix' => '<div class="button radius small">',
+						//'#suffix' => '</div>',
+					);
+					$actions = $this->buildActionLinks($value['uid']);
+
+					foreach($actions as $type => $action){
+						$output['wrapper']['customer'][$value['uid']][$name][$type] = $action;
+					}
+					unset($this->profile_userss);
+				}
+			}else{
+
+				$options_dvr = array(
+					'attributes' => array(
+						'class' => array('button', 'radius', 'small', 'reveal-link'),
+						'data-reveal-id' => array($value['uid']),
+					),
+				);
+
+				$output['wrapper']['customer'][$value['uid']]['dvr'] = array(
+					'#type' => 'markup',
+					'#markup' => '<a class="button radius small"  href="?customers='.$value['uid'].'&dvr='.$value['dvr'].'">Cameras</a>',
+				);
+
+				$output['wrapper']['customer'][$value['uid']]['edit'] = array(
+					'#type' => 'markup',
+					'#markup' => l('Edit Account', 'user/'.$value['uid'].'/edit', $options),
+					//'#prefix' => '<div class="button radius small">',
+					//'#suffix' => '</div>',
+				);
+
+				$actions = $this->buildActionLinks($value['uid']);
+
+				foreach($actions as $type => $action){
+					$output['wrapper']['customer'][$value['uid']][$type] = $action;
+				}
+				if(!empty($value['tour_times'])){
+
+					$table = $this->buildTourTimes($value['tour_times']);
+
+					$output['wrapper']['customer'][$value['uid']]['time'] = array(
+						'#theme' => 'table',
+						'#header' => $table['headers'],
+						'#rows' => $table['rows'],
+						'#weight' => 12,
+						'#empty' => t('No $itemss available with the selected parameters.'),
+					);
+				}
+			}
+		}
+		//unset($output['wrapper']['customer'][$this->uid]);
+		return $output;
+	}
+
+
+
+
+	private function buildTourTimes($values){
+		$rows = array();
+		$headers = array(
+			'day',
+			'time',
+		);
+		foreach($values as $key => $times){
+			foreach($times as $keys => $time){
+				foreach($time as $num => $value){
+					$rows[$key] = array(
+						'data' => array(
+							array(
+								'data' => $value['day'],
+								'style' => array(''),
+								'class' => array(''),
+							),
+							array(
+								'data' => $value['starthours'],
+								'style' => array(''),
+								'class' => array(''),
+							),
+						),
+					);
+				}
+			}
+		}
+		return array('rows' => $rows, 'headers' => $headers);
+	}
+
+
+
+
+	private function buildActionLinks($uid){
+		$this->output['tour']= array(
+			'#type' => 'markup',
+			'#markup' => '<a class="button radius small"  href="../../node/add/fortified-virtual-tours?cust='.$uid.'">Virtual Tour</a>',
+		);
+		$this->output['event']= array(
+			'#type' => 'markup',
+			'#markup' => '<a class="button radius small"  href="../../node/add/fortified-events?cust='.$uid.'">Event</a>',
+		);
+		$this->output['report']= array(
+			'#type' => 'markup',
+			'#markup' => '<a class="button radius small"  href="../../node/add/fortified-incident-reports?cust='.$uid.'">Incident Report</a>',
+		);
+
+		return $this->output;
+
+	}
+
+}// end class
+
+
+
+/**
+ *
+ * @ Hook_page_alter
+ *
+ **/
+class dashPage{
+
+	function __construct(){
+		global $user;
+		$this->user = $user;
+		$this->user_roles = $this->user->roles;
+		$this->user_pro = profile2_load_by_user($this->user->uid, $type_name = NULL);
+		$args = arg();
+		if(!empty($args)){
+			foreach($args as $key => $arg){
+				$this->arg[] = arg($key);
+			}
+		}
+		$this->has_dvr = FALSE;
+		$this->has_alarm = FALSE;
+		$this->requestedCustCam = FALSE;
+		$this->is_authenticated = FALSE;
+		$this->has_account = FALSE;
+	}
+
+
+
+	/**
+	 *
+	 * @ Load the page into an object
+	 *
+	 **/
+	public function loadPage($page){
+		$this->page = $page;
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Load current users profil info
+	 *
+	 **/
+	public function profileInfo(){
+
+		$user_pro = $this->user_pro;
+		for($i = 0; $i<=count($user_pro['customer']->field_cust_service_type['und']) - 1; $i++){
+			$this->service_type[] = $user_pro['customer']->field_cust_service_type['und'][$i]['value'];
+		}
+		$service_type = $this->service_type;
+		foreach($service_type as $key => $type){
+			if($type == 'cam'){
+				$this->dvr_addr = $user_pro['customer']->field_cust_dvr_url['und'][0]['safe_value'];
+				$this->has_dvr = TRUE;
+				$this->dvrModal = $this->buildDvrModal();
+				$this->requested_dvr = FALSE;
+			}
+			if($type == 'alarm'){
+				$this->has_alarm = TRUE;
+				$this->alarmModal = $this->buildAlarmModal();
+			}
+		}
+		if(!empty($this->user_pro)){
+			$this->has_account = TRUE;
+			$this->buildHelpModal();
+		}
+
+	}
+
+
+
+
+
+	/**
+	 *
+	 * @ Build the help Modal
+	 *
+	 **/
+	private function buildHelpModal(){
+		$help = array();
+		$this->help_modal['help_wrapper'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('help-modal-wrapper', 'twelve', 'columns', 'reveal-modal', 'xlarge'),
+				'id' => 'helpModal',
+			),
+		);
+		$this->help_modal['help_wrapper']['close'] = array(
+			'#type' => 'markup',
+			'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div>',
+			'#prefix' => '<div class="close-modal-wrapper">',
+			'#suffix' => '</div>',
+		);
+		$this->help_modal['help_wrapper']['general'] = array(
+			'#type' => 'markup',
+			'#markup' => '<h1 class="header text-center">Help</h1>',
+			'#prefix' => '<div class="general-help-wrapper">',
+			'#suffix' => '</div>',
+		);
+		//Build help sections for each help type
+		if($this->has_alarm == TRUE){
+			$type = 'Alarm';
+			$tid = 1;
+			$this->buildHelpArray($type, $tid);
+		}
+		if($this->has_dvr == TRUE){
+			$type = 'DVR';
+			$tid = 2;
+			$this->buildHelpArray($type, $tid);
+		}
+		if($this->has_account == TRUE){
+			$type = 'Account';
+			$tid = 3;
+			$this->buildHelpArray($type, $tid);
+		}
+	}
+
+
+
+
+	/**
+	 *
+	 * @laod the help taxonomy terms
+	 *
+	 **/
+	private function buildHelpArray($type, $tid){
+
+		$help_list = array();
+		$taxonomy_nodes = $this->loadTaxonomy($tid);
+
+		$class = strtolower($type);
+
+		$this->help_modal['help_wrapper']['wrapper'][$type] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('help-modal-wrapper', 'row', 'mobile-four', 'font-fortified'),
+			),
+		);
+
+		$this->help_modal['help_wrapper']['wrapper'][$type] = array(
+			'#type' => 'fieldset',
+			'#title' => t(''.$type.' Help'),
+			'#attached' => array(
+				'js' => array(
+					'misc/form.js',
+					'misc/collapse.js',
+				),
+			),
+			'#attributes' => array('class' => array('collapsible', 'font-fortified', 'header-black', 'row', 'help-main-wrapper', 'fieldset-white')),
+		);
+
+		$options = array(
+			'#attributes' => array(
+				'class' => array('help-'.$class),
+			),
+		);
+
+		if(!empty($taxonomy_nodes)){
+
+			foreach($taxonomy_nodes as $title => $values){
+				foreach($values as $key => $value){
+					$this->help_modal['help_wrapper']['wrapper'][$type][$value['taxonomy_title']] = array(
+						'#type' => 'fieldset',
+						'#title' => t($value['taxonomy_title']),
+						'#attached' => array(
+							'js' => array(
+								'misc/form.js',
+								'misc/collapse.js',
+							),
+						),
+						'#attributes' => array('class' => array('collapsible', '', 'fieldset-white', 'six', 'columns', 'help-subject-wrapper', 'font-fortified')),
+					);
+
+					$help_list[$value['taxonomy_title']][] = l($value['node_title'], '../node/'.$value['nid'], $options);
+
+				}
+			}
+			foreach($help_list as $category => $rows){
+				$this->help_modal['help_wrapper']['wrapper'][$type][$category][] = array(
+					'#theme' => 'item_list',
+					'#items' => $rows,
+					//'#title' => t('Sign Up Today'),
+					'#type' => 'ul',
+					'#attributes' => array('class' => array('help-'.$class.'', 'twelve', 'columns', 'fieldset-white')),
+					'#container_id' => '',
+					'#prefix' => '<div>',
+					'#suffix' => '</div>',
+				);
+
+			}
+		}
+	}
+
+
+
+
+	/**
+	 *
+	 * @laod the help taxonomy terms
+	 *
+	 **/
+	private function loadTaxonomy($tid){
+		$search_title = array();
+		$taxonomy = taxonomy_get_children($tid, $vid = 0);
+		foreach($taxonomy as $key => $values){
+			$query = new EntityFieldQuery;
+			$query->entityCondition('entity_type', 'node')
+			->entityCondition('bundle', 'help')
+			->propertyCondition('status', 1)
+			->fieldCondition('field_help_search_tags', 'tid', $tid, '=')
+			->fieldCondition('field_help_section', 'tid', $key, '=');
+			$result = $query->execute();
+			if(!empty($result['node'])){
+				foreach($result['node'] as $nid => $info){
+					$load = node_load($nid);
+
+					$search_title[$values->name][] = array(
+						'node_title' => $load->title,
+						'taxonomy_title' => $values->name,
+						'nid' => $nid,
+					);
+				}
+			}
+		}
+
+		return $search_title;
+	}
+
+
+
+	/**
+	 *
+	 * @ Build the dvr Modal
+	 *
+	 **/
+	private function buildDvrModal(){
+
+		$dvr_addr = $this->dvr_addr;
+		$dvrModal = array(
+			'#type' => 'markup',
+			'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div>
+				<iframe seamless width="100%" height="700px" src="http://'.$dvr_addr.'">
+				</iframe>',
+			'#prefix' => '<div id="myDvrModal" class="reveal-modal xlarge">',
+			'#suffix' => '</div>',
+		);
+		return $dvrModal;
+	}
+
+
+
+
+	/**
+	 * @ Load the requested cameras from admin
+	 **/
+	public function requestCameras(){
+		if($this->has_dvr == TRUE){
+			$this->requested_dvr = TRUE;
+		}
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Build the alarm modal
+	 *
+	 **/
+	private function buildAlarmModal(){
+		$alarmModal = array(
+			'#type' => 'markup',
+			'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div>
+				<iframe seamless width="100%" height="700px" src="https://ldecholsenterprises.alarmdealer.com/index.php">
+				</iframe>',
+			'#prefix' => '<div id="myAlarmModal" class="reveal-modal xlarge">',
+			'#suffix' => '</div>',
+		);
+		return $alarmModal;
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Build the camaer modal for admin customer
+	 *
+	 **/
+	public function requestCustCameras($info){
+
+		$roles = $this->user_roles;
+		if(!in_array('anonymous user', $roles)){
+			$uid = $info['customers'];
+			$dvr = $info['dvr'];
+			$this->cust_dvr = array(
+				'#type' => 'markup',
+				'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div>
+					<iframe seamless scroll="yes" width="100%" height="700px" src="http://'.$dvr.'">
+					</iframe>',
+				'#prefix' => '<div id="'.$uid.'" class="reveal-modal xlarge">',
+				'#suffix' => '</div>',
+			);
+			$this->requestedCustCam = TRUE;
+			$this->is_authenticated = TRUE;
+			$this->modal_id = array(
+				'#type' => 'markup',
+				'#markup' => '<input type="hidden" id="custCam" value="'.$uid.'"/>',
+			);
+			$this->page['modal']['id'] = $this->modal_id;
+		}
+
+	}
+
+
+
+	/**
+	 *
+	 * @ Add all needed js files for each function
+	 *
+	 **/
+	public function finishAllModals(){
+		$this->addModalToPage();
+		$this->attatchJsToPage();
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Add all needed js files for each function
+	 *
+	 **/
+	private function attatchJsToPage(){
+		if(!empty($this->has_dvr) && $this->has_dvr == TRUE){
+			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal.js', array('type' => 'file', 'scope' => 'header'));
+		}
+		if(!empty($this->requestedCustCam) && $this->requestedCustCam == TRUE){
+			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal_cust.js', array('type' => 'file', 'scope' => 'footer'));
+
+		}
+		if(!empty($this->requestTour) && $this->requestTour == TRUE){
+			drupal_add_js(drupal_get_path('module', 'fr_user_dash') . '/js/fr_user_dash_files.js', array('weight' => 1));
+		}
+		if(!empty($this->viewNodeAcess) && $this->viewNodeAcess == TRUE){
+			drupal_add_js(drupal_get_path('module', 'fr_upload') .'/fr_upload.js', array('type' => 'file', 'scope' => 'footer'));
+		}
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Add all the modals to the page
+	 *
+	 **/
+	private function addModalToPage(){
+		if(!empty($this->has_alarm) && $this->has_alarm == TRUE){
+			$this->page['modal']['alarm'] = $this->alarmModal;
+		}
+		if(!empty($this->has_dvr) && $this->has_dvr == TRUE && $this->requested_dvr == TRUE){
+			$this->page['modal']['dvr'] = $this->dvrModal;
+		}
+		if(!empty($this->viewNodeAcess) && $this->viewNodeAcess == TRUE){
+			$this->page['modal']['vt'] = $this->node_output;
+		}
+		if(!empty($this->is_authenticated) && $this->is_authenticated == TRUE){
+			$this->page['modal']['cust_dvr'] = $this->cust_dvr;
+		}
+		if(!empty($this->help_modal)){
+			$this->page['modal']['help_modal'] = $this->help_modal;
+		}
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Add all the global js files to the page
+	 *
+	 **/
+	public function globalJsFiles(){
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_download.js', array('type' => 'file', 'scope' => 'footer'));
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Add all the requested js files to the page
+	 *
+	 **/
+	public function loadFileJs($info){
+		$nid = $info['nid'];
+		$this->requestTour = TRUE;
+		//load the users tours
+		$this->loadNode($nid);
+		$get_render = $this->node_output;
+		if($get_render == FALSE) {
+			$this->viewNodeAccess = FALSE;
+		}else{
+			$this->viewNodeAccess = TRUE;
+		}
+	}
+
+
+
+
+	/**
+	 *
+	 * @ Load the requested node
+	 *
+	 **/
+	private function loadNode($nid){
+		$user = $this->user;
+		$node = node_load($nid);
+		$cust_uid = $node->field_vt_customer['und'][0]['target_id'];
+
+		if($user->uid == 1 || $cust_uid == $user->uid){
+			$view_vt = node_view($node, $view_mode = 'full', $langcode = NULL);
+			$this->node_output = array(
+				'#type' => 'markup',
+				'#markup' => '<div id="myVtModal" class="reveal-modal xlarge">
+	  	<div class="close-reveal-modal close-modal">&#215;</div>
+	  	<div class="manage-vt-buttons"><a class="lead button radius small" href="../../node/'.$nid.'/edit">Edit</a>
+	  	<a class="lead button radius small" href="../../node/'.$nid.'/delete">Delete</a></div>
+	  	<div class="vt-tour-revealed">'.drupal_render($view_vt).'</div></div>');
+		}
+	}
+
+
+	public function redirect($get){
+		if(empty($get[2])){
+		if(!empty($get[0]) && $get[0] == 'user'){
+			if(!empty($get[1]) && $get[1] == $this->user->uid){
+			$uid = $this->user->uid;
+			$path = 'user/'.$uid.'/dashboard';
+			$options = array('');
+			$http_response_code = 302;
+				drupal_goto($path, $options, $http_response_code); 
+			}
+		}
+	}
+}
+
+
+
+}// end class
+
+
+
+function fr_user_dash_page_alter(&$page){
+
+	$dash = new dashPage;
+	$dash->loadPage($page);
+
+	$user = $dash->user;
+	$user_pro = $dash->user_pro;
+	if(!empty($dash->arg[1]) && $dash->arg[1] == $dash->user->uid){
+		if($user_pro){
+			$dash->globalJsFiles();
+			$dash->profileInfo();
+		}
+		if(isset($_GET['cameras'])){
+			$dash->requestCameras();
+		}
+
+		if(isset($_GET['customers'])){
+			$dash->requestCustCameras($_GET);
+		}
+		if(isset($_GET['nid'])){
+			$dash->loadFileJs($_GET);
+		}
+
+		if(isset($_GET['download'])){
+			$nid = $_GET['nid'];
+			$dash->requestDownload($nid);
+		}
+		//add all the modals and js files to the page last
+		$dash->finishAllModals();
+		$page = $dash->page;
+	}
+	if($dash->arg[0] == 'user'){
+		$dash->redirect(arg());
+	}
+		return $page;
+}
+
+
+
+
+
+
+
+class getRequest{
+
+	public function loadUser(){
+		global $user;
+		$this->user = $user->uid;
+	}
+
+	public function requestDownload($nid){
+
+		if(!empty($nid)){
+			$node = node_load($nid);
+			if(!empty($node)){
+
+				$this->customer = $node->field_vt_customer['und'][0]['target_id'];
+				if($this->customer == $this->user){
+					$get_files = explode(',', $node->field_vt_tour_files['und'][0]['upload_type']);
+					if(in_array('video', $get_files)){
+						$videos = $node->field_vt_tour_files['und'][0]['video_files'];
+						$get_videos = explode(',', $videos);
+						foreach($get_videos as $key => $video){
+							$link = $this->downloadVideo($video);
+							$this->status[] = $link;
+						}
+						return $link;
+					}
+				}
+			}
+		}
+	}
+
+	private function downloadVideo($video_fid){
+		$load_file = file_load($video_fid);
+		$file_name = $load_file->filename;
+		$stream = file_create_url($load_file->uri);
+		$options = array();
+		return $stream;
+	}
+
+}
+
+
+
+
+function fr_user_dash_menu() {
+	// Ajax Callback. Returns telephone number for current region.
+	$items['fr_user_delete'] = array(
+		'access callback' => TRUE,
+		'page callback' => 'fr_user_dash_delete_callback',
+		'type' => MENU_CALLBACK
+	);
+	$items['fr_user_download'] = array(
+		'access callback' => TRUE,
+		'page callback' => 'fr_user_dash_download_callback',
+		'type' => MENU_CALLBACK
+	);
+
+	return $items;
+}
+
+
+
+
+
+
+function fr_user_dash_download_callback(){
+	$nid = $_POST['nids'];
+	$getRequest = new getRequest;
+	$getRequest->loadUser();
+	$link = $getRequest->requestDownload($nid);
+	if(!empty($getRequest->status)){
+		$status = $getRequest->status;
+		drupal_json_output($getRequest->status);
+		drupal_exit();
+	}
+}
+
+
+
+
+
+
+function fr_user_dash_delete_callback() {
+	$nids = $_POST;
+	$i = 0;
+	if(is_array($nids) && !empty($nids)){
+		foreach($nids['nids'] as $key => $node){
+			if(!empty($node) && $node != 0){
+				$delete = node_delete($node);
+				if(!node_load($node)){
+					$i++;
+				}else{
+					$errors[] = 1;
+				}
+			}
+		}
+	}
+	$return = empty($errors) ? 'Successfully Deleted '.$i.' items.' : 'Failed to delete items!';
+	$output = array('status' => $return);
+
+	drupal_json_output($output);
+
+	//return if this operatio nwas successfull
+	drupal_exit();
+}
+
+
+
+
+
+
+
+/***
+*
+* Genderate the menu
+*
+**/
+function _fr_menu_generate_list ($list_items) {
+
+	$list = array();
+
+	foreach ($list_items as $name => $list_item) {
+		$options = array();
+		$link = $list_item['path'];
+
+		if (!empty($list_item['query'])) {
+			$options['query'] = $list_item['query'];
+		}
+
+		if (!empty($list_item['fragment'])) {
+			$options['fragment'] = $list_item['fragment'];
+		}
+
+		$options['html'] = TRUE;
+		switch($list_item['type']){
+		case'cam':
+			$path = '<a href="'.$link.'" class="user-dash-button" >'.$list_item['title'].'</a>';
+			break;
+		case'alarm':
+			$path = '<a href="'.$link.'" class="user-dash-button" data-reveal='.$list_item['id'].' >'.$list_item['title'].'</a>';
+			break;
+		case'help':
+			$path = '<a href="'.$link.'" class="user-dash-button" data-reveal-id="'.$list_item['id'].'" >'.$list_item['title'].'</a>';
+			break;
+		}
+		if(empty($path)){
+			$path = '<a href="'.$link.'" class="user-dash-button" >'.$list_item['title'].'</a>';
+		}
+
+		$list[] = array(
+			'data' => $path,
+			'class' => $list_item['class'],
+			'data-reveal' => $list_item['id'],
+		);
+	}
+
+
+	return $list;
+}
+
+
+
+
+function fr_user_dash_build_dash(){
+	$dash = new dashPage;
+	$user = $dash->user;
+	$user_pro = $dash->user_pro;
+
+
+	if($user_pro){
+		// load this users profile info
+		$dash->profileInfo();
+		$service_type = $dash->service_type;
+
+		foreach($service_type as $key => $type){
+			if($type == 'cam'){
+				$dvr = array(
+					'type' => 'cam',
+					'title' => t("My Cameras"),
+					'path' => "?cameras=1",
+					'query' => '',
+					'class' => array('button radius small user_cameras reveal-link'),
+					'id' => 'myDvrModal',
+				);
+			}
+			if($type == 'alarm'){
+				$alarm = array(
+					'type' => 'alarm',
+					'title' => t("My Virtual Alarm"),
+					'path' => ''.$_SERVER['REQUEST_URI'].'#',
+					'query' => '',
+					'class' => array('button radius small revealMyAlarmModal'),
+					'id' => 'myAlarmModal',
+				);
+			}
+		}
+
+
+		$menu_items = array();
+		$uid = $dash->user->uid;
+		$menu_items['account'] = array(
+			'type' => 'account',
+			'title' => t("Edit My Account"),
+			'path' => 'edit',
+			'query' => '',
+			'class' => array('button radius small'),
+			'id' => '',
+		);
+
+		$menu_items['help'] = array(
+			'type' => 'help',
+			'title' => t("Help"),
+			'path' => '#',
+			'query' => '',
+			'class' => array('button radius small'),
+			'id' => 'helpModal',
+		);
+
+		if(!empty($dvr)){
+			$menu_items['dvr'] = $dvr;
+		}
+		if(!empty($alarm)){
+			$menu_items['alarm'] = $alarm;
+		}
+		$menu_list = _fr_menu_generate_list($menu_items);
+		$menu = array(
+			'#theme' => 'item_list',
+			'#items' => $menu_list,
+			//'#title' => t('Sign Up Today'),
+			'#type' => 'ul',
+			'#attributes' => array('id' => 'navigation'),
+			'#container_id' => '',
+			'#prefix' => '<section>',
+			'#suffix' => '</section></nav>',
+		);
+
+		return $menu;
+	}
+}
+
+/** Authenticate via Rails/Devise site */
+/*
+function devise_login() {
+   $data = array(
+   'id' => '794f9060-779b-d984-90c0-5159cc580bf3',
+    'pass' => '123456',
+    'utility' => 'event_log',
+    'data' => array(
+    'device_type' => '2',
+    'mac' => '00:23:FB:00:B1:0B',
+    	),
+    );
+
+   //Pull the url out of the drupal settings
+   		$url = 'https://alarmdealer.com/api';
+     $response = drupal_http_request($url, array(
+       'method' => 'POST',
+       'data' => json_encode($data),
+       'max_redirects' => 0,
+       'headers' => array('Content-Type' => 'application/json', 'Accept' => 'application/json'))
+     );
+
+     return json_decode($response->data);
+
+}
+
+
+*/

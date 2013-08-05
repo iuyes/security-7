@@ -1,0 +1,344 @@
+<?php
+
+
+/**
+ *
+ * @ hook_field_info_alter
+ *
+ **/
+function fr_help_field_info_alter(&$info){
+	$info['taxonomy_term_reference']['default_formatter'] = 'fr_help_formatter';
+}
+
+
+
+
+
+/**
+ *
+ * @ hook_field_formatter_info
+ *
+ **/
+function fr_help_field_formatter_info() {
+  return array(
+    'fr_help_formatter' => array(
+      'label' => t('Help Formatter'),
+      'field types' => array('taxonomy_term_reference'),
+    ),
+  );
+}
+
+
+
+/**
+ *
+ * @ Format Help Page
+ *
+ **/
+function fr_help_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, &$items, $display){
+	if(!empty($items)){
+		//$help = new helpPage($items);	
+		//$items = $help->help_modal;
+		//$GLOBALS['help_modal'] = $items;
+		
+	}
+}
+
+
+
+
+
+/**
+ *
+ * @ hook_block_info
+ *
+ **/
+function fr_help_block_info(){
+	$blocks['main_help_block'] = array(
+		'info' => t('Main Help Block'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	return $blocks;
+}
+
+
+
+
+/**
+ *
+ * @ hook_block_view
+ *
+ **/
+function fr_help_block_view($delta = ''){	
+	switch($delta){
+		case'main_help_block':
+			//$items = variable_get('help_subjects_name', '');
+			//$tids = explode(',', $items);
+			//$help = new helpPage($tids);
+			$block['content'] = build_tabs(); //$help->help_modal;
+		break;
+	}
+	return $block;
+}
+
+
+function build_tabs(){
+
+			$items = variable_get('help_subjects_name', '');
+			$tids = explode(',', $items);
+			foreach($tids as $key => $tid){
+				$name = taxonomy_term_load($tid);
+				$help = new helpPage($tid);
+				$tabs[$name->name] = array(
+					'title' => t($name->name),
+					'contents' => array('#markup' => drupal_render($help->help_modal)),
+					'weight' => 1,
+				);
+			}
+
+// Configure the QuickTabs options
+$overrides = array('style' => 'Sky', 'sorted' => TRUE, 'ajax' => TRUE);
+$quicktabs_name = 'dynamic_quicktabs_menu';
+$quicktabs = render(quicktabs_build_quicktabs($quicktabs_name, $overrides, $tabs));
+
+return $quicktabs;
+}
+
+
+class helpPage{
+
+
+	function __construct($tids){
+		$this->tids = $tids;
+		$this->buildHelpBlocks($tids);
+	}
+	
+	
+	private function buildHelpBlocks($tids){
+		$help = array();
+		$this->help_modal['help_wrapper'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('help-page-modal-wrapper', 'six', 'columns'),
+				'id' => 'helpModal',
+			),
+		);
+			$taxonomy = taxonomy_term_load($tids);
+			$type = $taxonomy->name;
+			$this->buildHelpArray($type, $tids);
+		
+	}
+
+
+
+
+	/**
+	 *
+	 * @laod the help taxonomy terms
+	 *
+	 **/
+	private function buildHelpArray($type, $tid){
+
+		$collapsed = 'collapsed';
+		if(isset($_GET['help_type'])){
+			if($type == $_GET['help_type']){
+				$collapsed = '';
+			}
+		}
+		$help_list = array();
+		$taxonomy_nodes = $this->loadTaxonomy($tid);
+		//dpm($taxonomy_nodes);
+		$class = strtolower($type);
+		
+		$this->help_modal['help_wrapper']['wrapper'][$type] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('help-page-modal-wrapper', 'row', 'mobile-four', 'font-fortified'),
+			),
+		);
+
+		$this->help_modal['help_wrapper']['wrapper'][$type] = array(
+			'#type' => 'fieldset',
+			'#title' => t( $type ),
+			'#attached' => array(
+				'js' => array(
+					'misc/form.js',
+					'misc/collapse.js',
+				),
+			),
+			'#attributes' => array('class' => array('collapsible', $collapsed, 'font-fortified', 'twelve', 'columns', 'help-page-main-wrapper', 'fieldset-white')),
+		);
+		$options = array(
+			'#attributes' => array(
+				'class' => array('help-'.$class),
+			),
+			'query' => array(
+				'help_type' => strtolower($type),
+			),
+		);
+
+		if(!empty($taxonomy_nodes)){
+
+			foreach($taxonomy_nodes as $title => $values){
+				foreach($values as $key => $value){
+					$this->help_modal['help_wrapper']['wrapper'][$type][$value['taxonomy_title']] = array(
+						'#type' => 'fieldset',
+						'#title' => t($value['taxonomy_title']),
+						'#attached' => array(
+							'js' => array(
+								'misc/form.js',
+								'misc/collapse.js',
+							),
+						),
+				   '#attributes' => array('class' => array('collapsible', 'collapsed', 'fieldset-white', 'twelve', 'columns', 'help-page-subject-wrapper', 'font-fortified')),
+					);
+
+					$help_list[$value['taxonomy_title']][] = l($value['node_title'], '../node/'.$value['nid'], $options);
+
+				}
+			}
+			foreach($help_list as $category => $rows){
+				$this->help_modal['help_wrapper']['wrapper'][$type][$category][] = array(
+					'#theme' => 'item_list',
+					'#items' => $rows,
+					//'#title' => t('Sign Up Today'),
+					'#type' => 'ul',
+					'#attributes' => array('class' => array('help-'.$class.'', 'twelve', 'columns', 'fieldset-white')),
+					'#container_id' => '',
+					'#prefix' => '<div>',
+					'#suffix' => '</div>',
+				);
+
+			}
+		}
+	}
+
+
+
+
+	/**
+	 *
+	 * @laod the help taxonomy terms
+	 *
+	 **/
+	private function loadTaxonomy($tid){
+		$search_title = array();
+		$taxonomy = taxonomy_get_children($tid, $vid = 0);
+		foreach($taxonomy as $key => $values){
+			$query = new EntityFieldQuery;
+			$query->entityCondition('entity_type', 'node')
+			->entityCondition('bundle', 'help')
+			->propertyCondition('status', 1)
+			->fieldCondition('field_help_search_tags', 'tid', $tid, '=')
+			->fieldCondition('field_help_section', 'tid', $key, '=');
+			$result = $query->execute();
+			if(!empty($result['node'])){
+				foreach($result['node'] as $nid => $info){
+					$load = node_load($nid);
+					//dpm($values->name);
+					$search_title[$values->name][] = array(
+						'node_title' => $load->title,
+						'taxonomy_title' => $values->name,
+						'nid' => $nid,
+					);
+				}
+			}
+		}
+		//dpm($search_title);
+		return $search_title;
+	}
+	
+}
+
+
+
+
+
+
+
+
+function fr_help_permission() {
+  return array(
+    'access fr configs' => array(
+      'title' => t('Access fr configs'),
+      'description' => t('Allows for configs to be set for Fortified.'),
+    ),
+  );
+}
+
+function fr_help_menu() {
+  $items = array();
+
+  $items['admin/config/system/help'] = array(
+    'title' => 'Fortified Help Config',
+    'description' => 'Configure site-wide settings for Fortified',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_fr_help_settings_form'),
+    'access arguments' => array('access fr configs'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'fr_help.admin.inc',
+  );
+  
+  $items['_fr_help_autocomplete'] = array(
+    'page callback' => '_fr_help_autocomplete',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function fr_help_form_submit ($form, &$form_state) {
+	$values = $form_state['values']['help_subjects'];
+	$format_values = explode(',', $values);
+	$tids = array();
+	foreach($format_values as $key => $value){
+ if (preg_match("/.+\((\d+)\)/", $value, $matches)) {
+      $tids[] = $matches[1];
+    }
+  }
+  dpm($tids);
+  $form_state['values']['help_subjects_name'] = implode(',', $tids);
+  dpm($form_state);
+  //return $form_state;
+}
+
+
+function _fr_help_autocomplete($string){
+	$query = new EntityFieldQuery();
+	if (preg_match("/.+\((\d+)\)/", $string, $matches)) {
+			
+      $string = str_replace($matches, '', $string);
+      $string = str_replace(',', '', $string);
+  }
+	$query->entityCondition('entity_type', 'taxonomy_term')
+	->propertyCondition('name', '%'.$string.'%', 'like');
+	$result = $query->execute();
+	$options = array();
+	if (isset($result['taxonomy_term'])){
+		foreach($result['taxonomy_term'] as $tid){
+			$load_tax = taxonomy_term_load($tid->tid);
+			$label = $load_tax->name;
+			//dpm($label);
+			$entity_id = $tid->tid;
+			$string = array('"'.$label.' ('.$entity_id.')"' => $label);
+			$key = "$label ($entity_id)";
+			// Labels containing commas or quotes must be wrapped in quotes.
+			if (strpos($key, ',') !== FALSE || strpos($key, '"') !== FALSE) {
+				$key = '"' . str_replace('"', '""', $key) . '"';
+			}
+			if(!empty($matches)){
+				$options[''.$key.', '.$matches[0].''] = ''.$label.'';	
+			}else{
+				$options[$key] = $label;
+			}
+		}
+	}else{
+		$options[0] = 'No '. $string . ' created';
+	}
+	//dpm($options);
+	drupal_json_output($options);
+ 
+}
+
+

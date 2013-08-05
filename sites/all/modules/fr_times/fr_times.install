@@ -1,0 +1,30 @@
+<?php
+function fr_times_field_schema($field) {
+  switch($field['type']) {
+    case 'fr_times':
+    	$columns = array();
+      // Build out three (3) Media Block Fields for the DataBase
+  
+        $columns['tour_time_day'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['tour_time'] = array(
+        'type' => 'text',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['tour_time_days'] = array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        );
+                        
+      break;
+      }
+  return array(
+  'columns' => $columns,
+  'indexes' => array(),
+  );
+}

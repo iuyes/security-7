@@ -1,0 +1,753 @@
+<?php
+
+//hook_field_info
+function fr_front_page_field_info() {
+	return array(
+		'fr_front_page' => array(
+			'label' => t('Tab Fields'),
+			'description' => t("Custom Fields For Fortified Tabs"),
+			'default_widget' => 'fr_front_page_widget',
+			'default_formatter' => 'fr_front_page_formatter',
+		),
+	);
+}
+
+
+
+//hook_field_validate
+function fr_front_page_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+	foreach ($items as $delta => $item) {
+
+	}
+
+}
+
+// hook_field_is_empty
+function fr_front_page_field_is_empty($item, $field) {
+	$is_empty = empty($item['feature']['highlight']) ? TRUE : FALSE;
+	return $is_empty;
+}
+
+//hook_field_widget_info
+function fr_front_page_field_widget_info() {
+	return array(
+		'fr_front_page_widget' => array(
+			'label' => t('Tab Fields'),
+			'field types' => array('fr_front_page'),
+		),
+	);
+}
+
+
+function fr_front_page_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+	//Default values
+
+	$default_values = _fr_front_page_build_default_values($items, $delta);
+	$process = array('fr_front_page_ignore_parent');
+
+	switch ($instance['widget']['type']) {
+	case 'fr_front_page_widget':
+
+		$widget = $instance['widget'];
+		$settings = $widget['settings'];
+		$field_name = $field['field_name'];
+
+		$element['tab'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'Front Page Tab ' . ($delta + 1),
+			'#process' => $process,
+			'#tree' => TRUE,
+		);
+
+		// Build out three (3) Media Block Fields for this Page
+
+		$media_fieldset = $field_name.'[und]['.$delta.'][feature][media][media_type]';
+
+		$element['tab']['feature'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'Features and Highlights',
+			'#collapsed' => FALSE,
+			'#collapsible' => FALSE,
+			'#tree' => TRUE,
+			'#weight' => '-80',
+			'#states' => array(
+				'visible' => array(
+					//':input[name="'.$media_fieldset.'[obj_'.$i.'_type]"]' => array('value' => 'html'),
+				),
+			),
+		);
+		$element['tab']['feature']['media'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'Media',
+			'#collapsed' => FALSE,
+			'#collapsible' => FALSE,
+			'#tree' => TRUE,
+			'#weight' => '-70',
+		);
+
+		$element['tab']['feature']['highlight'] = array(
+			'#type' => 'textfield',
+			'#title' => ('Feature/Highlight'),
+			'#description' => 'Parent',
+			'#size' => 60,
+			'#weight' => '-75',
+			'#default_value' => $default_values['highlight'],
+			'#maxlength' => 225,
+		);
+
+		$element['tab']['feature']['desc'] = array(
+			'#type' => 'text_format',
+			'#base_type' => 'textarea',
+			'#title' => t('Feature/Highlight Description'),
+			'#rows' => 10,
+			'#default_value' => $default_values['desc'],
+			'#format' => 'full_html',
+			'#weight' => -74,
+		);
+
+		$element['tab']['feature']['media']['media_type'] = array(
+			//'#name' => 'obj_'.$i.'_type',
+			'#type' => 'select',
+			'#title' => t('Media Type:'),
+			'#weight' => '-69',
+			'#default_value' => $default_values['media_type'],
+			'#options' => array(
+				'none' => '- Select One -',
+				'feature' => 'Highlight/Feature',
+				'map' => 'Map',
+				'image'  => 'Image',
+				'video' => 'Video',
+			),
+		);
+
+		$element['tab']['feature']['media']['image'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'Image',
+			'#collapsed' => FALSE,
+			'#collapsible' => FALSE,
+			'#tree' => TRUE,
+			'#weight' => '-68',
+			'#states' => array(
+				'visible' => array(
+					':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+				),
+			),
+		);
+
+		for($i=1; $i<4; $i++){
+
+			switch($i){
+
+			case '1':
+
+				$element['tab']['feature']['media']['image']['image_'.$i.''] = array(
+					'#type' => 'fieldset',
+					'#title' => 'Featured Image',
+					'#collapsed' => TRUE,
+					'#collapsible' => TRUE,
+					'#tree' => TRUE,
+					'#weight' => '-70',
+					'#states' => array(
+						'visible' => array(
+							':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+						),
+					),
+				);
+
+				break;
+
+			case '2':
+			case '3':
+
+				$element['tab']['feature']['media']['image']['image_'.$i.''] = array(
+					'#type' => 'fieldset',
+					'#title' => 'Image',
+					'#collapsed' => TRUE,
+					'#collapsible' => TRUE,
+					'#tree' => TRUE,
+					'#weight' => '-68',
+					'#states' => array(
+						'visible' => array(
+							':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+						),
+					),
+				);
+
+				break;
+			}
+
+			$element['tab']['feature']['media']['image']['image_'.$i.'']['img_'.$i] = array(
+				'#type' => 'managed_file',
+				'#title' => t('Upload An Image'),
+				'#weight' => '-67',
+				'#description' => t('File size needs to be 360px (Height) X 270px (Width). Allowed extensions: gif png jpg jpeg'),
+				'#default_value' => $default_values['img_'.$i],
+				'#upload_location' => 'public://',
+				'#upload_validators' => array(
+					'file_validate_extensions' => array('gif png jpg jpeg bmp'),
+					//Pass the maximum file size in bytes
+					//'file_validate_size' => array(MAX_FILE_SIZE*1024*1024),
+				),
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+
+
+			$element['tab']['feature']['media']['image']['image_'.$i.'']['img_'.$i.'_alt'] = array(
+				'#type' => 'textfield',
+				'#title' => ('Image Alt Tag'),
+				'#description' => '',
+				'#size' => 60,
+				'#weight' => '-100',
+				'#default_value' => $default_values['img_'.$i.'_alt'],
+				'#maxlength' => 225,
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+
+			$element['tab']['feature']['media']['image']['image_'.$i.'']['img_'.$i.'_link'] = array(
+				'#type' => 'textfield',
+				'#title' => ('Image Link'),
+				'#description' => '',
+				'#size' => 60,
+				'#weight' => '-68',
+				'#default_value' => $default_values['img_'.$i.'_link'],
+				'#maxlength' => 225,
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+
+			$element['tab']['feature']['media']['image']['image_'.$i.'']['img_'.$i.'_link_new_window'] = array(
+				'#type' => 'checkbox',
+				'#title' => t('Open in new window?'),
+				'#weight' => '-68',
+				'#default_value' => $default_values['img_'.$i.'_link_new_window'],
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+			$element['tab']['feature']['media']['image']['image_'.$i.'']['img_'.$i.'_cap'] = array(
+				'#type' => 'textfield',
+				'#title' => ('Caption'),
+				'#description' => '',
+				'#size' => 60,
+				'#weight' => '-68',
+				'#default_value' => $default_values['img_'.$i.'_cap'],
+				'#maxlength' => 225,
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+		}
+
+		$element['tab']['feature']['media']['map'] = array(
+			'#type' => 'textfield',
+			'#title' => ('Select A Map'),
+			'#size' => '60',
+			'#description' => t('Select a map that has been uploaded to the "map" content type'),
+			'#weight' => '-68',
+			'#default_value' => $default_values['map'],
+			'#states' => array(
+				'visible' => array(
+					':input[name="'.$media_fieldset.'"]' => array('value' => 'map'),
+				),
+			),
+			'#autocomplete_path' => '_fr_front_page_map_autocomplete',
+		);
+
+
+		$element['tab']['feature']['media']['video'] = array(
+			'#type' => 'textfield',
+			'#title' => ('Select A Video'),
+			'#size' => '60',
+			'#description' => t('Select a videos that has been uploaded to the "video" content type'),
+			'#weight' => '-68',
+			'#default_value' => $default_values['video'],
+			'#states' => array(
+				'visible' => array(
+					':input[name="'.$media_fieldset.'"]' => array('value' => 'video'),
+				),
+			),
+			'#autocomplete_path' => '_fr_front_page_video_autocomplete',
+		);
+
+		break;
+	}
+	return $element;
+}
+
+
+function _fr_front_page_build_default_values($items, $delta) {
+	$default_values = array();
+	if (empty($items)) {
+		return NULL;
+	}else{
+		$empty_field = array_key_exists($delta, $items) ? FALSE : TRUE;
+		$values = !$empty_field ? $items[$delta] : $items[0];
+
+		foreach ($values as $item => $value) {
+			$default_values[$item] = (!empty($value) && !$empty_field) ? $value : NULL;
+		}
+	}
+
+	return $default_values;
+}
+
+// Function to help save text_format format to database
+
+/**
+ * Implements hook_field_presave().
+ */
+function fr_front_page_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+	foreach ($items as $delta => $value) {
+		/*dpm($value);
+	for($i=1; $i<=3; $i++) {
+    	if(!empty($value['media_'.$i.'']['image_'.$i.'']['obj_'.$i.'_img'])){
+  		$image = $value['media_'.$i.'']['image_'.$i.'']['obj_'.$i.'_img'];
+	  	// Load the file via file.fid.
+		$file = file_load($image);
+		// Change status to permanent.
+		$file->status = FILE_STATUS_PERMANENT;
+		// Save.
+		file_save($file);
+		// Record that the module (in this example, user module) is using the file.
+		file_usage_add($file, 'fr_front_page', 'field', $entity->nid);
+		}
+	 }*/
+		_fr_front_page_process($items[$delta], $delta, $field, $entity);
+
+	}
+}
+
+/**
+ * Prepares the item description and format for storage.
+ */
+function _fr_front_page_process(&$item, $delta = 0, $field, $entity) {
+	$item = _fr_front_page_flatten_values ($item);
+}
+
+function _fr_front_page_flatten_values ($item) {
+	// Break out the Body field item
+	$item['desc_format'] = $item['feature']['desc']['format'];
+	$item['desc'] = $item['feature']['desc']['value'] ;
+
+
+	// Break out the field items
+
+	$media = $item['feature']['media'];
+	$item['highlight'] = $item['feature']['highlight'];
+	if(empty($media['map'])) {
+		$media['map'] = '0';
+	}
+	if(empty($media['video'])) {
+		$media['video'] = '0';
+	}else{
+		$item['video'] = $media['video'];
+	}
+
+	for($i=1; $i<4; $i++){
+		// Break out the Image field items
+		$image = $media['image']['image_'.$i];
+		foreach ($image as $item_name => $value) {
+			$item[$item_name] = $value;
+		}
+		unset($media['image']['image_'.$i]);
+	}
+	// Break out the Remaining field items
+	foreach ($media as $item_name => $value) {
+		$item[$item_name] = $value;
+	}
+	unset($item['media']);
+	unset($item['feature']);
+	//dpm($item);
+
+	return $item;
+}
+
+// hook_field_formatter_info()
+function fr_front_page_field_formatter_info() {
+	return array(
+		'fr_front_page_formatter' => array(
+			'label' => t('Fortified Formatter'),
+			'field types' => array('fr_front_page'),
+		),
+	);
+}
+
+//hook_field_formatter_view()
+function fr_front_page_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+
+	$element = array();
+	switch ($display['type']) {
+	case 'fr_front_page_formatter':
+
+
+		//Pager Variables
+		$object = array();
+		$head = array();
+
+		$head['tab_header'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('tab_head_wrapper'),
+			),
+		);
+
+		$head['tab_header']['header'] = array(
+			'#type' => 'markup',
+			'#markup' => $entity->title,
+			'#prefix' => '<h1 class="tab_sub_header">',
+			'#suffix' => '</h1>',
+		);
+		$head = drupal_render($head);
+
+
+		foreach($items as $delta => $item) {
+
+
+
+			foreach($item as $key => $value) {
+				$field = $key;
+				$url = $delta + 1;
+				$escape = str_replace(' / ', ' ', $items[$delta]['highlight']);
+				$escape = str_replace('/', ' ', $escape);
+				$clean_url = ''.strtolower(str_replace(' ', '-', $escape)).'';
+				if(!empty($entity->field_fr_main_page_link['und'][0]['target_id'])) {
+					$main_page = $entity->field_fr_main_page_link['und'][0]['target_id'];
+				}else {
+					$main_page = 35;
+				}
+
+				switch($field) {
+				case 'highlight':
+
+					$object['highlight'] = array(
+						'#type' => 'markup',
+						'#markup' => $item['highlight'],
+						'#prefix' => '<div class="tab_highlight">',
+						'#suffix' => '</div>',
+					);
+
+					break;
+
+				case 'img_1':
+				case 'img_2':
+				case 'img_3':
+
+					if($field == 'img_1') {$i = 1; }
+					if($field == 'img_2') {$i = 2; }
+					if($field == 'img_3') {$i = 3; }
+
+					if(!empty($item[$field])){ // this is needed so it doesn't throw an error when no image is being used.
+					
+					$object['desc']['img_'.$i] = array(
+						'#type' => 'container',
+						'#attributes' => array(
+							'class' => array('tabs-img-wrapper', 'four', 'columns', 'mobile-four'),
+						),
+					);
+					
+						$file_object = file_load($item[$field]);
+						$img_uri = $file_object->uri;
+						$variables = array(
+							'path' => image_style_url('large', $img_uri),
+							'alt' => $item['img_'.$i.'_alt'],
+						);
+						$img =  theme('image', $variables);
+						$url = file_create_url($img_uri);
+						//print l($img, $url, array('attributes' => array('class' => array('fancybox-img')), 'html' => true));
+						//check to see if they would like this image opened in a new tab / window
+						$img_new_window = $item['img_'.$i.'_link_new_window'] ? '_blank' : '_self';
+
+						if($item['img_'.$i.'_link']){
+
+							$object['desc']['img_'.$i]['image_'.$i] = array(
+								'#theme' => 'link',
+								'#text' => $img,
+								'#path' => $item['img_'.$i.'_link'],
+								'#options' => array(
+									'attributes' => array('target' => $img_new_window, 'class' => array('tab_desc_img row')),
+									'html' => TRUE,
+								),
+							);
+						}else{
+							$object['desc']['img_'.$i]['image_'.$i] = array(
+								'#type' => 'markup',
+								'#markup' => $img,
+								'#prefix' => '<div class="tab_desc_img row">',
+								'#suffix' => '</div>',
+							);
+						}
+						$object['desc']['img_'.$i]['image_'.$i]['img_'.$i.'_cap'] = array(
+							'#type' => 'markup',
+							'#markup' => $item['img_'.$i.'_cap'],
+							'#prefix' => '<div class="tab_img_cap">',
+							'#suffix' => '</div>',
+						);
+
+					}
+
+					break;
+
+				case 'desc':
+
+					$object['desc'] = array(
+						'#type' => 'container',
+						'#attributes' => array(
+							'class' => array('desc_wrapper', 'clearfix'),
+						),
+					);
+					
+					$object['desc']['head'] = array(
+						'#type' => 'markup',
+						'#markup' => $item['highlight'],
+						'#prefix' => '<div class="tab_desc_head">',
+						'#suffix' => '</div>',
+					);
+					
+					$object['desc']['description'] = array(
+						'#type' => 'markup',
+						'#markup' => $item['desc'],
+						'#prefix' => '<div class="tab_desc">',
+						'#suffix' => '</div>',
+					);
+					$object['desc']['learn_more'] = array(
+						'#type' => 'markup',
+						'#markup' => '<div class="learn-more"><a class="button radius medium" href="node/'.$main_page.'/'.$clean_url.'">Learn More</a></div>',
+						'#prefix' => '<div class="learn-more-wrapper three columns">',
+						'#suffix' => '</div>',
+					);
+
+					break;
+
+				case 'video':
+					if(!empty($item['video'])){
+						$object['desc']['video'] = array(
+							'#type' => 'container',
+							'#attributes' => array(
+								'class' => array('video_wrapper', 'mobile-four', 'clearfix'),
+							),
+						);
+						$object['desc']['video']['obj_video'] = array(
+							'#type' => 'markup',
+							'#markup' => _get_video($item['video']),
+							'#prefix' => '<div class="flex-video-overlay"><div class="obj_video mobile-four flex-video">',
+							'#suffix' => '</div></div>',
+						);
+					}
+					break;
+
+				case 'map':
+					if(!empty($item['map'])){
+					$object['desc']['map'] = array(
+						'#type' => 'container',
+						'#attributes' => array(
+							'class' => array('tab_map_wrapper', 'clearfix'),
+						),
+					);
+					$object['desc']['map']['obj_map'] = array(
+						'#type' => 'markup',
+						'#markup' => _get_map($item['map']),
+						'#prefix' => '<div class="tab_map">',
+						'#suffix' => '</div>',
+					);
+					}
+					break;
+				}
+			}
+
+			$element[] = $object;
+		}
+
+		array_push($element, $head);
+
+		return $element;
+
+	}
+
+}
+
+
+
+
+// Hook_menu() for autocomplete fields
+function fr_front_page_menu() {
+	$items['_fr_front_page_map_autocomplete'] = array(
+		'page callback' => '_fr_front_page_map_autocomplete',
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
+	$items['_fr_front_page_video_autocomplete'] = array(
+		'page callback' => '_fr_front_page_video_autocomplete',
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+
+//autocomplete function for video field
+function _fr_front_page_video_autocomplete($string) {
+	$query = new EntityFieldQuery();
+	$query->entityCondition('entity_type', 'node')
+	->entityCondition('bundle', 'video')
+	->propertyCondition('title', '%'.$string.'%', 'like');
+	$result = $query->execute();
+	$options = array();
+	if (isset($result['node'])) {
+		$nids = array_keys($result['node']);
+		$nodes =  entity_load('node', $nids);
+		foreach($nodes as $nid => $node){
+			$label = $node->title;
+			$entity_id = $node->nid;
+			$string = array('"'.$label.' ('.$entity_id.')"' => $label);
+			$key = "$label ($entity_id)";
+			// Labels containing commas or quotes must be wrapped in quotes.
+			if (strpos($key, ',') !== FALSE || strpos($key, '"') !== FALSE) {
+				$key = '"' . str_replace('"', '""', $key) . '"';
+			}
+			$options = array($key => $label);
+		}
+	}else{
+		$options[0] = 'No '. $string . ' created';
+	}
+	drupal_json_output($options);
+}
+
+
+// autocomplete funciton for map field
+function _fr_front_page_map_autocomplete($string) {
+	$query = new EntityFieldQuery();
+	$query->entityCondition('entity_type', 'node')
+	->entityCondition('bundle', 'map')
+	->propertyCondition('title', '%'.$string.'%', 'like');
+	$result = $query->execute();
+	$options = array();
+	if (isset($result['node'])) {
+		$nids = array_keys($result['node']);
+		$nodes =  entity_load('node', $nids);
+		foreach($nodes as $nid => $node){
+			$label = $node->title;
+			$entity_id = $node->nid;
+			$string = array('"'.$label.' ('.$entity_id.')"' => $label);
+			$key = "$label ($entity_id)";
+			// Labels containing commas or quotes must be wrapped in quotes.
+			if (strpos($key, ',') !== FALSE || strpos($key, '"') !== FALSE) {
+				$key = '"' . str_replace('"', '""', $key) . '"';
+			}
+			$options = array($key => $label);
+		}
+	}else{
+		$options[0] = 'No '. $string . ' created';
+	}
+	drupal_json_output($options);
+}
+
+
+
+
+function fr_front_page_ignore_parent(&$form, &$form_state, $complete) {
+	array_pop($form['#parents']);
+	return $form;
+}
+
+function _get_video($vid){
+	if(!empty($vid)) {
+		// Take "label (entity id)', match the id from parenthesis.
+		if (preg_match("/.+\((\d+)\)/", $vid, $matches)) {
+			$vid = $matches[1];
+		}
+		//Load the node from reference ID $vid
+		$node = node_load($vid);
+		//Load values from field field_vid_video_embed
+		$vid_video = field_get_items('node', $node, 'field_video', $node->language);
+		//Theme out video using video_embed_field_embed_code
+		$video = theme('video_embed_field_embed_code', array('url' => $vid_video[0]['video_url'], 'style' => 'normal'));
+		//return the video
+		return $video;
+	}
+}
+
+
+function _get_map($map_id){
+	if(!empty($map_id)) {
+		// Take "label (entity id)', match the id from parenthesis.
+		if (preg_match("/.+\((\d+)\)/", $map_id, $matches)) {
+			$map_id = $matches[1];
+		}
+		//Load the node from reference ID $map_id
+		$node = node_load($map_id);
+		//Load values from field field_maps_embedded_map
+		$map = field_get_items('node', $node, 'field_maps_embedded_map', $node->language);
+
+		//return the map
+		return $map[0]['safe_value'];
+	}
+}
+
+function fr_front_page_node_insert($node){
+	$positions = array();
+	switch($node->type){
+	case 'front_page':
+		$pages = ($node->field_front_page_tabs[$node->language]) ? $node->field_front_page_tabs[$node->language] : NULL ;
+		if(!empty($pages)){
+			foreach($pages as $page) {
+				for($i = 1; $i <= 3; $i++){
+					if(!empty($page['img_'.$i.''])) {
+						$image = $page['img_'.$i.''];
+						// Load the file via file.fid.
+						$file = file_load($image);
+						// Change status to permanent.
+						$file->status = FILE_STATUS_PERMANENT;
+						// Save.
+						file_save($file);
+						// Record that the module (in this example, user module) is using the file.
+						file_usage_add($file, 'fr_front_page', 'field', $node->nid);
+					}
+				}
+			}
+			break;
+		}
+	}
+}
+
+function fr_front_page_node_submit($node, $form, &$form_state){
+	if($node->nid){
+		$positions = array();
+		switch($node->type){
+		case 'front_page':
+			$pages = ($node->field_front_page_tabs[$node->language]) ? $node->field_front_page_tabs[$node->language] : NULL ;
+			if(!empty($pages)){
+				for($i=1; $i<4; $i++){
+					foreach($pages as $page) {
+						if(!empty($page['feature']['media']['image']['image_'.$i]['img_'.$i])) {
+							$image = $page['feature']['media']['image']['image_'.$i]['img_'.$i];
+							// Load the file via file.fid.
+							$file = file_load($image);
+							// Change status to permanent.
+							$file->status = FILE_STATUS_PERMANENT;
+							// Save.
+							file_save($file);
+							// Record that the module (in this example, user module) is using the file.
+							file_usage_add($file, 'fr_front_page', 'field', $node->nid);
+						}
+					}
+				}
+			}
+			break;
+		}
+	}
+}

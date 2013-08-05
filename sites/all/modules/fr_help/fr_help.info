@@ -1,0 +1,4 @@
+name = Fortified Help Page
+description = This Module Build The Fortified Help Page.
+package = Fortified
+core = 7.x 

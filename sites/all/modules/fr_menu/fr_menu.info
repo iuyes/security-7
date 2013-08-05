@@ -1,0 +1,5 @@
+name = Fortified Menu	
+description = Fortified Main Menu
+package = Fortified
+core = 7.x 
+;scripts[] = fr_menu.js

@@ -1,0 +1,4 @@
+name = Front Page Tab Formatter
+description = This Module Formatts the image fields into a view.
+package = Fortified
+core = 7.x 

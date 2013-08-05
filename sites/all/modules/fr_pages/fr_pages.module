@@ -1,0 +1,797 @@
+<?php
+
+//hook_field_info
+function fr_pages_field_info() {
+	return array(
+		'fr_pages' => array(
+			'label' => t('Main Page Fields'),
+			'page_description' => t("Custom Fields For Fortified highlights"),
+			'default_widget' => 'fr_pages_widget',
+			'default_formatter' => 'fr_pages_formatter',
+		),
+	);
+}
+
+
+//hook_field_validate
+function fr_pages_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+	foreach ($items as $delta => $item) {
+
+	}
+
+}
+
+// hook_field_is_empty
+function fr_pages_field_is_empty($item, $field) {
+	$is_empty = empty($item['feature']['page_highlight']) ? TRUE : FALSE;
+	return $is_empty;
+}
+
+//hook_field_widget_info
+function fr_pages_field_widget_info() {
+	return array(
+		'fr_pages_widget' => array(
+			'label' => t('highlight Fields'),
+			'field types' => array('fr_pages'),
+		),
+	);
+}
+
+
+function fr_pages_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+	//Default values
+	$default_values = _fr_pages_build_default_values($items, $delta);
+	$process = array('fr_pages_ignore_parent');
+	drupal_add_library('system', 'drupal.collapse');
+	switch ($instance['widget']['type']) {
+	case 'fr_pages_widget':
+
+		$widget = $instance['widget'];
+		$settings = $widget['settings'];
+		$field_name = $field['field_name'];
+
+		$element['highlight'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'Main Page Highlight ' . ($delta + 1),
+			'#process' => $process,
+			'#tree' => TRUE,
+		);
+
+		// Build out three (3) Media Block Fields for this Page
+
+		$media_fieldset = $field_name.'[und]['.$delta.'][feature][media][page_media_type]';
+
+		$element['highlight']['feature'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'Highlights',
+			'#collapsed' => FALSE,
+			'#collapsible' => FALSE,
+			'#tree' => TRUE,
+			'#weight' => '-80',
+			'#states' => array(
+				'visible' => array(
+					//':input[name="'.$media_fieldset.'[obj_'.$i.'_type]"]' => array('value' => 'html'),
+				),
+			),
+		);
+		$element['highlight']['feature']['media'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'Media',
+			'#collapsed' => FALSE,
+			'#collapsible' => FALSE,
+			'#tree' => TRUE,
+			'#weight' => '-70',
+		);
+
+		$element['highlight']['feature']['page_highlight'] = array(
+			'#type' => 'textfield',
+			'#title' => ('Feature/Highlight'),
+			'#page_description' => 'Parent',
+			'#size' => 60,
+			'#weight' => '-75',
+			'#default_value' => $default_values['page_highlight'],
+			'#maxlength' => 225,
+		);
+		
+		$element['highlight']['feature']['page_meta_t'] = array(
+			'#type' => 'textfield',
+			'#title' => ('Page Meta Title'),
+			'#size' => 60,
+			'#weight' => -75,
+			'#default_value' => $default_values['page_meta_t'],
+			'#maxlength' => 225,
+		);
+		
+		$element['highlight']['feature']['page_meta_d'] = array(
+			'#type' => 'text_format',
+			'#base_type' => 'textarea',
+			'#title' => t('Page Meta Description'),
+			'#rows' => 10,
+			'#default_value' => $default_values['page_meta_d'],
+			'#format' => 'plain_text',
+			'#weight' => -74,
+		);
+
+		$element['highlight']['feature']['page_desc'] = array(
+			'#type' => 'text_format',
+			'#base_type' => 'textarea',
+			'#title' => t('Feature/Highlight page_description'),
+			'#rows' => 10,
+			'#default_value' => $default_values['page_desc'],
+			'#format' => 'full_html',
+			'#weight' => -73,
+		);
+
+		$element['highlight']['feature']['media']['page_media_type'] = array(
+			//'#name' => 'obj_'.$i.'_type',
+			'#type' => 'select',
+			'#title' => t('Media Type:'),
+			'#weight' => '-69',
+			'#default_value' => $default_values['page_media_type'],
+			'#options' => array(
+				'none' => '- Select One -',
+				'image'  => 'Image',
+				'video' => 'Video',
+			),
+		);
+
+		$element['highlight']['feature']['media']['img'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('Image'),
+			'#collapsed' => FALSE,
+			'#collapsible' => FALSE,
+			//'#tree' => TRUE,
+			'#weight' => '-68',
+			'#states' => array(
+				'visible' => array(
+					':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+				),
+			),
+		);
+
+		for($i=1; $i<4; $i++){
+		  
+		  $description = t('');
+		  $title = t('Image '.$i.'');
+
+  		switch($i){
+    		case'3':
+    		  $title = t('Teaser Image');
+    		  $description = t('This Image will show up on the front page menu');
+    		  break;
+  		}
+			$element['highlight']['feature']['media']['img']['image_'.$i.''] = array(
+				'#type' => 'fieldset',
+				'#title' => $title,
+				'#collapsed' => TRUE,
+				'#collapsible' => TRUE,
+				'#tree' => TRUE,
+				'#weight' => '-68',
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+
+
+			$element['highlight']['feature']['media']['img']['image_'.$i.'']['image_'.$i] = array(
+				'#type' => 'managed_file',
+				'#title' => t('Upload An Image'),
+				'#weight' => '-67',
+				'#description' => $description,
+				'#page_description' => t('Allowed extensions: gif png jpg jpeg'),
+				'#default_value' => $default_values['image_'.$i],
+				'#upload_location' => 'public://',
+				'#upload_validators' => array(
+					'file_validate_extensions' => array('gif png jpg jpeg'),
+					//Pass the maximum file size in bytes
+					//'file_validate_size' => array(MAX_FILE_SIZE*1024*1024),
+				),
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+
+
+			$element['highlight']['feature']['media']['img']['image_'.$i.'']['image_'.$i.'_alt'] = array(
+				'#type' => 'textfield',
+				'#title' => ('Image Alt Tag'),
+				'#page_description' => '',
+				'#size' => 60,
+				'#weight' => '-100',
+				'#default_value' => $default_values['image_'.$i.'_alt'],
+				'#maxlength' => 225,
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+
+			$element['highlight']['feature']['media']['img']['image_'.$i.'']['image_'.$i.'_link'] = array(
+				'#type' => 'textfield',
+				'#title' => ('Image Link'),
+				'#page_description' => '',
+				'#size' => 60,
+				'#weight' => '-68',
+				'#default_value' => $default_values['image_'.$i.'_link'],
+				'#maxlength' => 225,
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+
+			$element['highlight']['feature']['media']['img']['image_'.$i.'']['image_'.$i.'_link_new_window'] = array(
+				'#type' => 'checkbox',
+				'#title' => t('Open in new window?'),
+				'#weight' => '-68',
+				'#default_value' => $default_values['image_'.$i.'_link_new_window'],
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+			$element['highlight']['feature']['media']['img']['image_'.$i.'']['image_'.$i.'_cap'] = array(
+				'#type' => 'textfield',
+				'#title' => ('Caption'),
+				'#page_description' => '',
+				'#size' => 60,
+				'#weight' => '-68',
+				'#default_value' => $default_values['image_'.$i.'_cap'],
+				'#maxlength' => 225,
+				'#states' => array(
+					'visible' => array(
+						':input[name="'.$media_fieldset.'"]' => array('value' => 'image'),
+					),
+				),
+			);
+		}
+		$element['highlight']['feature']['media']['page_video'] = array(
+			'#type' => 'textfield',
+			'#title' => ('Select A Video'),
+			'#size' => '60',
+			'#page_description' => t('Select a page_videos that has been uploaded to the "page_video" content type'),
+			'#weight' => '-68',
+			'#default_value' => $default_values['page_video'],
+			'#states' => array(
+				'visible' => array(
+					':input[name="'.$media_fieldset.'"]' => array('value' => 'video'),
+				),
+			),
+			'#autocomplete_path' => '_fr_pages_page_video_autocomplete',
+		);
+
+		break;
+	}
+	return $element;
+}
+
+function _fr_pages_build_default_values($items, $delta) {
+	$default_values = array();
+	if (empty($items)) {
+		return NULL;
+	}else{
+		$empty_field = array_key_exists($delta, $items) ? FALSE : TRUE;
+		$values = !$empty_field ? $items[$delta] : $items[0];
+
+		foreach ($values as $item => $value) {
+			$default_values[$item] = (!empty($value) && !$empty_field) ? $value : NULL;
+		}
+	}
+
+	return $default_values;
+}
+
+// Function to help save text_format format to dahighlightase
+
+/**
+ * Implements hook_field_presave().
+ */
+function fr_pages_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+
+	foreach ($items as $delta => $value) {
+		/*dpm($value);
+	for($i=1; $i<=3; $i++) {
+    	if(!empty($value['media_'.$i.'']['image_'.$i.'']['obj_'.$i.'_image'])){
+  		$image = $value['media_'.$i.'']['image_'.$i.'']['obj_'.$i.'_image'];
+	  	// Load the file via file.fid.
+		$file = file_load($image);
+		// Change status to permanent.
+		$file->status = FILE_STATUS_PERMANENT;
+		// Save.
+		file_save($file);
+		// Record that the module (in this example, user module) is using the file.
+		file_usage_add($file, 'fr_pages', 'field', $entity->nid);
+		}
+	 }*/
+		_fr_pages_process($items[$delta], $delta, $field, $entity);
+
+	}
+}
+
+/**
+ * Prepares the item page_description and format for storage.
+ */
+function _fr_pages_process(&$item, $delta = 0, $field, $entity) {
+	$item = _fr_pages_flatten_values ($item);
+}
+
+function _fr_pages_flatten_values ($item) {
+
+	// Break out the Body field item
+	$item['page_desc_format'] = $item['feature']['page_desc']['format'] ;
+	$item['page_desc'] = $item['feature']['page_desc']['value'];
+	
+	$item['page_meta_d'] = $item['feature']['page_meta_d']['value'];
+	$item['page_meta_d_f'] = $item['feature']['page_meta_d']['format'];
+	
+	$item['page_meta_t'] = $item['feature']['page_meta_t'];
+	// Break out the field items
+
+	$media = $item['feature']['media'];
+	$item['page_highlight'] = $item['feature']['page_highlight'];
+	if(empty($media['obj_page_video'])) {
+		$media['page_video'] = '0';
+
+		for($i=1; $i<4; $i++){
+			// Break out the Image field items
+			$image = $media['img']['image_'.$i];
+			foreach ($image as $item_name => $value) {
+				$item[$item_name] = $value;
+			}
+			unset($media['img']['image_'.$i]);
+		}
+		// Break out the Remaining field items
+		foreach ($media as $item_name => $value) {
+			$item[$item_name] = $value;
+		}
+		unset($item['media']);
+		unset($item['feature']);
+	}
+
+	return $item;
+}
+
+// hook_field_formatter_info()
+function fr_pages_field_formatter_info() {
+	return array(
+		'fr_pages_formatter' => array(
+			'label' => t('Main Pages Format'),
+			'field types' => array('fr_pages'),
+		),
+	);
+}
+
+//hook_field_formatter_view()
+function fr_pages_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+	//dpm($entity);
+	$element = array();
+	$pages = array();
+	$media_objects = array();
+	switch ($display['type']) {
+	case 'fr_pages_formatter':
+		$images = array();
+		$object = array();
+		$menu = array();
+		//$menu[0] = ''.$entity->title.'';
+
+
+		$options = array();
+
+		if(!empty($entity->field_fr_pages_meta_title['und'][0]['value'])){
+			$meta_title = $entity->field_fr_pages_meta_title['und'][0]['value'];
+			variable_set('page_title', $meta_title);
+		}
+		if(!empty($entity->field_fr_pages_meta_desc['und'][0]['value'])){
+			$meta_desc = $entity->field_fr_pages_meta_desc['und'][0]['value'];
+			variable_set('page_desc', $meta_desc);
+		}
+
+		// for menu
+		$for_hook_menu = array();
+		for($b=1; $b<=count($items); $b++) {
+			$c = $b - 1;
+			$escape = strtolower(str_replace(' / ', ' ', $items[$c]['page_highlight']));
+			$escape = strtolower(str_replace('/', ' ', $escape));
+			$clean_url = strtolower(str_replace(' ', '-', $escape));
+			$path = current_path();
+			$path_alias = drupal_lookup_path('alias',$path);
+			$options = array(
+				'query' => array(
+					'page' => $clean_url,
+					'delta' => $b,
+				),
+				'attributes' => array(
+				  'class' => array('small-12', 'columns'),
+				),
+			);
+			$menu[$b] = l($items[$c]['page_highlight'], $path_alias, $options);
+		}
+		$current_page = NULL;
+		$current_page_title = NULL;
+		$home_page = TRUE;
+		if(isset($_GET['page'])){
+			$home_page = FALSE;
+			$current_page = !empty($_GET['delta']) && $_GET['delta'] <= $b ? ($_GET['delta'] - 1) : FALSE;
+			$current_page_title = !empty($_GET['page']) && $_GET['delta'] <= $b ? $_GET['page'] : FALSE;
+			$home_page = $current_page == FALSE || $current_page_title == FALSE ? TRUE : FALSE;
+		}
+		if($home_page != TRUE){
+			foreach($items as $delta => $item) {
+				switch($delta){
+				case $current_page:
+					foreach($item as $keys => $value) {
+
+						switch($keys) {
+
+						case 'page_desc':
+							$object['page_desc'] = array(
+								'#type' => 'container',
+								'#attributes' => array(
+									'class' => array('page_desc_wrapper', 'row', 'clearfix'),
+								),
+								'#sorted' => TRUE,
+							);
+							$object['page_desc']['highlight'] = array(
+								'#type' => 'markup',
+								'#markup' => $item['page_highlight'],
+								'#prefix' => '<h2 class="page_desc_subheader">',
+								'#suffix' => '</h2>',
+							);
+							$object['page_desc']['page_description'] = array(
+								'#type' => 'markup',
+								'#markup' => $item['page_desc'],
+								'#prefix' => '<div class="page_desc large-8 columns">',
+								'#suffix' => '</div>',
+								'#weight' => 100,
+							);
+							break;
+							
+							case'page_meta_t':
+									
+								variable_set('page_title', $item['page_meta_t']);
+							
+							break;
+							
+							case'page_meta_d':
+							
+								variable_set('page_desc', $item['page_meta_d']);
+								
+							break;
+
+						case 'image_1':
+							
+							$object['page_desc']['image'] = array(
+								'#type' => 'container',
+								'#attributes' => array(
+									'class' => array('page_image_wrapper', 'large-4', 'columns', ''),
+								),
+								'#weight' => -100,
+							);
+
+							for($i=1; $i<4; $i++){
+
+								if(!empty($item['image_'.$i])){ // this is needed so it doesn't throw an error when no image is being used.
+									$file_object = file_load($item['image_'.$i]);
+									$image_uri = $file_object->uri;
+									$variables = array(
+										'path' => image_style_url('large', $image_uri),
+										'alt' => $item['image_'.$i.'_alt'],
+									);
+									$image =  theme('image', $variables);
+									$url = file_create_url($image_uri);
+									//print l($image, $url, array('attributes' => array('class' => array('fancybox-image')), 'html' => true));
+
+									//check to see if they would like this image opened in a new highlight / window
+									$image_new_window = $item['image_'.$i.'_link_new_window'] ? '_blank' : '_self';
+
+									if($item['image_'.$i.'_link']){
+
+										$object['page_desc']['image']['image_'.$i] = array(
+											'#theme' => 'link',
+											'#text' => $image,
+											'#path' => $item['image_'.$i.'_link'],
+											'#options' => array(
+												'attributes' => array('target' => $image_new_window, 'class' => array('page_img')),
+												'html' => TRUE,
+											),
+										);
+									}else{
+										$object['page_desc']['image']['image_'.$i] = array(
+											'#type' => 'markup',
+											'#markup' => $image,
+											'#prefix' => '<div class="page_img">',
+											'#suffix' => '</div>',
+										);
+									}
+									$object['page_desc']['image']['image_'.$i]['image_'.$i.'_cap'] = array(
+										'#type' => 'markup',
+										'#markup' => $item['image_'.$i.'_cap'],
+										'#prefix' => '<div class="page_img_cap">',
+										'#suffix' => '</div>',
+									);
+
+								}
+							}
+							break;
+
+						case 'page_video':
+						if(!empty($item['page_video'])){
+							$object['page_desc']['page_video'] = array(
+								'#type' => 'container',
+								'#attributes' => array(
+									'class' => array('page_video_wrapper', 'four', 'columns', 'clearfix'),
+								),
+							);
+							$object['page_desc']['page_video']['obj_page_video'] = array(
+								'#type' => 'markup',
+								'#markup' => _get_page_video($item['page_video']),
+								'#prefix' => '<div class="obj_page_video">',
+								'#suffix' => '</div>',
+							);
+						}
+							break;
+
+						}
+					}
+					break; // end switch
+				}
+			}
+		} else{
+			$object = _build_default_page($entity, $menu);
+		}
+	}
+	$element[0] = array($menu, $object);
+
+	return $element;
+}
+
+
+
+
+
+function _build_default_page($entity, $menu){
+	$object = array();
+	$title = $entity->title;
+	$body = !empty($entity->field_main_page_body['und'][0]['value']) ? $entity->field_main_page_body['und'][0]['value'] : '';
+	$body = !empty($body) ? $body : $entity->body['und'][0]['value'];
+	$featured_image = !empty($entity->field_main_page_featured_image) ? $entity->field_main_page_featured_image : '';
+	if(!empty($featured_image)){
+		$featured_image = $entity->field_main_page_featured_image['und'][0];
+	}else{
+		$featured_image = NULL;
+	}
+
+
+	$object['page_desc'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'class' => array('page_desc_wrapper', 'large-12', 'columns', 'clearfix'),
+		),
+		'#sorted' => TRUE,
+	);
+
+	$object['page_desc']['page_highlight_head'] = array(
+		'#type' => 'container',
+		//'#weight' => -100,
+		'#attributes' => array(
+			'class' => array('welcome-page-menu', 'large-3', 'columns'),
+		),
+	);
+
+	$object['page_desc']['page_highlight_head']['navigation'] = build_menu_items($menu, $title);
+	$object['page_desc']['page_description'] = array(
+		'#type' => 'markup',
+		'#markup' => $body,
+		'#prefix' => '<div class="welcome-page-desc large-8 columns">',
+		'#suffix' => '</div>',
+	);
+	if(!empty($featured_image['fid'])){
+		if(!empty($entity->field_main_page_map_id['und'][0]['safe_value'])){
+			$map_id = $entity->field_main_page_map_id['und'][0]['safe_value'];
+		}else{
+			$map_id = '';
+		}
+		$file_object = file_load($featured_image['fid']);
+		$image_uri = $file_object->uri;
+		$variables = array(
+			'path' => $image_uri,
+			'attributes' => array(
+				//'usemap' => array($map_id),
+			),
+		);
+
+		$image =  theme('image', $variables);
+
+		$object['page_desc']['featured_image'] = array(
+			'#type' => 'markup',
+			'#markup' => $image,
+			'#prefix' => '<div class="welcome-feat-image large-9 columns">',
+			'#suffix' => '</div>',
+		);
+	}
+
+	return $object;
+}
+
+
+
+
+function build_menu_items($menu, $title){
+	$object = array();
+		$object['page_desc']['page_highlight_head']['navigation'] = array(
+		'#theme' => 'item_list',
+		'#items' => $menu,
+		//'#title' => t('Sign Up Today'),
+		'#type' => 'ul',
+		'#attributes' => array('id' => 'page_menu', 'class' => array('page_menu')),
+		'#container_id' => 'scope-list-wrapper',
+	);
+	return $object;
+}
+
+
+
+
+
+
+// Hook_menu() for autocomplete fields
+function fr_pages_menu() {
+	$items['_fr_pages_page_video_autocomplete'] = array(
+		'page callback' => '_fr_pages_page_video_autocomplete',
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+
+//autocomplete function for page_video field
+function _fr_pages_page_video_autocomplete($string) {
+	$query = new EntityFieldQuery();
+	$query->entityCondition('entity_type', 'node')
+	->entityCondition('bundle', 'page_video')
+	->propertyCondition('title', '%'.$string.'%', 'like');
+	$result = $query->execute();
+	$options = array();
+	if (isset($result['node'])) {
+		$nids = array_keys($result['node']);
+		$nodes =  entity_load('node', $nids);
+		foreach($nodes as $nid => $node){
+			$label = $node->title;
+			$entity_id = $node->nid;
+			$string = array('"'.$label.' ('.$entity_id.')"' => $label);
+			$key = "$label ($entity_id)";
+			// Labels containing commas or quotes must be wrapped in quotes.
+			if (strpos($key, ',') !== FALSE || strpos($key, '"') !== FALSE) {
+				$key = '"' . str_replace('"', '""', $key) . '"';
+			}
+			$options = array($key => $label);
+		}
+	}else{
+		$options[0] = 'No '. $string . ' created';
+	}
+	drupal_json_output($options);
+	exit();
+}
+
+
+
+function fr_pages_ignore_parent(&$form, &$form_state, $complete) {
+	array_pop($form['#parents']);
+	return $form;
+}
+
+function _get_page_video($vid){
+	if(!empty($vid)) {
+		// Take "label (entity id)', match the id from parenthesis.
+		if (preg_match("/.+\((\d+)\)/", $vid, $matches)) {
+			$vid = $matches[1];
+		}
+		//Load the node from reference ID $vid
+		$node = node_load($vid);
+		//Load values from field field_vid_page_video_embed
+		$vid_page_video = field_get_items('node', $node, 'field_vid_page_video_embed', $node->language);
+		//Theme out page_video using page_video_embed_field_embed_code
+		$page_video = theme('page_video_embed_field_embed_code', array('url' => $vid_page_video[0]['page_video_url'], 'style' => 'normal'));
+		//return the page_video
+		return $page_video;
+	}
+}
+
+
+function fr_pages_node_insert($node){
+	$positions = array();
+	switch($node->type){
+	case 'main_pages':
+		$pages = ($node->field_main_page_highlights[$node->language]) ? $node->field_main_page_highlights[$node->language] : NULL ;
+		if(!empty($pages)){
+			foreach($pages as $page) {
+				for($i = 1; $i <= 3; $i++){
+					if(!empty($page['image_'.$i.''])) {
+						$image = $page['image_'.$i.''];
+						// Load the file via file.fid.
+						$file = file_load($image);
+						// Change status to permanent.
+						$file->status = FILE_STATUS_PERMANENT;
+						// Save.
+						file_save($file);
+						// Record that the module (in this example, user module) is using the file.
+						file_usage_add($file, 'fr_pages', 'field', $node->nid);
+					}
+				}
+			}
+			break;
+		}
+	}
+}
+
+function fr_pages_node_submit($node, $form, &$form_state){
+	if($node->nid){
+		$positions = array();
+		switch($node->type){
+		case 'main_pages':
+		if(!empty($node->field_main_page_highlights)){
+  		buld_fortified_pages($node->field_main_page_highlights, $node->title);
+		}
+			$pages = ($node->field_main_page_highlights[$node->language]) ? $node->field_main_page_highlights[$node->language] : NULL ;
+			if(!empty($pages)){
+				for($i=1; $i<4; $i++){
+					foreach($pages as $page) {
+						if(!empty($page['feature']['media']['img']['image_'.$i]['image_'.$i])) {
+							$image = $page['feature']['media']['img']['image_'.$i]['image_'.$i];
+							// Load the file via file.fid.
+							$file = file_load($image);
+							// Change status to permanent.
+							$file->status = FILE_STATUS_PERMANENT;
+							// Save.
+							file_save($file);
+							// Record that the module (in this example, user module) is using the file.
+							file_usage_add($file, 'fr_pages', 'field', $node->nid);
+						}
+					}
+				}
+			}
+			break;
+		}
+	}
+}
+
+
+function escape_menu_items($item){
+  $escape = strtolower(str_replace(' / ', ' ', $item));
+  $escape = strtolower(str_replace('/', ' ', $escape));
+  $clean_url = strtolower(str_replace(' ', '-', $escape));
+  return $clean_url;
+}
+
+
+
+function buld_fortified_pages($items, $title){
+  $menu_path = array();
+  foreach($items['und'] as $delta => $item){
+    if(!empty($item['feature']['page_highlight'])){
+      $page = $item['feature']['page_highlight'];
+      $parent = escape_menu_items($title);
+      $sub_page = escape_menu_items($page);
+      $menu_path[] = 'service/'.$parent.'?page='.$sub_page.'&delta='.($delta + 1).'';
+    }
+  }
+  $check_menu = variable_get('fortified_pages');
+  if(!empty($check_menu)){
+    if(!array_key_exists($title, $check_menu)){
+      $add_menu_items = array($title => $menu_path);
+      $merge_items = array_merge($add_menu_items, $check_menu);
+      variable_set('fortified_pages', $merge_items);
+    }
+  }else{
+    variable_set('fortified_pages', array($title => $menu_path));
+  }
+}
+

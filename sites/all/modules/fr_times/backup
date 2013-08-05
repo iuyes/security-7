@@ -1,0 +1,847 @@
+<?php
+
+/**
+ * hook_field_info
+ *
+ */
+function fr_times_field_info() {
+  return array(
+    'fr_times' => array(
+      'label' => t('Tour Times'),
+      'description' => t("Virtual"),
+      'default_widget' => 'fr_times_widget',
+      'default_formatter' => 'fr_times_formatter',
+    ),
+  );
+}
+
+/**
+ * hook_field_validate
+ *
+ */
+function fr_times_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  foreach ($items as $delta => $item) {
+
+  }
+
+}
+
+/**
+ * hook_field_is_empty
+ *
+ */
+function fr_times_field_is_empty($item, $field) {
+  $is_empty = empty($item['tour_times']['everyday']) ? TRUE : FALSE;
+  return $is_empty;
+}
+
+/**
+ * hook_field_widget_info
+ *
+ */
+function fr_times_field_widget_info() {
+  return array(
+    'fr_times_widget' => array(
+      'label' => t('Virtual Tour Times'),
+      'field types' => array('fr_times'),
+    ),
+  );
+}
+
+
+/**
+ * hook_field_widget_form
+ *
+ */
+function fr_times_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  //Default values
+  switch ($instance['widget']['type']) {
+  case 'fr_times_widget':
+    drupal_add_js(drupal_get_path('module', 'fr_times') .'/fr_times.js', array('type' => 'file', 'scope' => 'footer'));
+    drupal_add_css(drupal_get_path('module', 'fr_times') .'/fr_times.css', array('type' => 'file', 'scope' => 'footer'));
+
+    $form['#attached']['css'] = array( drupal_get_path('module', 'fr_times') . '/fr_times.css');
+
+    $field_name = $field['field_name'];
+    $field_data = array(
+      'field_name' => $field_name,
+      'langcode' => $langcode,
+      'delta' => $delta,
+    );
+    $form_state['tour_times']['field_data'] = $field_data;
+
+
+
+    $default_values = _fr_times_build_default_values($items, $delta);
+
+    $amount_of_tours = !empty($default_values['tour_time_day']) ? $default_values['tour_time_day'] : '';
+    $times = !empty($default_values['tour_time']) ? $default_values['tour_time'] : '';
+    $days = !empty($default_values['tour_time_days']) ? $default_values['tour_time_days'] : '';
+    $days = !empty($days) ? explode(',', $days) : '';
+    $times = !empty($times) ? explode(',', $times) : '';
+
+    $element['tour_times'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Tour Times',
+      '#collapsed' => FALSE,
+      '#collapsible' => FALSE,
+      '#tree' => TRUE,
+      '#weight' => -100,
+    );
+    //$days = array('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
+
+    $element['tour_times']['everyday'] = array(
+      '#type' => 'radios',
+      '#title' => t('Will Tour Times Be The Same Each Day?'),
+      '#default_value' => 'yes',
+      '#options' => array(
+        'yes' => 'Yes',
+      ),
+      '#weight' => -100,
+    );
+    $amount = array();
+    for($i=1; $i<=10; $i++){
+      $amount[$i] = $i;
+    }
+    $element['tour_times']['tour_amount'] = array(
+      '#type' => 'select',
+      '#title' => t('Number Of Tours'),
+      '#default_value' => $amount_of_tours,
+      '#options' => $amount,
+      '#weight' => -100,
+      '#states' => array(
+        'visible' => array(
+          ':input[name="profile_customer[field_fr_vt_tour_times][und][0][tour_times][everyday]"]' => array('value' => 'yes'),
+        ),
+      ),
+    );
+    $hours[''] = '';
+    for($t=1; $t<=12; $t++){
+      $hours[$t] = $t;
+    }
+    $element['tour_times']['times'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Times',
+      '#collapsed' => FALSE,
+      '#collapsible' => FALSE,
+      '#tree' => TRUE,
+      '#weight' => 100,
+      '#attributes' => array(
+        'id' => 'tour_times',
+      ),
+    );
+    foreach($amount as $key => $value){
+      $count_times = count($times);
+      if(!empty($times[($key - 1)])){
+        $default_times = $times[($key - 1)];
+        //$replace = str_replace(':', '', $default_times);
+        //$replace = str_replace('am', '', $replace);
+        //$replace = str_replace('pm', '', $replace);
+        //$replace = str_replace(' ', '', $replace);
+        $default_times = strtotime($default_times);
+        $hour = date('g', $default_times);
+        $minute = date('i', $default_times);
+        $type = date('a', $default_times);
+      }else{
+        $hour = '';
+        $minute = '';
+        $type = 'am';
+      }
+
+      $element['tour_times']['times']['wrapper'.$value.''] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Tour '.$value.' Time:',
+        '#collapsed' => FALSE,
+        '#collapsible' => FALSE,
+        '#tree' => TRUE,
+        //'#weight' => 100,
+        '#attributes' => array(
+          'id' => 'tour_times_'.$value.'',
+          'class' => array('tour-times-wrapper', 'tour_times_'.$value.''),
+        ),
+      );
+      if($key == 1){
+        //$hour = 1;
+      }
+      $pe = $hour;
+      //$pe[2] = array($hour, $hour);
+      //dpm($pe);
+
+      $element['tour_times']['times']['wrapper'.$value.'']['time_hour_'.$value.''] = array(
+        '#type' => 'select',
+        '#title' => t(''),
+        '#default_value' => strval($hour),
+        '#options' => $hours,
+        '#prefix' => '<div class="time_'.$value.' tour-times">',
+        '#suffix' => '</div>',
+      );
+      //dpm($element['tour_times']['times']['wrapper'.$value.'']['time_hour_'.$value.'']['#default_value']);
+
+      $element['tour_times']['times']['wrapper'.$value.'']['time_minute_'.$value.''] = array(
+        '#type' => 'select',
+        '#title' => t(''),
+        '#default_value' => $minute,
+        '#options' => array(
+          '' => '',
+          '00' => '00',
+          '30' => '30',
+        ),
+        '#prefix' => '<div class="time_'.$value.' tour-times">',
+        '#suffix' => '</div>',
+      );
+
+      $element['tour_times']['times']['wrapper'.$value.'']['time_type_'.$value.''] = array(
+        '#type' => 'select',
+        '#title' => t(''),
+        '#default_value' => $type,
+        '#options' => array(
+          'am' => 'am',
+          'pm' => 'pm',
+        ),
+        '#prefix' => '<div class="time_'.$value.' tour-times">',
+        '#suffix' => '</div>',
+      );
+    }
+    //dpm($element);
+    /*$days = array('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
+		$i=0;
+		foreach($days as $key => $value){
+			$element['tour_times']['days_'.$i.''] = array(
+				'#type' => 'fieldset',
+				'#title' => t($value),
+				'#collapsed' => FALSE,
+				'#collapsible' => FALSE,
+				'#tree' => TRUE,
+				//'#weight' => 100,
+				'#attributes' => array(
+					'class' => array('tour-times-wrapper', 'day_'.$i.''),
+				),
+				'#states' => array(
+					'visible' => array(
+						':input[name="profile_customer[field_fr_vt_tour_times][und][0][tour_times][everyday]"]' => array('value' => 'no'),
+					),
+				),
+			);
+			$element['tour_times']['days_'.$i.'']['days_time_'.$i.''] = array(
+			'#type' => 'select',
+			'#title' => t('Number Of Tours'),
+			'#options' => $amount,
+			'#weight' => -100,
+			'#attributes' => array(
+				'class' => array('days_select'),
+			),
+			'#states' => array(
+				'visible' => array(
+					':input[name="profile_customer[field_fr_vt_tour_times][und][0][tour_times][everyday]"]' => array('value' => 'no'),
+				),
+			),
+		);
+		$element['tour_times']['days_'.$i.'']['wrapper'] = array(
+				'#type' => 'fieldset',
+				'#title' => t('Tour Time'. ($i + 1).':'),
+				'#collapsed' => FALSE,
+				'#collapsible' => FALSE,
+				'#tree' => TRUE,
+				//'#weight' => 100,
+				'#attributes' => array(
+					'class' => array('tour-times-wrapper', 'day_'.$i.''),
+				),
+			);
+			$element['tour_times']['days_'.$i.'']['wrapper']['time_hour_'.$i.''] = array(
+				'#type' => 'select',
+				'#title' => t(''),
+				'#options' => $hours,
+				'#prefix' => '<div class="time_'.$i.' tour-times">',
+				'#suffix' => '</div>',
+			);
+
+			$element['tour_times']['days_'.$i.'']['wrapper']['time_minute_'.$i.''] = array(
+				'#type' => 'select',
+				'#title' => t(''),
+				'#options' => array(
+					'00' => '00',
+					'30' => 30,
+				),
+				'#prefix' => '<div class="time_'.$i.' tour-times">',
+				'#suffix' => '</div>',
+			);
+
+			$element['tour_times']['days_'.$i.'']['wrapper']['time_type_'.$i.''] = array(
+				'#type' => 'select',
+				'#title' => t(''),
+				'#options' => array(
+					'am' => 'am',
+					'pm' => 'pm',
+				),
+				'#prefix' => '<div class="time_'.$i.' tour-times">',
+				'#suffix' => '</div>',
+			);
+			$i++;
+		}*/
+    break;
+  }
+  return $element;
+
+}
+
+/*function fr_times_callback($form, $form_state) {
+	$fieldname = $form_state['triggering_element']['#name'];
+	//return dpm($form_state);
+	return $form['profile_customer']['field_fr_vt_tour_times']['und'][0]['times'];
+}*/
+
+function fr_times_callback() {
+  $nid = $_POST['quantity'];
+  $status = array('status' => $nid);
+  drupal_json_output($status);
+  drupal_exit();
+}
+
+
+function fr_times_menu(){
+  $items['fr_times_time'] = array(
+    'access callback' => TRUE,
+    'page callback' => 'fr_times_callback',
+    'type' => MENU_CALLBACK
+  );
+  return $items;
+}
+
+
+
+
+/**
+ * Build the default values for our form
+ *
+ */
+function _fr_times_build_default_values($items, $delta) {
+  //dpm($delta);
+  $default_values = array();
+  //dpm($items);
+  if(empty($items[$delta])){ return NULL; }else{
+    foreach($items[$delta] as $field => $value){
+      $default_values[$field] = $value;
+    }
+  }
+
+  return $default_values;
+
+}
+
+
+
+
+
+/**
+ * Implements hook_field_presave().
+ */
+function fr_times_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  foreach ($items as $delta => $value) {
+    _fr_times_process($items[$delta], $delta, $field, $entity);
+
+  }
+}
+
+
+
+
+/**
+ * Prepares the item description and elementat for storage.
+ */
+function _fr_times_process(&$item, $delta = 0, $field, $entity) {
+  $item = _fr_times_flatten_values ($item, $entity);
+}
+
+function _fr_times_flatten_values ($item, $entity) {
+  $everyday = !empty($item['tour_times']['everyday']) ? $item['tour_times']['everyday'] : '';
+  $tour_amount = !empty($item['tour_times']['tour_amount']) ? $item['tour_times']['tour_amount'] : '';
+  $times = array();
+  $days = array();
+  if($everyday == 'yes' && $tour_amount > 0 ){
+    for($i=1; $i<=$tour_amount; $i++){
+      $base = $item['tour_times']['times']['wrapper'.$i.''];
+      $hour = $base['time_hour_'.$i.''];
+      $minute = $base['time_minute_'.$i.''];
+      $type = $base['time_type_'.$i.''];
+      $times[$i] = $hour.':'.$minute.' '.$type.'';
+    }
+
+    $times = implode(',', $times);
+    unset($item);
+    for($d=0; $d<=6; $d++){
+      $days[$d] = $d;
+    }
+    $days = implode(',', $days);
+    $item['tour_time'] = $times;
+    $item['tour_time_days'] = $days;
+    $item['tour_time_day'] = $tour_amount;
+
+  }
+  return $item;
+}
+
+
+/**
+ * Class for bulding the files
+ *
+ */
+
+
+
+
+
+
+
+
+/**
+ * hook_field_elementatter_info()
+ *
+ */
+
+function fr_times_field_formatter_info() {
+  return array(
+    'fr_times_formatter' => array(
+      'label' => t('Virtual Tours Times Formatter'),
+      'field types' => array('fr_times'),
+    ),
+  );
+}
+
+
+
+class times{
+
+  function __construct($date){
+
+  }
+
+  private function checkResults($results){
+    $completed = array();
+    $load = array();
+    foreach($results as $key => $node){
+      $load = node_load($node->nid);
+      $completed[] = $load->title;
+    }
+    variable_set('tours_done_today', $completed);
+    //dpm($times);
+    return $completed;
+  }
+
+  public function tQuery($time, $uid, $items){
+    $tour_times = strtotime(date('g:i a', strtotime($items)));
+    $hour = $tour_times + 3600;
+    $current_time = strtotime(date('g:i a', strtotime('now')));
+    $this->query = new EntityFieldQuery;
+    $this->query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'fortified_virtual_tours')
+    ->propertyCondition('created', $hour, '<=')
+    ->propertyCondition('created', $tour_times, '>=')
+    ->fieldCondition('field_vt_customer', 'target_id', $uid, '=')
+    ->propertyCondition('status', 1);
+    $result = $this->query->execute();
+    if(!empty($result['node'])){
+      $done_times = $this->checkResults($result['node']);
+      return $done_times;
+    }else{
+      variable_set('tours_done_today', '');
+      return '';
+    }
+  }
+  public static function explodeItems($raw_days, $raw_times){
+    $days = explode(',', $raw_days);
+    $times = explode(',', $raw_times);
+    return array('days' => $days, 'times' => $times);
+  }
+
+  public static function loopTimes($times, $uid){
+    $object = array();
+    $time = str_replace(',', ' | ', $times);
+    $object[] = array(
+      '#type' => 'markup',
+      '#markup' => 'Everyday @ '.$time.'',
+      //'#prefix' => '<div class="admin-dash-times one column">',
+      //'#suffix' => '<div>',
+    );
+    $tours = 'fortified_virtual_tours';
+    $object['wrapper']['day']['view'] = array(
+      '#type' => 'markup',
+      '#markup' => '<strong>View:</strong> <a class="leaf" onclick="jQuery.viewTours('.$uid.', 1); return false;" id="class-'.$uid.'" href="#">Virtual Tours</a> |
+				<a class="leaf" onclick="jQuery.viewTours('.$uid.', 2); return false;" class="tours-'.$uid.'" href="#">Events</a> |
+				<a class="leaf" onclick="jQuery.viewTours('.$uid.', 3); return false;" id="class-'.$uid.'" href="#">Incident Reports</a>',
+      '#prefix' => '<div class="admin-cust-data">',
+      '#suffix' => '</div>',
+    );
+
+    return $object;
+  }
+
+}
+
+
+
+
+
+
+/**
+ * hook_field_formatter_view()
+ *
+ */
+function fr_times_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+  $object = array();
+  switch ($display['type']) {
+  case 'fr_times_formatter':
+    if(!empty($display['views_view']->name)){
+      switch($display['views_view']->name){
+      case'tours_today':
+        if(!empty($items)){
+          $object = fr_tours_today_formatter($items, $entity);
+        }
+        break;
+
+      case'admin_users_dash':
+        if(!empty($items)){
+          $uid = $entity->uid;
+          $object = fr_admin_users_dash_formatter($items, $uid);
+        }
+        break;
+      }
+    }elseif(!empty($items)){
+      $object = fr_tours_today_formatter($items, $entity);
+    }
+    break;
+  }
+
+  $element[] = $object;
+  return $element;
+}
+
+
+function fr_tours_today_formatter($items, $entity){
+  $object = array();
+  $cTime = strtotime('now');
+  $tours = new times($cTime);
+  $uid = $entity->uid;
+
+  $today = date('w');
+  foreach($items as $key => $value){
+    $raw_days = $value['tour_time_days'];
+    $raw_times = $value['tour_time'];
+    $explode = $tours::explodeItems($raw_days, $raw_times);
+    $days = $explode['days'];
+    $times = $explode['times'];
+    foreach($days as $num => $day){
+      if($day == $today){
+        $object['wrapper'] = array(
+          '#type' => 'container',
+          '#attributes' => array(
+            'class' => array('tours-today', 'large-12', 'columns'),
+          ),
+        );
+        foreach($times as $keys => $time){
+          $done = $tours->tQuery($cTime, $uid, $time);
+          $times = date('g:i a', strtotime($time));
+          $current = date('g:i a', strtotime('now'));
+          $difference = (strtotime($time) - strtotime('now')) / 3600;
+
+          $hour = 3600;
+          if($difference <= 0){
+            $difference = $difference + 24;
+          }
+          if($difference > -1 && $difference <= 1){
+            $status = 'most-important';
+          }elseif($difference > 1 && $difference <= 2){
+            $status = 'more-important';
+          }elseif($difference >= 2 && $difference <= 3){
+            $status = 'less-important';
+          }else{
+            //dpm($done);
+            if(empty($done)){
+              $status = 'urgent';
+            }else{
+              $status = 'normal';
+            }
+
+          }
+
+          $object['wrapper']['times'][] = array(
+            '#type' => 'markup',
+            '#markup' => '<a class="tour-times-link" href="../../node/add/fortified-virtual-tours?cust='.$entity->uid.'">'.$time.'</a>',
+            '#prefix' => '<div class="tours-times-today large-2 columns '.$status.'">',
+            '#suffix' => '</div>',
+          );
+        }
+      }
+    }
+  }
+  return $object;
+}
+
+
+function fr_admin_users_dash_formatter($items, $uid){
+  $object = array();
+
+  $object['wrapper'] = array(
+    '#type' => 'container',
+    '#attributes' => array(
+      'class' => array('cust-dash-tours', 'large-12', 'columns'),
+    ),
+  );
+
+  foreach($items as $key => $value){
+    $raw_days = $value['tour_time_days'];
+    $raw_times = $value['tour_time'];
+    $explode = times::explodeItems($raw_days, $raw_times);
+    $days = $explode['days'];
+    $times = $explode['times'];
+    $everyday = FALSE;
+    if(count($days) == 7){
+      $object['wrapper']['day'] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'class' => array('cust-dash-day', 'large-12', 'columns'),
+        ),
+      );
+      $object['wrapper']['day']['tour_times'] = times::loopTimes($raw_times, $uid);
+    }else{
+      /*foreach($days as $num => $day){
+			switch($day){
+			case'0':
+				$day = 'Sunday';
+				break;
+			case'1':
+				$day = 'Monday';
+				break;
+			case'2':
+				$day = 'Tuesday';
+				break;
+			case'3':
+				$day = 'Wednesday';
+				break;
+			case'4':
+				$day = 'Thursday';
+				break;
+			case'5':
+				$day = 'Friday';
+				break;
+			case'6':
+				$day = 'Saturday';
+				break;
+			}*/
+      $object['wrapper']['day'] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'class' => array('cust-dash-day', 'row'),
+        ),
+      );
+      $object['wrapper']['day']['tour_times'] = times::loopTimes($times, $uid);
+    }
+  }
+  return $object;
+}
+
+
+
+
+function fr_times_load_customers(){
+  $tours = new ToursToday();
+  $customers = $tours->loadCustomers();
+  $tour_customers = $tours->sortCustomer($customers);
+  $times = $tours->getTImes($tour_customers);
+  $markup = $tours->renderMarkup($times);
+  return $markup;
+}
+
+
+
+
+class ToursToday{
+
+  public $profiles = array();
+
+  public function loadCustomers(){
+    $return = NULL;
+    $sql = "SELECT uid FROM {users}
+            WHERE uid != :args";
+    $result = db_query($sql, array(':args' => 0));
+    if(!empty($result)){
+      foreach ($result as $uid) {
+      //dpm($pid);
+        $load_profiles = profile2_load_by_user($uid->uid, $type_name = NULL);
+        if(!empty($load_profiles)){
+          $profiles[$uid->uid] = $load_profiles;
+        }
+      }
+      $return = $profiles;
+    }
+    //dpm($return);
+    return $return;
+  }
+  
+  public function sortCustomer($profiles){
+    if(!empty($profiles)){
+      foreach($profiles as $key => $profile){
+        //dpm($profile);
+        if(!empty($profile['customer']->field_cust_virtual_tours['und'][0]['value']) && $profile['customer']->field_cust_virtual_tours['und'][0]['value'] == 'yes'){
+          $this->profiles[] = $profile['customer'];
+        }
+      }
+      return $this->profiles;
+    }
+  }
+  
+  
+  public function getTimes($profiles){
+    $this->profile_name_to_pid = array(); 
+    $times = array();
+    $today = array();
+    $complete = array();
+    foreach($profiles as $key => $profile){
+      if(!empty($profile->field_fr_vt_tour_times['und'])){
+        $name = $profile->field_cust_name['und'][0]['value'];
+        $times[$name] = $profile->field_fr_vt_tour_times['und'][0]['tour_time'];
+        $today[$name] = $this->getDay($profile->field_fr_vt_tour_times['und'][0]['tour_time_days']);
+        $this->profile_name_to_pid[$name] = $profile;
+      }
+    }
+    $sorted = $this->sortTimes($times);
+    return $sorted;
+  }
+  
+  private function getDay($days){
+    $today = strtolower(date('w'));
+    $tours_today = FALSE;
+    $days_array = explode(',', $days);
+    foreach($days_array as $key => $value){
+      if($value == $today){
+        $tours_today = TRUE;
+      }
+    }
+    return $tours_today;
+    
+  }
+  
+  
+  
+  
+  private function sortTimes($times){
+    $cust = array();
+    $ranked = array();
+    $upcoming = array();
+    $passed = array();
+    $passed_tours = array();
+    foreach($times as $key => $values){
+      $explode[$key] = explode(',', $values);
+    }
+    foreach($explode as $name => $timez){
+      if(!empty($timez)){
+        foreach($timez as $delta => $time){
+          $cust[$name][] = (strtotime($time) - strtotime('now'));
+        }
+      }
+    }
+    foreach($cust as $name => $rtimes){
+      sort($rtimes, SORT_NUMERIC);
+      foreach($rtimes as $key => $time){
+      //dpm($time);
+      if(!empty($time) && is_int($time)){
+          if(($time < 0) && ($time >= -3600)){
+            $passed[$name][] = $time;
+          }elseif($time > 0){
+            $upcoming[$name][] = $time;
+          }
+        }
+      }
+      /*$upcoming_values = array_keys($upcoming);
+      foreach($passed as $neg_cust_name => $neg_values){
+        foreach($upcoming_values as $int => $upcoming_cust_name){
+          if($neg_cust_name == $upcoming_cust_name){
+            unset($passed[$upcoming_cust_name]);
+          }
+        }
+          asort($passed, SORT_NUMERIC);
+          if(!empty($passed[$neg_cust_name])){
+            $slice = array_slice($passed[$neg_cust_name], 0, 1, TRUE);
+            $passed_tours[$neg_cust_name] = $slice[0];
+          }
+      }
+      asort($passed_tours, SORT_NUMERIC);*/
+      $sort = $upcoming;
+      foreach($sort as $key => $value){
+        $slice = array_slice($value, 0, 1, TRUE);
+        $ranked[$key] = $slice[0];
+      }
+    }
+    asort($ranked, SORT_NUMERIC);
+    $ranked = $this->statusColor($ranked);
+    $passed = $this->statusColor($passed);
+    return array('upcoming' => $ranked, 'passed' => $passed);
+  }
+  
+  
+  private function statusColor($array){
+    foreach($array as $key => $value){
+      if($value < 0 && $value >= -3600 ){
+          $status_color = 'red';
+        }else{
+          $status_color = 'green'; 
+        }
+        $array[$key] = $status_color;
+    }
+    return $array;
+  }
+  
+  
+  public function renderMarkup($times){
+    $profiles = $this->profile_name_to_pid;
+    $markup = array();
+    $rows = array();
+    $headers = array(
+      'Customer',
+      'Times',
+    );
+  foreach($times['upcoming'] as $key => $value){
+  $done = FALSE;
+    foreach($profiles as $name => $data){
+        if($key == $name){
+        $view = field_view_field('profile2', $data, 'field_fr_vt_tour_times', 'tour_times');
+        $tours_completed = variable_get('tours_done_today');
+        $display = 'visible';
+        if(!empty($tours_completed)){
+          foreach($tours_completed as $delt => $cust_name){
+            if($key == $cust_name){
+              $display = 'hidden';
+              $done = TRUE;
+            }
+          }
+        }
+        if($done == FALSE){
+          $rows[] = array(
+            'data' => array(
+            array(
+              'data' => $key,
+              'style' => array('background:'.$value.'; color:white; font-weight:bold;'),
+              'class' => array(''),
+            ),
+            array(
+              'data' => $view,
+              'style' => array(''),
+              'class' => array(''),
+            ),
+          ),
+        );
+        }
+        }
+      }
+    }
+    $markup['table'] = array(
+      '#theme' => 'table',
+      '#header' => $headers,
+      '#rows' => $rows,
+      '#empty' => t('Sorry No Data For This Customer'),
+    );
+    return $markup;
+ }
+
+
+}

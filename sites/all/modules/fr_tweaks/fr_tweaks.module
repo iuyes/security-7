@@ -1,0 +1,514 @@
+<?php
+
+function fr_tweaks_form_profile2_form_alter(&$form, &$form_state) {
+	if(!empty($form['profile_customer'])){
+		$form['profile_customer']['field_cust_multiple_cameras']['#states'] = array(
+			'visible' => array(
+				':input[name="profile_customer[field_cust_service_type][und][cam]"]' => array('checked' => TRUE),
+			),
+		);
+
+		$form['profile_customer']['field_cust_account']['#states'] = array(
+			'visible' => array(
+				':input[name="profile_customer[field_cust_multiple_cameras][und]"]' => array('value' => 'yes'),
+			),
+		);
+
+		$form['profile_customer']['field_cust_dvr_url']['#states'] = array(
+			'visible' => array(
+				':input[name="profile_customer[field_cust_service_type][und][cam]"]' => array('checked' => TRUE),
+				':input[name="profile_customer[field_cust_multiple_cameras][und]"]' => array('value' => 'no'),
+			),
+		);
+		$form['profile_customer']['field_cust_alarm_settings']['#states'] = array(
+			'visible' => array(
+				':input[name="profile_customer[field_cust_service_type][und][alarm]"]' => array('checked' => TRUE),
+			),
+		);
+		$form['profile_customer']['field_cust_device_mac']['#states'] = array(
+			'visible' => array(
+				':input[name="profile_customer[field_cust_service_type][und][alarm]"]' => array('checked' => TRUE),
+			),
+		);
+		
+		
+		unset($form['profile_customer']['field_cust_virtual_tours']['und']['#options']['_none']);
+		drupal_add_js(drupal_get_path('module', 'fr_tweaks') .'/fr_tweaks.js', array('type' => 'file', 'scope' => 'footer'));
+		$form['#submit'][] = 'customer_profile_submit';
+		$form['profile_customer']['field_cust_folders']['#type'] = 'hidden';
+		$form['profile_customer']['field_cust_alarm_url']['#type'] = 'hidden';
+		$form['profile_customer']['field_cust_tour_urls']['#type'] = 'hidden';
+
+		/*$form['notifications'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('notifications wrapper');
+			);
+		);
+		$form['notifications']['profile_name'] = array();*/
+
+		$form['#validate'][] = 'fr_val_cust';
+		//dpm($form);
+		return $form;
+	}
+}
+
+
+function fr_val_cust($form, &$form_state){
+	$user_uid = $form_state['profiles']['customer']->uid;
+	$this_user = user_load($user_uid);
+	$profile_name = $form_state['values']['profile_customer']['field_cust_name']['und'][0]['value'];
+	$user_name = $this_user->name;
+	if($user_name != $profile_name){
+		form_set_error('profile_customer][field_cust_name', 'This Customers "Company Name/First Name" must match thier "Account Name". This Customers Account Name is: '.$user_name.'');
+	}
+	$service_type = $form_state['values']['profile_customer']['field_cust_service_type']['und'];
+	foreach($service_type as $key => $service){
+		switch($service['value']){
+			case'cam':
+				if(empty($form_state['values']['profile_customer']['field_cust_dvr_url']['und'][0]['value'])){
+					form_set_error('profile_customer][field_cust_dvr_url', 'The DVR url cannot be empty!');
+				}
+			break;
+		}
+	}
+}
+
+
+function fr_val_user_form($form, &$form_state){
+	$is_cust = !empty($form_state['values']['roles'][4]) ? $form_state['values']['roles'][4] : FALSE;
+	if($is_cust != FALSE){
+		$account_name = $form_state['values']['name'];
+		if(!empty($form_state['build_info']['args'][0]->uid)){
+			$uid = $form_state['build_info']['args'][0]->uid;
+			$profile = profile2_load_by_user($uid, $type_name = NULL);
+			if($profile){
+				$profile_name = $profile['customer']->field_cust_name['und'][0]['safe_value'];
+				if($profile_name != $account_name){
+					if(file_exists('./sites/default/files/fortified/'.strtolower($profile_name).'')){
+						$path = './sites/default/files/fortified/';
+						rename($path.'/'.strtolower($profile_name), $path.'/'.strtolower($account_name));
+					}
+					$profile['customer']->field_cust_name['und'][0]['safe_value'] = $account_name;
+					$profile['customer']->field_cust_name['und'][0]['value'] = $account_name;
+					profile2_save($profile['customer']);
+				}
+			}
+		}
+	}
+	return $form_state;
+}
+
+function fr_user_reg_form_submit($form, &$form_state){
+	$is_cust = !empty($form_state['values']['roles'][4]) ? $form_state['values']['roles'][4] : FALSE;
+	if($is_cust != FALSE){
+		if(!empty($form_state['values']['uid'])){
+			$uid = $form_state['values']['uid'];		
+			$form_state['redirect'] = array('user/'.$uid.'/edit/customer');
+		}
+	}
+	return $form_state;
+}
+
+
+function customer_profile_submit($form, &$form_state){
+	$service_type = $form_state['values']['profile_customer']['field_cust_service_type']['und'];
+	$alarms = FALSE;
+	$dvr = FALSE;
+	foreach($service_type as $delta => $value){
+		if($value['value'] == 'cam'){
+			$dvr = TRUE;
+		}
+		if($value['value'] == 'alarm'){
+			$alarms = TRUE;
+		}
+
+	}
+	if($alarms == TRUE){
+		$form_state['values']['profile_customer']['field_cust_alarm_url']['und'][0]['value'] =
+			'https://ldecholsenterprises.alarmdealer.com/index.php?mod=auth&action=login';
+	}
+	$has_tours = $form_state['values']['profile_customer']['field_cust_virtual_tours']['und'][0]['value'];
+	$this_user = $form_state['profiles']['customer']->uid;
+	if($dvr == TRUE && $has_tours == 'yes'){
+		$actions = array('fortified-events' => 'Event', 'fortified-virtual-tours' => 'Virtual Tour', 'fortified-incident-reports' => 'Incident Report');
+		$i=0;
+		foreach($actions as $name => $action){
+			$options = array(
+				'attributes' => array(
+					'class' => array('button', 'radius', 'small'),
+				),
+				'query' => array('cust' => $this_user),
+			);
+			$path = '../../node/add/'.$name.'';
+			$form_state['values']['profile_customer']['field_cust_tour_urls']['und'][$i]['value'] = l($action, $path, $options);
+			$form_state['values']['profile_customer']['field_cust_tour_urls']['und'][$i]['_weight'] = $i;
+			$i++;
+		}
+	}
+	$has_folders = $form_state['values']['profile_customer']['field_cust_folders']['und'][0]['value'];
+	if($has_folders != TRUE){
+		$service = $form_state['values']['profile_customer']['field_cust_service_type']['und'][0]['value'];
+		switch($service){
+		case'cam':
+			$account_name = $form_state['values']['profile_customer']['field_cust_name']['und'][0]['value'];
+			$has_tours = $form_state['values']['profile_customer']['field_cust_virtual_tours']['und'][0]['value'];
+			switch($has_tours){
+			case'yes':
+				$account_folder = _create_folders($account_name);
+				if($account_folder == TRUE){
+					$form_state['values']['profile_customer']['field_cust_folders']['und'][0]['value'] = TRUE;
+				}
+				break;
+			}
+			break;
+		}
+	}
+}
+
+
+
+
+function _create_folders($account_name){
+    $created = FALSE;
+    $path = './sites/default/files/fortified/';
+    $folders = array('images', 'videos');
+    $old_umask = umask(0);
+    if(!file_exists($path.'/'.$account_name)){
+      try{
+		    $account_folder = mkdir($path.'/'.strtolower($account_name).'/', 0777);
+		  }
+		  catch (Exception $e){
+  		  throw new Exception('The folder cannot be created do to a permission error!');
+		  }
+		  if($account_folder){
+  		  try{
+    		  chmod($path.'/'.strtolower($account_name), 0777);
+  		  }
+  		  catch (Exception $e){
+    		  throw new Exception('The folder was created but its permissions could not be set! ');
+  		  }
+        foreach($folders as $key => $value){
+          try{
+    		    $sub_folders = mkdir($path.'/'.strtolower($account_name).'/'.$value.'/', 0777);
+    		  }
+    		  catch (Exception $e){
+    		    throw new Exception('The sub folder '.$value.' could not be created do to a permissions error! ');
+    		  }
+    		  if($sub_folders){
+    		    try{
+    		      chmod($path.'/'.strtolower($account_name).'/'.$value, 0777);
+    		    }
+    		    catch (Exception $e){
+    		      throw new Exception('The sub folder '.$value.' permissions could not be changed do to a permissions error!');
+    		    }
+    		  }
+    		}
+  		}
+  		if($account_folder){
+    		$created = TRUE;
+  		}
+  }else{
+    if(is_writable($path.'/'.$account_name)){
+      $created = TRUE;
+    }
+  }
+  return $created;
+}
+
+
+
+function fr_tweaks_views_pre_render(&$view){
+	switch($view->name){
+	case'slide_show':
+
+		if(!empty($view->result)){
+			foreach($view->result as $key => $fields){
+				if(!empty($fields->field_field_main_page_map_id) && !empty($fields->field_field_main_page_featured_image)){
+					$map = $fields->field_field_main_page_map_id;
+					$image = $fields->field_field_main_page_featured_image[0]['rendered']['#item'];
+					$map_id = $map[0]['rendered']['#markup'];
+					$image['attributes']['usemap'] = array($map_id);
+					$view->result[$key]->field_field_main_page_featured_image[0]['rendered']['#item'] = $image;
+					//$view->result[$key]->field_field_main_page_featured_image[0]['rendered']['#theme'] = 'slide_image';
+				}
+			}
+		}
+		//drupal_render($view->result[0]->field_field_main_page_image_map[0]['rendered']['#markup']);
+		return $view;
+		break;
+	}
+}
+
+
+function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
+			global $user;
+	switch($form_id){
+	case 'webform_client_form_5':
+
+		$form['#submit'][] = 'fr_tweaks_form_submit';
+
+		break;
+	case'user_profile_form':
+	
+			if(!empty($form['#user']->roles)){
+				$arg = arg();
+				$roles = array_values($user->roles);
+				$auth = array('administrator', 'editor');
+				$auth1 = array('administrator', 'supervisor', 'editor');
+				if(!in_array('editor', $roles)){
+				if(array_intersect($auth, $form['#user']->roles) && !in_array('editor', $roles)){
+					drupal_not_found();
+					drupal_exit();
+				}
+			}
+		}
+			if(!in_array('administrator', $roles)){
+				unset($form['account']['roles']['#options'][3]);
+				unset($form['account']['roles']['#options'][5]);
+				unset($form['account']['roles']['#options'][6]);
+			}
+		$form['#validate'][] = 'fr_val_user_form';
+		break;
+	
+	case'user_register_form':
+		if($form['administer_users']['#value'] == TRUE){
+		$roles = $user->roles;
+			//dpm($user);
+			if(!in_array('administrator', $roles)){
+				unset($form['account']['roles']['#options'][3]);
+				unset($form['account']['roles']['#options'][5]);
+				unset($form['account']['roles']['#options'][6]);
+			}
+		}
+		$form['#submit'][] = 'fr_user_reg_form_submit';
+	break;
+	
+	case'user_login':
+		$form['name']['#prefix'] = '<div class="login-field large-6 small-12 columns">';
+		$form['name']['#suffix'] = '</div>';
+		$form['pass']['#prefix'] = '<div class="login-field large-6 small-12 columns">';
+		$form['pass']['#suffix'] = '</div>';
+		$form['actions']['submit']['#prefix'] = '<div class="login-field-submit large-6 columns small-4">';
+		$form['actions']['submit']['#suffix'] = '</div>';
+		//dpm($form);
+	break;
+
+	case'views_exposed_form';
+
+
+	switch($form['#id']){
+		case'views-exposed-form-admin-users-dash-block':
+
+		$form['actions_wrapper'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('twelve', 'columns'),
+			),
+		);
+		$form['actions_wrapper']['reset'] = array(
+			'#type' => 'markup',
+			'#markup' => '<input type="button" href="#" value="Reset" Onclick="location.reload();"/>',
+			'#prefix' => '<div class="form-reset">',
+			'#suffix' => '</div>',
+		);
+		$submit = $form['submit'];
+		$form['actions_wrapper']['submit'] = $submit;
+		unset($form['submit']);
+		break;
+
+		case'views-exposed-form-saved-virtual-tours-block':
+		//dpm($form);
+		$form['#prefix'] = '<div class="sort-saved-files large-3 columns">';
+		$form['#suffix'] = '</div>';
+			$keep = array('fortified_events', 'fortified_incident_reports', 'fortified_virtual_tours');
+			foreach($form['type_1']['#options'] as $key => $value){
+				if(!in_array($key, $keep)){
+					unset($form['type_1']['#options'][$key]);
+					unset($form['type_1']['#options'][$key][$value]);
+				}
+			}
+		
+		break;
+	}
+		break;
+		
+		case'front_page_menu_node_form':
+			$form['body']['#states'] = array(
+				'visible' => array(
+					':input[name="field_front_page_link_custum[und][no]"]' => array('checked' => TRUE),
+					),
+			);	
+			$form['field_main_page_to_link']['und'][0]['target_id']['#states'] = array(
+				'visible' => array(
+					':input[name="field_front_page_link_custum[und][yes]"]' => array('checked' => TRUE),
+					),
+			);
+		break;
+
+		
+		case'user_multiple_cancel_confirm':
+			if(in_array(1, array_keys($form['accounts']))){
+				drupal_not_found();
+					drupal_exit();
+			}
+		break;
+		
+		case'search_block_form':
+		
+			$form['container'] = array(
+				'#type' => 'container',
+				'#attributes' => array(
+					'class' => array('search-block-wrapper'),
+				),
+			);
+			unset($form['search_block_form']);
+			unset($form['actions']['submit']);
+			$form['container']['search_block_form'] = array(
+				'#type' => 'textfield',
+				'#size' => 20,
+				'#weight' => 100,
+				'#attributes' => array(
+					'placeholder' => array('Search...'),
+					'class' => array('search-block-input', 'form-item'),
+				),
+				);
+			$form['container']['submit'] = array(
+				'#type' => 'submit',
+				'#title' => 'search',
+				'#weight' => -100,
+				'#attributes' => array(
+					'style' => array('background: white url(../../sites/default/files/search-icon.png) top no-repeat;'),
+					'id' => 'search-form-submit',
+				),
+			);
+			$form['#attributes'] = array(
+				'id' => 'search-block',
+			);
+		
+		break;
+	}
+}
+
+
+function fr_tweaks_form_submit(&$form, $form_state){
+	$base = $form_state['input']['submitted'];
+	$body = '<html>
+			<body>
+				<p>A new lead lead has been submitted from <strong>'.$base['name'].'</strong> On '.date('Y-m-d').'.</p><br/>
+				<p>Lead Contact Info:<br/>
+				Primary Phone: '.$base['primary_phone'].'<br/>
+				Email: '.$base['email'].'<br/>
+				City: '.$base['city'].'<br/>
+				State: '.$base['state'].'<br/>
+				Subject: '.$base['subject'].'<br/>
+				Message: '.$base['message'].'
+				</p>
+			</body>
+		</html>';
+	//dpm($customer);
+	define('GUSER', 'no-reply@fortifiedsecurityservices.com'); // GMail username
+	define('GPWD', 'FortifieD!'); // GMail password
+	global $error;
+	$mail = new PHPMailer();  // create a new object
+	$mail->IsSMTP(); // enable SMTP
+	$mail->SMTPDebug = 0;  // debugging: 1 = errors and messages, 2 = messages only
+	$mail->SMTPAuth = true;  // authentication enabled
+	$mail->SMTPSecure = 'ssl'; // secure transfer enabled REQUIRED for GMail
+	$mail->Host = 'smtp.gmail.com';
+	$mail->Port = 465;
+	$mail->Username = GUSER;
+	$mail->Password = GPWD;
+	$mail->SetFrom('no-reply@fortifiedsecurityservices.com', 'Fortified Security Services');
+	$mail->Subject = 'You have a new web lead From '.$base['name'].'';
+	$mail->Body = $body;
+	$mail->IsHTML(true);
+	$mail->AddAddress('info@fortifiedsecurityservices.com');
+	if(!$mail->Send()) {
+		$error = 'Mail error: '.$mail->ErrorInfo;
+		$success = 'Failed to notify Customer';
+	} else {
+		$error = 'Message sent!';
+		$success = 'Customer has been notified';
+	}
+}
+
+
+
+
+/*
+ * @ hook_block_info
+ *
+ */
+function fr_tweaks_block_info(){
+	$blocks['front_page_markup'] = array(
+		'info' => t('Front Page Markup'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	return $blocks;
+}
+
+
+
+
+/*
+ * @ hook_block_view
+ *
+ */
+function fr_tweaks_block_view($delta = ''){
+	switch($delta){
+		case'front_page_markup':
+			
+			$block['content'] = _fr_load_content();
+			
+		break;
+	}
+	return $block;
+}
+
+
+
+/*
+ * @ query database for front_page_text
+ *
+ */
+function _fr_load_content(){
+	$content = array();
+	
+	$query = new EntityFieldQuery;
+	$query->entityCondition('entity_type', 'node')
+	->entityCondition('bundle', 'front_page_text')
+	->propertyCondition('status', 1);
+	$results = $query->execute();
+	
+	if(!empty($results['node'])){
+		
+		$content['wrapper'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('footer-first-markup-wrapper', 'large-12', 'columns'),
+			),
+		);
+		$nodes = $results['node'];
+		foreach($nodes as $key => $node){
+			$node_object = node_load($node->nid);
+			$content['wrapper'][$node->nid] = array(
+				'#type' => 'markup',
+				'#markup' => render(node_view($node_object, $view_mode = 'teaser', $langcode = NULL)),
+				'#prefix' => '<div class="front-page-text">',
+				'#suffix' => '</div>',
+			);
+		}
+	}
+	return $content;
+}
+
+
+
+
+function fr_tweaks_page_alter(&$page){
+	if(!empty($page['content']['system_main']['default_message'])){
+		unset($page['content']['system_main']['default_message']);
+	}
+	return $page;
+}

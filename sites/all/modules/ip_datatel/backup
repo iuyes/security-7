@@ -1,0 +1,707 @@
+<?php
+
+
+
+
+/*
+*
+*hook_block_info
+*
+*/
+function ip_datatel_block_info(){
+  // This example comes from node.module.
+  $blocks['alarm_settings'] = array(
+    'info' => t('Alarm Settings'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+
+  return $blocks;
+}
+
+
+
+
+
+/*
+*
+* hook_blck_view
+*
+*/
+function ip_datatel_block_view($delta = ''){
+  switch($delta){
+  case'alarm_settings':
+    $content['wrapper'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Alarm Manager'),
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+    );
+    $content['wrapper']['form'] = array(
+      '#type' => 'markup',
+      '#markup' => render(build_alarm_block()),
+    );
+    $block['subject'] = t('Alarm Settings');
+    $block['content'] = $content;
+
+    break;
+  }
+  return $block;
+}
+
+
+
+/*
+ * Implements hook_menu()
+ *
+ */
+function ip_datatel_menu() {
+  $items['alarm-settings/%'] = array(
+    'page callback' => 'ip_datatel_load_alarm_profile',
+    'page arguments' => array(1, 2, 3),
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+
+
+
+/*
+*
+*@ Class For alarm dealer api
+*
+*/
+function ip_datatel_load_alarm_profile($uid, $utility, $arg){
+  global $user;
+  $arg = !empty($arg) ? $arg : NULL;
+  if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles) || in_array('Customer', $user->roles)){
+    $data = 'You need to update this users IpDatel username and password <a href="../../user/'.$uid.'/edit">here</a>. Then you can change this users settings.';
+    $api = new ipDatatel($uid, $user);
+    $has_data = $api->authenticate();
+    if($has_data == TRUE){
+      $data = $api->loadUtility($utility, $arg);
+    }
+    return $data;
+  }else{
+    return drupal_not_found();
+  }
+}
+
+
+
+
+
+
+
+
+class ipDatatel{
+
+  public function __construct($uid, $user){
+    $this->user = $uid;
+    $this->user_account = $user;
+    $this->profile = profile2_load_by_user($uid, $type_name = NULL);
+  }
+
+  public function authenticate(){
+    $auth = FALSE;
+    $user_profile = $this->profile;
+    foreach($user_profile['customer']->field_cust_service_type['und'] as $key => $value){
+      if(in_array('alarm', $value)){
+        $auth = TRUE;
+      }
+    }
+    if(!empty($user_profile['customer']->field_cust_alarm_username['und'][0]['value']) && !empty($user_profile['customer']->field_cust_alarm_password['und'][0]['value'])){
+      $this->username = $user_profile['customer']->field_cust_alarm_username['und'][0]['value'];
+      $this->pass = $user_profile['customer']->field_cust_alarm_password['und'][0]['value'];
+      $auth = TRUE;
+    }else{
+      $auth = FALSE;
+    }
+    return $auth;
+  }
+
+  public function loadUtility($utility, $arg){
+    $this->utility = $utility;
+
+    switch($utility){
+    case'cust_info':
+      //$get_parent_id = $this->getParentId();
+      $data = $this->custInfo($utility, $arg);
+
+      break;
+
+    case'build_alarm_block':
+
+      $data = drupal_render(build_alarm_block());
+
+      break;
+
+    case'all':
+      $username = $this->username;
+      $all_users = $this->listUsers();
+      $data = build_alarm_block();
+      $data['users'] = $all_users;
+      break;
+
+    case'modify_user':
+
+      $data = $this->modifyUser($utility, $arg);
+
+      break;
+
+    case'cust_remove':
+
+      $data = $this->deleteUser($utility, $arg);
+
+      break;
+    }
+
+    return $data;
+  }
+
+
+
+  private function deleteUser($utility, $arg){
+    //$data = array('username' => $username);
+    //$build_request = self::jsonData($utility, $data, '', '');
+    //$send_request = self::jsonRequest($build_request);
+    $status = 'Sorry, Something went wrong. Please contact our customer support.';
+    $cust_data = $this->requestData($arg);
+    if(!empty($cust_data->data)){
+      $user_id = $cust_data->data->user_id;
+      $user = $arg;
+      $data = array('user' => $user, 'user_id' => $user_id);
+      $build_request = self::jsonData($utility, $data, '', '');
+      $send_request = self::jsonRequest($build_request);
+      $status = default_form();
+      $status['wrapper']['message'] = status_message($send_request->message);
+      if($send_request->status == 0){
+        $uid = $this->user;
+        $profile = profile2_load_by_user($uid, $type_name = NULL);
+        foreach($profile['customer']->field_cust_users_attatched['und'] as $key => $values){
+          if($values['value'] == $user){
+            unset($profile['customer']->field_cust_users_attatched['und'][$key]);
+          }
+        }
+        profile2_save($profile['customer']);
+      }
+    }
+    return $status;
+  }
+
+  private function modifyUser($utility, $arg){
+    $data = array('username' => $username);
+    $build_request = self::jsonData($utility, $data, '', '');
+    $send_request = self::jsonRequest($build_request);
+    return $send_request;
+  }
+
+
+  private function custInfo($utility, $arg){
+    $username = $arg;
+    $data = array('user' => $username);
+    $build_request = self::jsonData($utility, $data, '', '');
+    $send_request = self::jsonRequest($build_request);
+    if(!empty($send_request->data)){
+      $this->returned_data = $send_request->data;
+      $cust_info = $this->storeData();
+    }else{
+      $cust_info = status_message($send_request->message);
+    }
+    return $cust_info;
+  }
+
+
+
+  private function storeData(){
+    $content = array();
+    $data = $this->returned_data;
+    variable_set('alarm_customer_data', $data);
+    $form = drupal_get_form('ip_datatel_mod_user_form');
+    return $form;
+  }
+
+
+
+  public static function jsonData($utlility, $data, $id, $pass){
+    /* IpDatatel API */
+    $id = '794f9060-779b-d984-90c0-5159cc580bf3';
+    $pass = '123456';
+    $data_array = array(
+      'id' => $id,
+      'pass' => $pass,
+      'utility' => $utlility,
+      'data' => $data,
+    );
+    return $data_array;
+  }
+
+
+  public static function jsonRequest($data){
+
+    //Pull the url out of the drupal settings
+    $url = 'https://alarmdealer.com/api';
+    $response = drupal_http_request($url, array(
+        'method' => 'POST',
+        'data' => json_encode($data),
+        'max_redirects' => 0,
+        'headers' => array('Content-Type' => 'application/json', 'Accept' => 'application/json'))
+    );
+    return json_decode($response->data);
+  }
+
+
+
+
+  private function listUsers(){
+    $user_list = array();
+    if(!empty($this->profile['customer']->field_cust_users_attatched['und'])){
+      $attatched_users = array();
+      $attatched_users = $this->profile['customer']->field_cust_users_attatched['und'];
+      if(in_array('administrator', $this->user_account->roles) || in_array('supervisor', $this->user_account->roles)){
+        $attatched_users[]['value'] = $this->username;
+        $attatched_users = array_reverse($attatched_users);
+      }
+      $uid = $this->user;
+      foreach($attatched_users as $key => $value){
+        $edit = '<a href="../../alarm-settings/'.$uid.'/cust_info/'.$value['value'].'">Edit</a>';
+        $delete = '<a href="../../alarm-settings/'.$uid.'/cust_remove/'.$value['value'].'">Delete</a>';
+        $options = array();
+        $rows[] = array(
+          'data' => array(
+            array(
+              'data' => $value['value'],
+            ),
+            array(
+              'data' => $edit,
+            ),
+            array(
+              'data' => $delete,
+            ),
+          ),
+        );
+      }
+      $header = array(
+        'Username',
+        'Edit',
+        'Delete',
+      );
+      $user_list['table'] = array(
+        '#theme' => 'table',
+        '#header' => $header,
+        '#rows' => $rows,
+        '#empty' => t('No Users Found'),
+      );
+    }
+    return $user_list;
+  }
+
+
+  public function requestData($user_type){
+    $return = NULL;
+    switch($user_type){
+    case'parent':
+      $username = $this->username;
+      break;
+
+    default:
+
+      $username = $user_type;
+
+      break;
+    }
+    $data = array('user' => $username);
+    $ipDatatel_mod_cust = ipDatatel::jsonData('cust_info', $data, '', '');
+    $send_json_data = ipDatatel::jsonRequest($ipDatatel_mod_cust);
+    if(!empty($send_json_data->data)){
+      $return =  $send_json_data;
+    }
+    return $return;
+  }
+
+}
+
+
+
+
+function _mod_user_form($form, &$form_state){
+  $sort_data = array();
+  $bad_data = array('submit', 'form_build_id', 'form_token', 'form_id', 'op');
+  foreach($form_state['values'] as $key => $value){
+    foreach($bad_data as $delta => $bad){
+      if($bad == $key ){
+        unset($form_state['values'][$key]);
+      }
+    }
+  }
+  $message = default_form();
+  $data = $form_state['values'];
+  $ipDatatel_mod_cust = ipDatatel::jsonData('cust_mod', $data, '', '');
+  $send_json_data = ipDatatel::jsonRequest($ipDatatel_mod_cust);
+  $message['wrapper']['message'] = status_message($send_json_data->message);
+  return $message;
+}
+
+
+
+
+
+
+function _add_user_form($form, &$form_state){
+  $message = t('Something Unknown Happened. Please Try Again');
+  $bad_data = array('submit', 'form_build_id', 'form_token', 'form_id', 'op', 're_password');
+  $ip_datatel_data = array();
+  foreach($form_state['values'] as $key => $value){
+    switch($key){
+    case'newuser':
+
+      $ip_datatel_data[$key] = $value;
+
+      break;
+
+    case'newpass':
+
+      $ip_datatel_data[$key] = $value;
+
+      break;
+
+    case'email':
+
+      $ip_datatel_data[$key] = $value;
+
+      break;
+
+    case'account_master_pass':
+
+      $account_master_pass = $value;
+      unset($form_state['values'][$key]);
+      break;
+    case'parent_id':
+
+      break;
+    case're_password':
+    
+      $re_pass = $value;
+    
+    break;
+    }
+    foreach($bad_data as $delta => $bad){
+      if($bad == $key ){
+        unset($form_state['values'][$key]);
+      }
+    }
+  }
+
+  if($form_state['values']['newpass'] != $re_pass){
+    form_set_error('newpass', 'Your passwords do not match!');
+    form_set_error('re_password', 'Your passwords do not match!');
+    unset($form_state['clicked_button']);
+    unset($form_state['triggering_element']);
+    unset($form_state['buttons']);
+    return $form_state;
+  }else{
+    $uid = $form_state['values']['uid'];
+    $data = $form_state['values'];
+    $ipDatatel_mod_cust = ipDatatel::jsonData('cust_add', $data, '', '');
+    $send_json_data = ipDatatel::jsonRequest($ipDatatel_mod_cust);
+    if($send_json_data->message == 'Success' && !empty($send_json_data->data)){
+      $profile = profile2_load_by_user($uid, $type_name = NULL);
+      $username = $send_json_data->data->newuser;
+      $id = $send_json_data->data->user_uid;
+      $profile['customer']->field_cust_users_attatched['und'][]['value'] = $username;
+      profile2_save($profile['customer']);
+      ctools_include('ajax');
+      ctools_add_js('ajax-responder');
+      $commands[] = ctools_ajax_command_redirect('../../alarm-settings/'.$uid.'/cust_info/'.$data['newuser'].'');
+      print ajax_render($commands);
+      exit;
+    }else{
+      unset($form_state['clicked_button']);
+      unset($form_state['triggering_element']);
+      unset($form_state['buttons']);
+      form_set_error('', $send_json_data->message);
+      return $form_state;
+    }
+  }
+  
+}
+
+
+function status_message($data){
+  $message = array(
+    '#type' => 'markup',
+    '#markup' => $data,
+    '#prefix' => '<div class="messages status">',
+    '#suffix' => '</div>',
+  );
+  return $message;
+}
+
+
+
+function default_form(){
+  $form = array();
+  $form['wrapper'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Alarm Manager'),
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+    '#attributes'=>array(
+      'id' => 'mod-cust-wrapper',
+    ),
+  );
+  $form['wrapper']['back'] = array(
+    '#type' => 'markup',
+    '#markup' => 'Go back',
+    '#prefix' => '<div onclick="window.history.back();" class="button radius small">',
+    '#suffix' => '</div>',
+  );
+  return $form;
+}
+
+
+
+
+
+function ip_datatel_add_user_form($node, &$form_state){
+  $arg = arg();
+  $uid = '';
+  
+  if(!empty($arg[1]) && is_numeric($arg[1])){
+    $uid = $arg[1];
+    $ipdatatel = new ipDatatel($uid, '');
+    $auth = $ipdatatel->authenticate();
+    if($auth == TRUE){
+      $request_data = $ipdatatel->requestData('parent');
+      $account_master_id = $request_data->data->user_id;
+      $account_master_pass = $ipdatatel->pass;
+    }
+    if(!empty($account_master_pass) && !empty($account_master_id)){
+
+      $form['wrapper'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Add User'),
+        '#collapsible' => FALSE,
+        '#collapsed' => FALSE,
+        '#attributes'=>array(
+          //'id' => 'mod-cust-wrapper',
+        ),
+      );
+
+      $form['wrapper']['account_master_pass'] = array(
+        '#type' => 'hidden',
+        '#title' => t('Username'),
+        '#default_value' => $account_master_pass,
+        '#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
+      );
+
+      $form['wrapper']['uid'] = array(
+        '#type' => 'hidden',
+        '#title' => t('Username'),
+        '#default_value' => $ipdatatel->user,
+        '#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
+      );
+
+      $form['wrapper']['parent_id'] = array(
+        '#type' => 'hidden',
+        '#title' => t('Username'),
+        '#default_value' => $account_master_id,
+        '#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
+      );
+
+      $form['wrapper']['newuser'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Username'),
+        '#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
+      );
+      $form['wrapper']['email'] = array(
+        '#type' => 'textfield',
+        '#title' => t('E-mail'),
+      );
+      $form['wrapper']['newpass'] = array(
+        '#type' => 'password',
+        '#title' => t('Password'),
+      );
+      $form['wrapper']['re_password'] = array(
+        '#type' => 'password',
+        '#title' => t('Re-type Password'),
+      );
+      $form['wrapper']['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Save',
+        '#submit' => '_add_user_form',
+        '#ajax' => array(
+          'callback' => '_add_user_form',
+          'wrapper' => 'mod-cust-wrapper',
+        ),
+      );
+      //$form['#validate'][] = 'add_user_form_validate';
+      $form['#prefix'] = '<div id="mod-cust-wrapper" class"mod-cust-wrapper">';
+      $form['#suffix'] = '</div>';
+    }else{
+      $form['markup'] = array(
+        '#type' => 'markup',
+        '#markup' => t('You need to enter in Ipdatatel password <a href="../../user/'.$uid.'/edit">here</a> for this user first!'),
+      );
+    }
+  }
+  return $form;
+}
+
+function ip_datatel_mod_user_form($node, &$form_state){
+  $cust_data = variable_get('alarm_customer_data');
+  if(!empty($cust_data)){
+    $form['wrapper'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('IpDatatel User'),
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#attributes'=>array(
+        'id' => 'mod-cust-wrapper',
+      ),
+    );
+    foreach($cust_data as $key => $value){
+      $status = FALSE;
+      switch($key){
+        case'user':
+          $status = TRUE;
+        break;
+        
+        case'user_id':
+          $status = TRUE;
+        break;
+      }
+      $form['wrapper'][$key] = array(
+        '#type' => 'textfield',
+        '#title' => t($key),
+        '#disabled' => $status,
+        '#default_value' => $value,
+      );
+    }
+    $form['wrapper']['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Save',
+      '#submit' => '_mod_user_form',
+      '#ajax' => array(
+        'callback' => '_mod_user_form',
+        'wrapper' => 'mod-cust-wrapper',
+      ),
+    );
+  }
+  return $form;
+}
+
+
+
+
+function ip_datatel_remove_user_form($node, &$form_state){
+  $form['test'] = array(
+    '#type' => 'markup',
+    '#markup' => 'Coming Soon'
+  );
+  return $form;
+}
+
+function ip_datatel_modify_user_form($node, &$form_state){
+  $form['test'] = array(
+    '#type' => 'markup',
+    '#markup' => 'Coming Soon'
+  );
+  return $form;
+}
+
+
+
+function build_modals($value){
+  $content = array(
+    '#type' => 'markup',
+    '#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><br/><div>'.drupal_render(drupal_get_form('ip_datatel_'.$value.'_form')).'</div>',
+    '#prefix' => '<div id="'.$value.'" class="reveal-modal xlarge">',
+    '#suffix' => '</div>',
+  );
+  return $content;
+}
+
+
+
+
+function ip_datatel_page_alter(&$page){
+  $arg = arg();
+  if(!empty($arg[0]) && $arg[0] == 'alarm-settings' || $arg[0] == 'user' && !empty($arg[2]) && $arg[2] == 'dashboard'){
+    $tools = array('add_user', 'modify_user', 'remove_user');
+    foreach($tools as $key => $value){
+      $page['modal'][$value] = build_modals($value);
+    }
+  }
+  return $page;
+}
+
+
+
+
+function build_alarm_block(){
+  $utility = array();
+
+  $utility['add_user'] = array(
+    'type' => 'add_user',
+    'title' => t("Add User"),
+    'path' => ''.$_SERVER['REQUEST_URI'].'#',
+    'query' => '',
+    'class' => array('button', 'radius', 'small'),
+    'id' => 'add_user',
+  );
+
+  $menu_list = _generate_list($utility);
+  $menu = array();
+  $menu['list'] = array(
+    '#theme' => 'item_list',
+    '#items' => $menu_list,
+    //'#title' => t('Sign Up Today'),
+    '#type' => 'ul',
+    '#attributes' => array('id' => 'alarm-menu-wrapper'),
+    '#container_id' => '',
+    '#prefix' => '<section>',
+    '#suffix' => '</section>',
+  );
+
+  return $menu;
+}
+
+
+
+
+function _generate_list ($list_items) {
+
+  $list = array();
+
+  foreach ($list_items as $name => $list_item) {
+    $options = array();
+    $link = $list_item['path'];
+
+    if (!empty($list_item['query'])) {
+      $options['query'] = $list_item['query'];
+    }
+
+    if (!empty($list_item['fragment'])) {
+      $options['fragment'] = $list_item['fragment'];
+    }
+
+    $options['html'] = TRUE;
+    switch($list_item['type']){
+    case'add_user':
+      $path = '<a href="'.$link.'" class="user-dash-button" id="add-user" data-reveal-id="'.$list_item['id'].'">'.$list_item['title'].'</a>';
+      break;
+    }
+
+    $list[] = array(
+      'data' => $path,
+      'class' => $list_item['class'],
+      'data-reveal' => $list_item['id'],
+    );
+  }
+
+
+  return $list;
+}

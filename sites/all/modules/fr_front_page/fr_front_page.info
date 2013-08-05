@@ -1,0 +1,5 @@
+name = Front Page Tab Fields
+description = This Module creates a compound field that is used for Fortified Front Pages Tabs.
+package = Fortified
+core = 7.x 
+files[] = fr_front_page.install
