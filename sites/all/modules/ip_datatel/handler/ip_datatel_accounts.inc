@@ -21,6 +21,7 @@ class ipDatatel{
     $account_information = array();
     $account_data = array();
     $attatched_users = array();
+    $permissions = array();
     $this->query = new EntityFieldQuery;
     $this->query->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', 'alarm')
@@ -43,6 +44,11 @@ class ipDatatel{
             node_save($results);
           }
         }
+        if(!empty($results->field_alarm_management['und'])){
+	        foreach($results->field_alarm_management['und'] as $delta => $permission){
+		       $permissions[$permission['value']] = $permission['value'];
+	        }
+        }
         $account_information[$customer_name][$results->field_alarm_ipdatatel_username['und'][0]['value']] = array(
           'account_type' => !empty($results->field_alarm_account_type['und'][0]['value']) ? $results->field_alarm_account_type['und'][0]['value'] : NULL,
           'username' => !empty($results->field_alarm_ipdatatel_username['und'][0]['value']) ? $results->field_alarm_ipdatatel_username['und'][0]['value'] : NULL,
@@ -51,6 +57,7 @@ class ipDatatel{
           'attatched_users' => !empty($attatched_users) ? $attatched_users : NULL,
           'account_id' => !empty($account_id) ? $account_id : $results->field_alarm_account_id['und'][0]['value'],
           'node_id' => $node->nid,
+          'permissions' => !empty($permissions) ? $permissions : NULL,
         );
       }
     }

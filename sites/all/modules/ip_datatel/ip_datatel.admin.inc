@@ -198,6 +198,7 @@ function _ip_datatel_settings_form($form, $form_state) {
   	 'events' => t('Show Events'),
   	 'add_users' => t('Add Users'),
   	 'delete_users' => t('Delete Users'),
+  	 'zone_aliases' => t('Generate Zone Aliases'),
   	),
   	'#weight' => -99,
   	'#states' => $ipdatatel->ipDatatelStates('visible', 'ip_datatel_page_status', array('checked' => TRUE)),

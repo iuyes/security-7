@@ -1,6 +1,10 @@
 <?php
 class ipdatatelUtility {
 
+	private $drupal_permissions = array();
+	private $bat_settings = array();
+	private $alarm_settings = array();
+
   public $account_information;
   public function __construct($account_info, $uid, $nid = NULL){
     if(!empty($nid)){
@@ -30,20 +34,27 @@ class ipdatatelUtility {
     $alarm_settings = $this->alarmSettings();
     $account_info = $this->account_information;
     $account_wrapper = array();
+    $master_settings = $this->buildMasterSettings();
     if(in_array('add_users', $alarm_settings) || in_array('TRUE', $alarm_settings)){
-      $this->addToRender($this->alarmTools($this->cust_block_settings, $this->uid, '', TRUE));
-    }
-    $this->addToRender($this->alarmTools($this->cust_block_settings, $this->uid, '', 'login'));
-
+      $this->addToRender($this->alarmTools($this->cust_block_settings, 'admin', $this->uid, '', 'add_users'));
+    }/*else{
+	    drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_login.js', array('type' => 'file', 'scope' => 'header'));
+			$this->addToRender($this->alarmTools($this->cust_block_settings, 'default', $this->uid, '', 'login'));
+    }*/
+    
+    drupal_add_js('misc/form.js');
+		drupal_add_js('misc/collapse.js');
+    
     foreach($account_info as $key => $value){
       foreach($value as $account_name => $account_data){
+      	$bat_settings = $this->batSettings($account_data);
         switch($account_data['account_type']){
         case 1:
           $username = $account_data['username'];
           $account_wrapper['wrapper'] = $this->alarmTitle($username);
           $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings)){
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $this->uid, $username, FALSE);
+          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
+            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
           }
           $this->addToRender($account_wrapper);
           break;
@@ -51,9 +62,10 @@ class ipdatatelUtility {
           $username = $account_data['username'];
           $account_wrapper['wrapper'] = $this->alarmTitle($username);
           $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings)){
+          $permissions = $account_data['permissions'];
+          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
           
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $this->uid, $username, FALSE);
+            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
           }
           $this->addToRender($account_wrapper);
           break;
@@ -65,8 +77,8 @@ class ipdatatelUtility {
           $username = $account_data['username'];
           $account_wrapper['wrapper'] = $this->alarmTitle($username);
           $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings)){
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $this->uid, $username, FALSE);
+          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
+            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
           }
           $this->addToRender($account_wrapper);
 
@@ -75,8 +87,8 @@ class ipdatatelUtility {
           $username = $account_data['username'];
          $account_wrapper['wrapper'] = $this->alarmTitle($username);
           $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings)){
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $this->uid, $username, FALSE);
+          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
+            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
           }
           $this->addToRender($account_wrapper);
 
@@ -90,6 +102,7 @@ class ipdatatelUtility {
   
   
   private function AlarmTitle($username){
+  
     return array(
       '#type' => 'fieldset',
       '#title' => t($username),
@@ -104,8 +117,7 @@ class ipdatatelUtility {
 
 
 
-  public function alarmTools($settings, $uid, $username, $arg){
-    
+  public function alarmTools($settings, $bat_settings, $uid, $username, $arg){
     $account_wrapper = array();
     $username = empty($username) ? 'Tools' : $username;
     $tools = array();
@@ -114,11 +126,10 @@ class ipdatatelUtility {
               'class' => array('button', 'radius', 'small'),
             ),
           );
-          
     foreach($settings as $key => $value){
       switch($value){
       case'add_users':
-        if($arg == TRUE){
+        if($arg === 'add_users' || !empty($bat_settings['add_users'])){
             $path = ''.$_SERVER['REQUEST_URI'].'#';
             $tools['add_user'] = array(
               'data' => l('Add User', $path, $options),
@@ -128,22 +139,24 @@ class ipdatatelUtility {
         }
         break;
       case'events':
-        if($arg == FALSE){
+        if($arg == 'events'){
           $path = '../../alarm-settings/'.$uid.'/event_log/'.$username.'';
           $tools['events'] = array(
             'data' => l('View Events', $path, $options),
           );
         }
         break;
-      }
-      if($arg == 'login'){
-        $tools['add_user'] = array(
-              'data' => l('Alarm Login', '#', $options),
-              'id' => 'alarm',
-              'data-reveal-id' => 'myAlarmModal',
-            );
+       case'zone_aliases':
+       	break;
       }
     }
+    if($arg === 'login'){
+        $tools['alarm_login'] = array(
+              'data' => l('Alarm Login', 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'#', $options),
+              'id' => 'alarm_login',
+            );
+      }
+    //dpm($tools);
     return array(
       '#theme' => 'item_list',
       '#items' => $tools,
@@ -213,8 +226,31 @@ class ipdatatelUtility {
             $alarm_settings[$key] = $value['value'];
           }
         }
+        $this->alarm_settings = $alarm_settings;
         return $alarm_settings; 
     }
+  }
+  
+  public function batSettings($account_data){
+	  if(!empty($account_data['permissions'])){
+	 		return $account_data['permissions'];
+	  }else{
+		  return array('');
+	  }
+  }
+  
+  
+  
+  private function buildMasterSettings(){
+  	$all_settings = array();
+  	$all_settings['account_alarm_settings'] = !empty($this->alarm_settings) ? $this->alarm_settings : 
+  	$all_settings['drupal_permissions'] = $this->drupal_permissions;
+		foreach($this->account_information as $key => $value){
+			foreach($value as $name => $permissions){
+				$all_settings['permissions'][$name] = $permissions['permissions'];
+			}
+		}
+		return $all_settings;
   }
 
 
@@ -257,6 +293,7 @@ class ipdatatelUtility {
             ),
           ),
         );
+        
         $edit = !empty($access['edit']) || in_array('edit_users', $alarm_settings) ? array('data' => l('Edit', '../../alarm-settings/'.$uid.'/cust_info/'.$value.'', $options)) : '';
         if(!empty($edit)){
           array_push($rows[$key]['data'], $edit);
@@ -279,7 +316,6 @@ class ipdatatelUtility {
         '#weight' => 100,
       );
     }
-    //$this->addToRender($user_list);
     
     return $user_list;
   }
@@ -291,6 +327,7 @@ class ipdatatelUtility {
     $access = array();
     $access['edit'] = user_access('edit_delete') || in_array('edit_users', $alarm_settings) ? t('Edit') : NULL;
     $access['delete'] = user_access('edit_delete') || in_array('delete_users', $alarm_settings)? t('Delete') : NULL;
+    $this->drupal_permissions = $access;
     return $access;
   }
 
@@ -316,9 +353,6 @@ class ipdatatelUtility {
 
 
   private function deleteUser($utility, $arg){
-    //$data = array('username' => $username);
-    //$build_request = self::jsonData($utility, $data, '', '');
-    //$send_request = self::jsonRequest($build_request);
       $status = default_form();
       $status['wrapper']['message'] = status_message('Sorry, Something went wrong. Please contact our customer support.');
       $user = $arg;

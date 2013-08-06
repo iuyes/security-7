@@ -417,10 +417,10 @@ function fr_pages_field_formatter_view($entity_type, $entity, $field, $instance,
 		$current_page_title = NULL;
 		$home_page = TRUE;
 		if(isset($_GET['page'])){
-			$home_page = FALSE;
-			$current_page = !empty($_GET['delta']) && $_GET['delta'] <= $b ? ($_GET['delta'] - 1) : FALSE;
-			$current_page_title = !empty($_GET['page']) && $_GET['delta'] <= $b ? $_GET['page'] : FALSE;
-			$home_page = $current_page == FALSE || $current_page_title == FALSE ? TRUE : FALSE;
+			$errors = array();
+			$current_page = !empty($_GET['delta']) && ($_GET['delta'] <= $b) ? ($_GET['delta'] - 1) : $errors['delta_error'] = TRUE;
+			$current_page_title = !empty($_GET['page']) && ($_GET['delta'] <= $b) ? $_GET['page'] : $errors['page_error'] = TRUE;
+			$home_page = empty($errors) ? FALSE : TRUE;
 		}
 		if($home_page != TRUE){
 			foreach($items as $delta => $item) {

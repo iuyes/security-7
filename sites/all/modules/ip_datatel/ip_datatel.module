@@ -143,9 +143,8 @@ function ip_datatel_load_alarm_profile($uid, $utility, $arg, $nid){
       $uid = $api->uid;
       $IpdatatelUtility = new ipdatatelUtility($account_info, $uid, $nid);
       $run_utility = $IpdatatelUtility->requestedUtility($utility, $arg);
-    }
+    } 
     return $run_utility;
-    //return 'd';
   }else{
     return drupal_not_found();
   }
