@@ -93,8 +93,6 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 	//Default values
 	switch ($instance['widget']['type']) {
 	case 'fr_virtual_widget':
-
-
 		//dpm($element);
 		$field_name = 'field_vt_tour_files';
 
