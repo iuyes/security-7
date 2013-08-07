@@ -6,6 +6,7 @@ cache/
 files/
 sites/*/files
 sites/*/private
+sites/default/files/fortified
 
 # Ignore default text files
 .htaccess
