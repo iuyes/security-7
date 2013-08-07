@@ -1691,16 +1691,20 @@ area.active {
     }
   }
   
-  .f-dropdown{
-  max-width:50% !important;
-  z-index:1000;
-  float:right;
-}
-.f-dropdown.large.open{
-  max-width:50% !important;
-  z-index:1000;
-  float:right;
-}
+	.f-dropdown{
+ 		max-width:60% !important;
+ 		z-index:999999;
+ 		.title-desc-wrapper{
+	 		text-align:center;
+ 		}
+ 		.dropdown-feat-image-link{
+	 		text-align:center;
+	 		
+ 		}
+ 	}
+	.block-fr-menu{
+		position: inherit;
+	}
 
 }
 
@@ -1726,16 +1730,27 @@ area.active {
     }
   }
 
-
-
-.f-dropdown{
-  max-width:60% !important;
-  z-index:1000;
-}
-.f-dropdown.large.open{
-  max-width:60% !important;
-  z-index:1000;
-}
+	
+	.learn-more-link-image{
+		visibility: hidden !important;
+		display:none !important;
+	}
+	.learn-more-title-group-img{
+		//float:left !important;
+		//display:table;
+		.learn-more-title-img-wrapper{
+			//float:left;
+			//display:inline-table;
+		}	
+		.learn-more-link{
+			display:none;
+			padding-top:2px !important;
+			padding-bototm:2px !important;
+			text-align:center;
+			
+		}
+	}
+	
   .middle-head-menu{
     margin-left:auto !important;
     margin-right:auto !important;

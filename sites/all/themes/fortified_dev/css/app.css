@@ -2111,14 +2111,15 @@ area.active {
       width: 160%; }
 
   .f-dropdown {
-    max-width: 50% !important;
-    z-index: 1000;
-    float: right; }
+    max-width: 60% !important;
+    z-index: 999999; }
+    .f-dropdown .title-desc-wrapper {
+      text-align: center; }
+    .f-dropdown .dropdown-feat-image-link {
+      text-align: center; }
 
-  .f-dropdown.large.open {
-    max-width: 50% !important;
-    z-index: 1000;
-    float: right; } }
+  .block-fr-menu {
+    position: inherit; } }
 @media only screen and (max-width: 768px) {
   .top-bar-search {
     visibility: visible;
@@ -2134,13 +2135,15 @@ area.active {
       height: 25px;
       width: 25px; }
 
-  .f-dropdown {
-    max-width: 60% !important;
-    z-index: 1000; }
+  .learn-more-link-image {
+    visibility: hidden !important;
+    display: none !important; }
 
-  .f-dropdown.large.open {
-    max-width: 60% !important;
-    z-index: 1000; }
+  .learn-more-title-group-img .learn-more-link {
+    display: none;
+    padding-top: 2px !important;
+    padding-bototm: 2px !important;
+    text-align: center; }
 
   .middle-head-menu {
     margin-left: auto !important;
