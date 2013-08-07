@@ -326,10 +326,14 @@ class menu{
 		
 		
 		$content['header_wrapper'] = $this->container(array('dropdown-header-wrapper', 'large-12', 'columns'));
-		$content['header_wrapper']['title_desc'] = $this->container(array('title-desc-wrapper', 'large-7', 'columns'));
+		$content['header_wrapper']['title_desc'] = $this->container(array('title-desc-wrapper', 'large-7', 'small-12', 'medium-12', 'columns'));
 
 		$items = l($title, $path, $options);
 		$content['header_wrapper']['title_desc']['markup'] = $this->markup($desc, '', 'menu-desc row', 99);
+		
+		$title_options = array();
+		$content['header_wrapper']['title_desc']['header'] = $this->markup(l($title, $path, $title_options), '', 'menu-desc-header', 98);
+		
 		$path = drupal_lookup_path('alias', 'node/'.$node->nid.'');
 		if(!empty($node->field_main_pages_teaser_image['und'][0])){
 		  $image = array();
@@ -343,7 +347,7 @@ class menu{
   		$title_image = theme('image', $image);
   		$title_img_options = array(
 			'attributes' => array(
-				'class' => array('large-5', 'columns'),
+				'class' => array('large-5', 'small-12', 'medium-12', 'dropdown-feat-image-link', 'columns'),
 			),
 			'html' => TRUE,
 		);
@@ -352,9 +356,8 @@ class menu{
 	  	    '#text' => $title_image,
 	  	    '#path' => $path,
 	  	    '#options' => $title_img_options,
-	  	    '#weight' => -101,
+	  	    '#weight' => 100,
 	  	  );
-  		//$content['title_image'] = $this->markup($title_image, '', 'menu-desc-image large-5 columns', -101);
 		}
 		//dpm($node);
 		if(!empty($node->field_main_page_highlights['und'])){
@@ -366,8 +369,7 @@ class menu{
 			$learn_more['wrapper'] = $this->container(array('menu-learn-more-wrapper', 'row', 'columns'));
 			$learn_more['wrapper']['learn_more'] = $load_links;
 		}
-		$title_options = array();
-		$content['header_wrapper']['title_desc']['header'] = $this->markup(l($title, $path, $title_options), '', 'menu-desc-header', -100);
+		
 		return array('items' => $items, 'content' => $content, 'links' => $learn_more);
 	}
 	
@@ -424,7 +426,7 @@ class menu{
   		}else{
     		$teaser_images['wrapper'][$nid][$group] = $this->container(array('learn-more-title-group-img-wrapper', 'large-12', 'columns'));
   		}
-  		$teaser_images['wrapper'][$nid][$group][$key] = $this->container(array('learn-more-title-img-wrapper', 'large-4', 'columns'));
+  		$teaser_images['wrapper'][$nid][$group][$key] = $this->container(array('learn-more-title-img-wrapper', 'large-4', 'small-12', 'columns'));
 			$path_alias = drupal_lookup_path('alias', 'node/'.$node->nid.'');
 			$links = l($head, $path_alias, $options);
 			if(!empty($value['image_3'])){
