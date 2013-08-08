@@ -4,7 +4,13 @@ class ipdatatelUtility {
 	private $drupal_permissions = array();
 	private $bat_settings = array();
 	private $alarm_settings = array();
-
+	private $alarm_tools_link_options = array(
+  	'attributes' => array(
+  	  'class' => array('button', 'radius', 'small'),
+  	),
+  );
+  public $add_users_permissions = array();
+  	
   public $account_information;
   public function __construct($account_info, $uid, $nid = NULL){
     if(!empty($nid)){
@@ -31,133 +37,119 @@ class ipdatatelUtility {
     $format_account_data = array();
     $account_users = array();
     $users = array();
-    $alarm_settings = $this->alarmSettings();
+    $tools = array();
+    $tool_item = array();
     $account_info = $this->account_information;
     $account_wrapper = array();
-    $master_settings = $this->buildMasterSettings();
-    if(in_array('add_users', $alarm_settings) || in_array('TRUE', $alarm_settings)){
+    $master_settings = $this->buildMasterSettings($account_info);
+    /*if(in_array('add_users', $alarm_settings) || in_array('TRUE', $alarm_settings)){
       $this->addToRender($this->alarmTools($this->cust_block_settings, 'admin', $this->uid, '', 'add_users'));
-    }/*else{
-	    drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_login.js', array('type' => 'file', 'scope' => 'header'));
-			$this->addToRender($this->alarmTools($this->cust_block_settings, 'default', $this->uid, '', 'login'));
     }*/
     
+    drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_login.js', array('type' => 'file', 'scope' => 'header'));
+    $tools['wrapper'] = $this->alarmTitle('Alarm Tools', -100, FALSE);
+    $tool_item['user_login'] = $this->toolsLogin();
+		
+		
     drupal_add_js('misc/form.js');
-		drupal_add_js('misc/collapse.js');
-    
+		drupal_add_js('misc/collapse.js');   
+    //$block_settings = $this->alarmPermissionsRout($this->cust_block_settings);   
     foreach($account_info as $key => $value){
       foreach($value as $account_name => $account_data){
-      	$bat_settings = $this->batSettings($account_data);
+      	 $bat_settings = $this->batSettings($account_data);
+      	 $username = $account_data['username'];
+				 $alarm_settings = $this->alarmPermissionsRout(NULL, $bat_settings, $username, $this->uid);
         switch($account_data['account_type']){
         case 1:
-          $username = $account_data['username'];
-          $account_wrapper['wrapper'] = $this->alarmTitle($username);
-          $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
-          }
-          $this->addToRender($account_wrapper);
-          break;
         case 2:
-          $username = $account_data['username'];
+        case 4:
           $account_wrapper['wrapper'] = $this->alarmTitle($username);
           $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          $permissions = $account_data['permissions'];
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
-          
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
-          }
-          $this->addToRender($account_wrapper);
+					$account_wrapper['wrapper']['menu'] = $this->toolListTools();
           break;
         case 3:
           if(!empty($users)){
             unset($account_data['attatched_users']);
             $account_data['attatched_users'] = $users;
           }
-          $username = $account_data['username'];
           $account_wrapper['wrapper'] = $this->alarmTitle($username);
           $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
-          }
-          $this->addToRender($account_wrapper);
-
-          break;
-        case 4:
-          $username = $account_data['username'];
-         $account_wrapper['wrapper'] = $this->alarmTitle($username);
-          $account_wrapper['wrapper']['table'] = $this->listUsers($account_data);
-          if(in_array('view_events', $alarm_settings) || in_array('TRUE', $alarm_settings) || in_array('events', $bat_settings)){
-            $account_wrapper['wrapper']['menu'] = $this->alarmTools($this->cust_block_settings, $bat_settings, $this->uid, $username, 'events');
-          }
-          $this->addToRender($account_wrapper);
-
+					$account_wrapper['wrapper']['menu'] = $this->toolListTools();
           break;
         }
+        $this->addToRender($account_wrapper);
       }
     }
-
+    if(!empty($this->add_users_permissions)){
+	    $tool_item['add_users'] = $this->toolsAddUsers();
+    }
+		$tools['wrapper']['menu'] = $this->toolListTools($tool_item);
+		array_unshift($this->for_render, $tools);
     //$alarm_tools = build_alarm_block($this->cust_block_settings, $username, $account_name, $this->uid);
   }
   
+  public $tools = array();
   
-  private function AlarmTitle($username){
   
-    return array(
-      '#type' => 'fieldset',
-      '#title' => t($username),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#attributes' => array(
-        'class' => array('user-alarms-fieldset', 'large-12', 'columns', 'collapsible', 'collapsed'),
-      ),
-    );
+  private function alarmPermissionsRout($block_settings = NULL, $bat_settings = NULL, $username = NULL, $uid = NULL){
+  	$tools = array();
+		if(!empty($block_settings)){
+			foreach($block_settings as $key => $value){
+				//$all_permissions['block_settings'][] = $value;
+			}
+		}
+		if(!empty($bat_settings)){
+	  	foreach($bat_settings as $key => $value){
+			  switch($key){
+				  case 'add_users':
+				  	$this->tools['add_users'] = $this->allowAddUsersPermissions($username);
+				  	break;
+				  case 'events':
+				  	$this->tools['events'] = $this->toolsViewEvents($uid, $username);
+				  	break;
+			  }
+		  }
+	 }
+	  return $this->tools;
   }
-
-
-
-
-  public function alarmTools($settings, $bat_settings, $uid, $username, $arg){
-    $account_wrapper = array();
-    $username = empty($username) ? 'Tools' : $username;
-    $tools = array();
-    $options = array(
-            'attributes' => array(
-              'class' => array('button', 'radius', 'small'),
-            ),
-          );
-    foreach($settings as $key => $value){
-      switch($value){
-      case'add_users':
-        if($arg === 'add_users' || !empty($bat_settings['add_users'])){
-            $path = ''.$_SERVER['REQUEST_URI'].'#';
-            $tools['add_user'] = array(
-              'data' => l('Add User', $path, $options),
-              'id' => 'add-user',
-              'data-reveal-id' => 'add_user',
-            );
-        }
-        break;
-      case'events':
-        if($arg == 'events'){
-          $path = '../../alarm-settings/'.$uid.'/event_log/'.$username.'';
-          $tools['events'] = array(
-            'data' => l('View Events', $path, $options),
-          );
-        }
-        break;
-       case'zone_aliases':
-       	break;
-      }
-    }
-    if($arg === 'login'){
-        $tools['alarm_login'] = array(
-              'data' => l('Alarm Login', 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'#', $options),
-              'id' => 'alarm_login',
-            );
-      }
-    //dpm($tools);
-    return array(
+ 
+ 
+  private function allowAddUsersPermissions($username){
+	  $this->add_users_permissions[$username] = TRUE;
+  }
+  
+  
+  private function toolsAddUsers(){
+		$path = ''.$_SERVER['REQUEST_URI'].'#';
+    $tools = array(
+    	'data' => l('Add User', $path, $this->alarm_tools_link_options),
+    	'id' => 'add-user',
+    	'data-reveal-id' => 'add_user',
+    );
+    return $tools;
+  }
+  
+  private function toolsViewEvents($uid, $username){
+		$path = '../../alarm-settings/'.$uid.'/event_log/'.$username.'';
+  	$tools = array(
+  	  'data' => l('View Events', $path, $this->alarm_tools_link_options),
+  	);
+  	return $tools;
+  }
+  
+  
+  private function toolsLogin(){
+		$tools = array(
+  	  'data' => l('Alarm Login', 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'#', $this->alarm_tools_link_options),
+  	  'class' => array('alarm_login'),
+  	);
+  	return $tools;
+  }
+  
+  
+  private function toolListTools($alarm_tools = NULL){
+  	$tools = !empty($alarm_tools) ? $alarm_tools : $this->tools;
+	  return array(
       '#theme' => 'item_list',
       '#items' => $tools,
       '#type' => 'ul',
@@ -168,7 +160,22 @@ class ipdatatelUtility {
       '#weight' => -100,
     );
   }
-
+  
+  
+  private function AlarmTitle($username, $weight = NULL, $collapsed = TRUE){
+  	$weight = !empty($weight) ? $weight : 100;
+  	$collapse = $collapsed == FALSE ? '' : 'collapsed';
+    return array(
+      '#type' => 'fieldset',
+      '#title' => t($username),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => $weight,
+      '#attributes' => array(
+        'class' => array('user-alarms-fieldset', 'large-12', 'columns', 'collapsible', $collapse),
+      ),
+    );
+  }
 
 
 
@@ -220,15 +227,8 @@ class ipdatatelUtility {
       if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
         return array('TRUE');
       }else{
-        $get_alarm_settings = $this->profile['customer']->field_cust_alarm_settings;
-        if(!empty($get_alarm_settings['und'])){
-          foreach($get_alarm_settings['und'] as $key => $value){
-            $alarm_settings[$key] = $value['value'];
-          }
-        }
-        $this->alarm_settings = $alarm_settings;
-        return $alarm_settings; 
-    }
+	      return FALSE;
+      }
   }
   
   public function batSettings($account_data){
@@ -262,7 +262,6 @@ class ipdatatelUtility {
     $block_settings = $this->cust_block_settings;
     if(!empty($data['attatched_users'])){
       $attatched_users = $data['attatched_users'];
-
       $user_list['users_wrapper'] = array(
         '#type' => 'container',
         '#attributes' => array(
@@ -273,8 +272,8 @@ class ipdatatelUtility {
 
       $uid = $this->uid;
       $options = array();
-      $alarm_settings = $this->alarmSettings(); 
-      $access = $this->checkAccess($alarm_settings);
+      $alarm_settings = $data['permissions'];
+      $access = $this->checkAccess($data['permissions']);
       $headers = array();
       
       $headers[] = t('Username');
