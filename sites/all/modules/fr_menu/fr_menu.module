@@ -316,7 +316,7 @@ class menu{
 		$title = $node->title;
 		$path = '#';
 		$learn_more = 'Learn More:';
-
+		$path = drupal_lookup_path('alias', 'node/'.$node->nid.'');
 		$options = array(
 			'attributes' => array(
 				'class' => array('header-bottom-item'),
@@ -334,7 +334,6 @@ class menu{
 		$title_options = array();
 		$content['header_wrapper']['title_desc']['header'] = $this->markup(l($title, $path, $title_options), '', 'menu-desc-header', 98);
 		
-		$path = drupal_lookup_path('alias', 'node/'.$node->nid.'');
 		if(!empty($node->field_main_pages_teaser_image['und'][0])){
 		  $image = array();
   		$teaser_image = $node->field_main_pages_teaser_image['und'][0];
@@ -429,6 +428,7 @@ class menu{
   		$teaser_images['wrapper'][$nid][$group][$key] = $this->container(array('learn-more-title-img-wrapper', 'large-4', 'small-12', 'columns'));
 			$path_alias = drupal_lookup_path('alias', 'node/'.$node->nid.'');
 			$links = l($head, $path_alias, $options);
+
 			if(!empty($value['image_3'])){
   			$teaser_image = $value['image_3'];
   			$load_img = file_load($teaser_image);
