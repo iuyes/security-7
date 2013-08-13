@@ -102,6 +102,11 @@ function ip_datatel_menu() {
     'access callback' => TRUE,
     'type' => MENU_NORMAL_ITEM,
   );
+  $items['ip_datatel_save_alarm_zones'] = array(
+    'page callback' => 'ip_datatel_save_alarm_zones',
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
   $items['admin/config/people/ipdatatel'] = array(
     'title' => 'Ipdatatel',
     'description' => 'Configure Ipdatatel',
@@ -725,30 +730,7 @@ function fr_ipdatatel_sort_events_log($form, &$form_state){
 function ip_datatel_form_alter(&$form, &$form_state, $form_id){
 	switch($form_id){
 		case'alarm_node_form':
-		drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_gen_zones.js', array('type' => 'file', 'scope' => 'header'));
-		$form['zone_aliases_wrapper'] = array(
-			'#type' => 'fieldset',
-			'#title' => t('Generate Zone Aliases'),
-			'#collapsible' => TRUE,
-			'#collapsed' => FALSE,
-		);
-			$form['zone_aliases_wrapper']['zone_aliases'] = array(
-				'#type' => 'markup',
-				'#markup' => '<input type="button" class="form-submit" id="generate-zone-aliases" value="Generate Zone Aliases">',
-				'#weight' => 99,
-				'#prefix' => '<div id="generate-aliases" style="padding-bottom:15px;">',
-				'#suffix' => '</div>',
-			);
-			//$form['#group_children']['zone_aliases_wrapper']['zone_aliases'] = 'group_alarm_info';
-			$form['zone_aliases_wrapper']['zone_aliases_eplace'] = array(
-				'#type' => 'markup',
-				'#markup' => '',
-				'#weight' => 100,
-				'#prefix' => '<div id="aliase-replace">',
-				'#suffix' => '</div>',
-			);
 			
-			return $form;
 			break;
 	}
 }
@@ -758,6 +740,13 @@ function ip_datatel_alarm_zones(){
 	$data = $_POST;
 	$username = $data['username'];
 	$password = $data['password'];
+	$utility = $data['utility'];
+	if($utility == 'zone_alias'){
+		$redirect_url = 'http://www.alarmdealer.com/index.php?mod=zone_alias&action=index';
+	}
+	if($utility == 'user_aliase'){
+		$redirect_url = 'http://www.alarmdealer.com/index.php?mod=zone_alias&action=index';
+	}
 	
 	$scrapper = new IpdatatelScrapper();
 	$url = 'https://www.alarmdealer.com/';
@@ -789,8 +778,8 @@ function ip_datatel_alarm_zones(){
 	);
 	$scrape_zones = $zones->whichScrapper($scrape);
 	$alarm_zones = $zones->mergeZones($scrape_zones['zone_names'], $scrape_zones['zone_numbers']);
-	$alarm_zones = render_alarm_zones($alarm_zones);
-	$return = array('results' => $alarm_zones, 'alarm_zones' => $alarm_zones);
+	$alarm_zones_output = render_alarm_zones($alarm_zones);
+	$return = array('results' => $alarm_zones_output, 'alarm_zones' => $alarm_zones);
 	drupal_json_output($return);
   drupal_exit();
 }
@@ -801,4 +790,27 @@ function render_alarm_zones($zones){
 		$output .= '<div class="zone"><input type="textfield" value="'.$key.'"/><input type="textfield" value="'.$value.'"/></div><br/>';
 	}
 	return $output;
+}
+
+
+
+function ip_datatel_save_alarm_zones(){
+	//$data = $_POST['data'];
+	$zones = $_POST['zones'];
+	$nid = $_POST['nid'];
+	$bat_zones = array();
+	$check = 1;
+	$nid = node_load($nid);
+	if(!empty($nid)){
+		$check = 2;
+		unset($nid->field_alarm_zone_alias);
+		foreach($zones as $key => $value){
+			$bat_zones[]['value'] = $key.':'.$value;
+		}
+		$nid->field_alarm_zone_alias['und'] = $bat_zones;
+		node_save($nid);
+	}
+	$status = array('status' => $check);
+	drupal_json_output($status);
+  drupal_exit();
 }
