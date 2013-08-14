@@ -6,7 +6,7 @@ class ipdatatelUtility {
 	private $alarm_settings = array();
 	private $alarm_tools_link_options = array(
   	'attributes' => array(
-  	  'class' => array('button', 'radius', 'small'),
+  	  'class' => array('button', 'star'),
   	),
   );
   public $add_users_permissions = array();
@@ -138,9 +138,10 @@ class ipdatatelUtility {
   private function toolsAddUsers(){
 		$path = ''.$_SERVER['REQUEST_URI'].'#';
     $tools = array(
-    	'data' => l('Add User', $path, $this->alarm_tools_link_options),
+    	'data' => l('Add User', $path, array('')),
     	'id' => 'add-user',
     	'data-reveal-id' => 'add_user',
+    	'class' => array('button', 'add'),
     );
     return $tools;
   }
@@ -160,7 +161,7 @@ class ipdatatelUtility {
   private function toolsViewEvents($uid, $username){
 		$path = '../../alarm-settings/'.$uid.'/event_log/'.$username.'';
   	$tools = array(
-  	  'data' => l('View Events', $path, $this->alarm_tools_link_options),
+  	  'data' => l('View Events', $path, array('')),
   	);
   	return $tools;
   }
@@ -178,14 +179,22 @@ class ipdatatelUtility {
   private function toolListTools($alarm_tools = NULL, $admin = FALSE){
   	$tools = !empty($alarm_tools) ? $alarm_tools : $this->tools;
 	  return array(
-      '#theme' => 'item_list',
-      '#items' => $tools,
-      '#type' => 'ul',
-      '#attributes' => array('class' => array('alarm-menu-wrapper')),
-      '#container_id' => '',
-      '#prefix' => '<section>',
-      '#suffix' => '</section>',
-      '#weight' => -100,
+	  	'wrapper' => array(
+	  		'#type' => 'container',
+	  		'#attributes' => array(
+	  			'class' => array('alarm-tools-wrapper'),
+	  		),
+	  	'menu' => array(
+	      '#theme' => 'item_list',
+	      '#items' => $tools,
+	      '#type' => 'ul',
+	      '#attributes' => array('class' => array('alarm-menu-wrapper')),
+	      '#container_id' => '',
+	      '#prefix' => '<section>',
+	      '#suffix' => '</section>',
+	      '#weight' => -100,
+	     ),
+	    ),
     );
   }
   
@@ -210,7 +219,7 @@ class ipdatatelUtility {
   	$content['zones_wrapper']['save'] = array(
   		'#type' => 'markup',
 	  	'#markup' => 'Save Aliases',
-	  	'#prefix' => '<div id="save-zones" class="button radius small">',
+	  	'#prefix' => '<div id="save-zones" class="button">',
 	  	'#suffix' => '</div>',
 	  	'#weight' => 100,
   	);

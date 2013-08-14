@@ -408,7 +408,7 @@ function fr_pages_field_formatter_view($entity_type, $entity, $field, $instance,
 					'delta' => $b,
 				),
 				'attributes' => array(
-				  'class' => array('small-12', 'columns'),
+				  'class' => array('small-12', 'columns', 'button', 'next'),
 				),
 			);
 			$menu[$b] = l($items[$c]['page_highlight'], $path_alias, $options);
@@ -628,7 +628,7 @@ function build_menu_items($menu, $title){
 		$object['page_desc']['page_highlight_head']['navigation'] = array(
 		'#theme' => 'item_list',
 		'#items' => $menu,
-		//'#title' => t('Sign Up Today'),
+		'#title' => t('Learn More:'),
 		'#type' => 'ul',
 		'#attributes' => array('id' => 'page_menu', 'class' => array('page_menu')),
 		'#container_id' => 'scope-list-wrapper',

@@ -62,8 +62,6 @@ function fr_user_dash_block_info(){
 */
 function fr_user_dash_block_view($delta = ''){
 	global $user;
-	drupal_add_js('misc/form.js');
-	drupal_add_js('misc/collapse.js');
 	$arg = arg();
 
 	$content = array();
@@ -356,12 +354,13 @@ class tools{
 			$title = $values['title'];
 			$query = $values['query'];
 			$path = $values['path'];
+			$class = $values['class'];
 			$list[] = array(
 				'type' => $type,
 				'title' => t($title),
 				'path' => $path,
 				'query' => $query,
-				'class' => array('button radius small'),
+				'class' => array('button', $class),
 			);
 		}
 		$buttons = $this->generateMenuList($list);
@@ -373,13 +372,15 @@ class tools{
 		$type = array('user', 'users', 'refresh', 'add an alarm', 'help');
 		$title = array('Add User', 'Manage Users', 'Refresh Page', 'Add An Alarm', 'Help');
 		$path = array('admin/people/create', 'admin/people', '../../user', '../../node/add/alarm', 'help');
-		$query = array('', '', 'window.refresh();', '');
+		$query = array('', '', 'window.refresh();', '', '');
+		$class = array('add', 'edit', 'next', 'add');
 		for($i = 0; $i<=3; $i++){
 			$tools[$i] = array(
 				'type' => $type[$i],
 				'title' => $title[$i],
 				'path' => $path[$i],
 				'query' => $query[$i],
+				'class' => $class[$i],
 			);
 		}
 		$build = $this->buildListItems($tools);
@@ -811,7 +812,7 @@ class dashPage extends dashboard{
 			$this->cust_dvr = array(
 				'#type' => 'markup',
 				'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div>
-					<iframe id="webclientDvr" seamless scroll="yes" width="100%" height="700px" src="http://'.$dvr.'">
+					<iframe id="webclientDvr" style="border:2px solid white;" seamless scroll="yes" width="100%" height="700px" src="http://'.$dvr.'">
 					</iframe>',
 				'#prefix' => '<div id="'.$uid.'" class="reveal-modal xlarge">',
 				'#suffix' => '</div>',
@@ -1434,7 +1435,7 @@ function _fr_menu_generate_list ($list_items) {
 				case'cam':
 					$options = array(
 						'attributes' => array(
-							'class' => array('user-dash-button', 'button', 'radius', 'small'),
+							'class' => array('user-dash-button', 'button', 'star'),
 							'data-reveal' => $list_item->id,
 						),
 						'query' => $list_item->query,
@@ -1455,11 +1456,11 @@ function _fr_menu_generate_list ($list_items) {
 					break;
 				case'prefrences':
 					$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="prefrences" data-reveal-id="'.$list_item->id.'" >'.$list_item->title.'</a>';
-					$list['buttons']['prefrences'] = fr_user_dash_markup($path, 'button radius small');
+					$list['buttons']['prefrences'] = fr_user_dash_markup($path, 'button edit');
 					break;
 				case'account':
 					$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="account">'.$list_item->title.'</a>';
-					$list['buttons']['account'] = fr_user_dash_markup($path, 'button radius small');
+					$list['buttons']['account'] = fr_user_dash_markup($path, 'button edit');
 					break;
 				}
 			}
