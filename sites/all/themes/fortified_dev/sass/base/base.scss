@@ -615,28 +615,6 @@ form{
         border-bottom: 18px solid transparent;
       }
     }
-
-
-  /*.img_modal_left{
-    position: absolute;
-    left: 2px;
-    top:50%;
-    width: 14px;
-    height: 20px;
-    background: url(/sites/all/themes/fortified_dev/images/image_slider.png) no-repeat bottom left transparent;
-  }
-  .img_modal_right{
-    position: absolute;
-    right: 2px;
-    top:50%;
-    width: 14px;
-    height: 20px;
-    background: url(/sites/all/themes/fortified_dev/images/image_slider.png) no-repeat top left transparent;
-  }*/
-
-
-
-
 /* Front Page Markup*/
 
 
@@ -707,6 +685,13 @@ form{
 		}
 	}
 	}
+}
+
+.menu-desc-header{
+  @include h3-styles(white);
+  //width:100%;
+  //float:right;
+  text-align:center;
 }
 
 
@@ -1329,7 +1314,7 @@ area.active {
 }
 
 .portlet-title{
-  font-family: $font;
+  font: bold 1em/1.5em Arial, Helvetica;
 }
 
 /*   end   */
@@ -1352,6 +1337,10 @@ area.active {
 	.form-submit{
 		float:left;
 	}
+}
+
+.webform-client-form{
+	padding:10px;
 }
 
 .actions-admin-wrapper {

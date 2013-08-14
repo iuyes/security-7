@@ -16,8 +16,8 @@
     </div>
   </div>
   <div class="top-bar-search"> 
-      <?php echo render($search_form); ?>
-    </div>
+  	<?php echo render($search_form); ?>
+	</div>
 </nav>
 	
 <div class="middle-head-menu">
@@ -28,32 +28,40 @@
   </div>
 </div>
 
-<!---center Header-->
+<?php if ($breadcrumb): ?>
+<!---Breadcrumbs Header-->
 <div class="large-8 large-centered columns">
   <div class="header-bottom">
-  	<?php if ($breadcrumb): print $breadcrumb; endif; ?>
+  	<?php print $breadcrumb; ?>
   </div>
 </div>
-<!---center Header-->
+<!--- END Breadcrumbs Header-->
+<?php endif; ?>
 
+<!---Highlighted-->
+<?php if (!empty($page['highlighted'])): ?>
+	<div class="hihglighted wrapper row">
+		<div class="large-12 large-centered columns">
+			<div class="highlight panel callout">
+				<?php print render($page['highlighted']); ?>
+			</div>
+		</div>
+	</div>
+<?php endif; ?>
+<!--- End Highlighted-->
 
-<div class="slideshow"><!--Slide Show--->
+<!---Slide Show--->
+<div class="slideshow">
 	<div class="slide-show">
 		<?php print render($page['slide_show']); ?>
 	</div>
 </div>
-
+<!---END Slide Show--->
 
 <div class="main-page-content row"><!--#row -->
 	<?php if ($messages): print $messages; endif; ?>
   <?php if (!empty($page['help'])): print render($page['help']); endif; ?>
-  	<div id="main" class="<?php print $main_grid; ?> columns">
-  	
-  	<?php if (!empty($page['highlighted'])): ?>
-      <div class="highlight panel callout">
-        <?php print render($page['highlighted']); ?>
-      </div>
-    <?php endif; ?>
+  	<div id="main" class="large-12 columns">
     <?php if ($title && !$is_front): ?>
       <?php print render($title_prefix); ?>
       <h1 id="page-title" class="title"><?php print $title; ?></h1>
@@ -70,19 +78,7 @@
         </ul>
       <?php endif; ?>
     <?php print render($page['content']); ?>
-  <?php if (!empty($page['sidebar_first'])): ?>
-  <!--#sidebar-first -->
-    <div id="sidebar-first" class="<?php print $sidebar_first_grid; ?> columns sidebar ">
-      <?php print render($page['sidebar_first']); ?>
-    </div><!--/#sidebar-first-->
-  <?php endif; ?>
-  <?php if (!empty($page['sidebar_second'])): ?>
-  <!--#sidebar-second -->
-    <div id="sidebar-second" class="<?php print $sidebar_sec_grid;?> columns sidebar">
-      <?php print render($page['sidebar_second']); ?>
-    </div><!--/#sidebar-second -->
-  <?php endif; ?>
-  </div> <!--/ #main-->
+    </div> <!--/ #main-->
 </div><!--/.row -->
 
 <?php if (!empty($page['footer_first']) || !empty($page['bottom_menu']) || !empty($page['footer_last'])): ?>

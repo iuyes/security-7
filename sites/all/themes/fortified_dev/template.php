@@ -288,11 +288,6 @@ function fortified_dev_preprocess_block(&$variables) {
 	// Add classes based on region.
 	switch ($variables['elements']['#block']->region) {
 		// Add a striping class
-	case 'sidebar_first':
-	case 'sidebar_second':
-		$variables['classes_array'][] = 'block-' . $variables['zebra'];
-		break;
-
 	case 'header':
 		$variables['classes_array'][] = 'header';
 		break;
@@ -598,29 +593,6 @@ function fortified_dev_preprocess_page(&$variables) {
 				'name' => 'main_menu',
 				'machine' => 'main-menu',
 			));
-	}
-
-	// Convenience variables
-	$left = $variables['page']['sidebar_first'];
-	$right = $variables['page']['sidebar_second'];
-
-	// Dynamic sidebars
-	if (!empty($left) && !empty($right)) {
-		$variables['main_grid'] = 'large-6 push-3';
-		$variables['sidebar_first_grid'] = 'large-3 pull-6';
-		$variables['sidebar_sec_grid'] = 'large-3';
-	} elseif (empty($left) && !empty($right)) {
-		$variables['main_grid'] = 'large-9';
-		$variables['sidebar_first_grid'] = '';
-		$variables['sidebar_sec_grid'] = 'large-3 small-3';
-	} elseif (!empty($left) && empty($right)) {
-		$variables['main_grid'] = 'large-9 push-3';
-		$variables['sidebar_first_grid'] = 'large-3 pull-9';
-		$variables['sidebar_sec_grid'] = '';
-	} else {
-		$variables['main_grid'] = 'large-12';
-		$variables['sidebar_first_grid'] = '';
-		$variables['sidebar_sec_grid'] = '';
 	}
 }
 

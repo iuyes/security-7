@@ -1271,22 +1271,6 @@ form {
     border-top: 18px solid transparent;
     border-bottom: 18px solid transparent; }
 
-/*.img_modal_left{
-  position: absolute;
-  left: 2px;
-  top:50%;
-  width: 14px;
-  height: 20px;
-  background: url(/sites/all/themes/fortified_dev/images/image_slider.png) no-repeat bottom left transparent;
-}
-.img_modal_right{
-  position: absolute;
-  right: 2px;
-  top:50%;
-  width: 14px;
-  height: 20px;
-  background: url(/sites/all/themes/fortified_dev/images/image_slider.png) no-repeat top left transparent;
-}*/
 /* Front Page Markup*/
 /*Menu Dropdown*/
 .f-dropdown.large.open {
@@ -1342,6 +1326,15 @@ form {
       float: left;
       display: inline;
       color: #4fc2e4; }
+
+.menu-desc-header {
+  font-weight: bold;
+  font-size: 22px;
+  color: white;
+  font-style: italic !important;
+  font-family: "Lucida Bright", "Georgia", "serif" !important;
+  padding-bottom: 5px;
+  text-align: center; }
 
 .menu-learn-more-wrapper {
   text-align: center;
@@ -1814,7 +1807,7 @@ area.active {
   width: 1%; }
 
 .portlet-title {
-  font-family: "Lucida Bright", "Georgia", "serif"; }
+  font: bold 1em/1.5em Arial, Helvetica; }
 
 /*   end   */
 /*   Webform   */
@@ -1828,6 +1821,9 @@ area.active {
   width: 25%; }
 .group-contact-wrapper .form-submit {
   float: left; }
+
+.webform-client-form {
+  padding: 10px; }
 
 .actions-admin-wrapper {
   float: left; }
