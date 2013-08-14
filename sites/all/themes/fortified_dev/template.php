@@ -32,11 +32,15 @@ _fortified_dev_load($files);
 function fortified_dev_html_head_alter(&$head_elements) {
 	//default meta tags
 	$meta_desc = 'With over thirty years experience installing and servicing burglar alarms, medical alarms, fire alarms, access control and camera systems throughout Arizona, Our company holds a residential and commercial Low Voltage Communications License from the State of Arizona.';
-		
-		
-		$meta = variable_get('page_desc');
-		if(!empty($meta)){
-			$meta_desc = $meta;
+	$meta_keywords = 'Tucson Alarms, Security Cameras, Alarm Systems, Security Systems, Video Security, Alarm Monitoring, Surveillance Systems, Guards, Virtual Guarding, Guard Service, Standing Guards, Tucson Arizona';
+	
+		$meta_desc_var = variable_get('page_desc');
+		if(!empty($meta_desc_var)){
+			$meta_desc = $meta_desc_var;
+		}
+		$meta_keywords_var = variable_get('page_keywords');
+		if(!empty($meta_keywords_var)){
+			$meta_keywords = $meta_keywords_var;
 		}
 	
 	// HTML5 charset declaration.
@@ -89,7 +93,7 @@ function fortified_dev_html_head_alter(&$head_elements) {
   	'#tag' => 'meta',
   	'#attributes' => array(
   	'name' => 'keywords',
-  	'content' => 'Tucson Alarms, Security Cameras, Alarm Systems, Security Systems, Video Security, Alarm Monitoring, Surveillance Systems, Guards, Virtual Guarding, Guard Service, Standing Guards, Tucson Arizona',
+  	'content' => $meta_keywords,
   	),
   );
 }

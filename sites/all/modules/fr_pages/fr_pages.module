@@ -392,6 +392,10 @@ function fr_pages_field_formatter_view($entity_type, $entity, $field, $instance,
 			$meta_desc = $entity->field_fr_pages_meta_desc['und'][0]['value'];
 			variable_set('page_desc', $meta_desc);
 		}
+		if(!empty($entity->field_main_pages_page_keywords['und'][0]['value'])){
+			$meta_keywords = $entity->field_main_pages_page_keywords['und'][0]['value'];
+			variable_set('page_keywords', $meta_keywords);
+		}
 
 		// for menu
 		$for_hook_menu = array();
