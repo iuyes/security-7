@@ -1,0 +1,39 @@
+<?php
+function ip_datatel_field_schema($field) {
+  switch($field['type']) {
+    case 'ip_datatel':
+
+      // Build out three (3) Media Block Fields for the DataBase
+        $columns['event_type'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['partition'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['signal'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['extra'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );
+        $columns['zone'] = array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        );                        
+                         
+      break;
+      }
+  return array(
+  'columns' => $columns,
+  'indexes' => array(),
+  );
+}

@@ -6,9 +6,9 @@
 */
 class ipDatatel{
   
+  private $authenticate = array('administrator', 'supervisor', 'guard');
   
-  
-  public function loadAccountInformation($uid){
+  public function loadAccountInformation($uid, $arg = NULL){
   
     global $user;
     $this->uid = $uid;
@@ -22,10 +22,10 @@ class ipDatatel{
     $account_data = array();
     $attatched_users = array();
     $permissions = array();
-    $this->query = new EntityFieldQuery;
-    $this->query->entityCondition('entity_type', 'node')
-    ->entityCondition('bundle', 'alarm')
-    ->fieldCondition('field_alarm_customer', 'target_id', $uid, '=');
+    $admin_permissions = array();
+    $custom_triggers = array();
+    
+    $query = $this->buildQueryPerams($arg);
     $result = $this->query->execute();
     if(!empty($result['node'])){
       foreach($result['node'] as $key => $node){
@@ -49,6 +49,14 @@ class ipDatatel{
 		       $permissions[$permission['value']] = $permission['value'];
 	        }
         }
+        if(!empty($results->field_alarm_admin_managments['und'])){
+	        foreach($results->field_alarm_admin_managments['und'] as $delta => $admin_permission){
+		       $admin_permissions[$admin_permission['value']] = $admin_permission['value'];
+	        }
+        }
+        if(!empty($results->field_alarm_custom_bat_triggers['und'])){
+	        $custom_triggers = $this->buildCustomerTriggers($results->field_alarm_custom_bat_triggers['und'], $results->field_alarm_ipdatatel_username['und'][0]['value']);
+        }
         $account_information[$customer_name][$results->field_alarm_ipdatatel_username['und'][0]['value']] = array(
           'account_type' => !empty($results->field_alarm_account_type['und'][0]['value']) ? $results->field_alarm_account_type['und'][0]['value'] : NULL,
           'username' => !empty($results->field_alarm_ipdatatel_username['und'][0]['value']) ? $results->field_alarm_ipdatatel_username['und'][0]['value'] : NULL,
@@ -58,10 +66,64 @@ class ipDatatel{
           'account_id' => !empty($account_id) ? $account_id : $results->field_alarm_account_id['und'][0]['value'],
           'node_id' => $node->nid,
           'permissions' => !empty($permissions) ? $permissions : NULL,
+          'admin_permissions' => !empty($admin_permissions) ? $admin_permissions : NULL,
+          'custom_triggers' => !empty($custom_triggers) ? $custom_triggers : NULL,
         );
       }
     }
     return $account_information;
+  }
+  
+  
+  private function buildCustomerTriggers($triggers, $account_name){
+  	$custom_triggers = array();
+  	foreach($triggers as $delta => $trigger){
+  		$custom_triggers[$delta] = new stdClass();
+			foreach($trigger as $trigger_name => $trigger_value){
+				$custom_triggers[$delta]->account_name = $account_name;
+				switch($trigger_name){
+					case'event_type':
+						$custom_triggers[$delta]->event = $trigger_value;
+						break;
+					case'partition':
+						$custom_triggers[$delta]->partition = $trigger_value;
+						break;
+					case'signal':
+						$custom_triggers[$delta]->signal = $trigger_value;
+						break;
+					case'extra':
+						$custom_triggers[$delta]->extra = $trigger_value;
+						break;
+					case'zone':
+						$custom_triggers[$delta]->zone = $trigger_value;
+						break;
+				}
+			}
+		}
+	return $custom_triggers;
+}
+  
+  
+  private function buildQueryPerams($arg){
+  	$uid = $this->uid;
+  	$auth = $this->authenticate;
+  	$this->query = new EntityFieldQuery;
+    $this->query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'alarm');
+    switch($arg){
+	    case'admin':
+	    	if(array_intersect($auth, $this->user_account->roles) && $arg == 'admin'){
+					$this->query->fieldCondition('field_alarm_admin_managments', 'value', 'process_alarms', '=');
+				}	
+	    	break;
+	    case'user':
+	    	$this->query->fieldCondition('field_alarm_customer', 'target_id', $uid, '=');
+	    	$this->query->fieldCondition('field_alarm_management', 'value', 'process_alarms', '=');
+	    	break;
+	    default:
+	    	$this->query->fieldCondition('field_alarm_customer', 'target_id', $uid, '=');
+	    	break;
+    }
   }
   
 
@@ -74,6 +136,7 @@ class ipDatatel{
     }
     return $format_users;
   }
+  
 }
 
 

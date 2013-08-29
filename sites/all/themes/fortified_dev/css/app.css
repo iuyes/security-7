@@ -1371,8 +1371,8 @@ form {
   box-shadow: 0px 0px 2px 2px #555; }
 
 /*Menu Dropdown*/
-#homebox-add-link {
-  display: none; }
+.clear-block {
+  background: #eee; }
 
 .side-bar-header {
   font-color: #888;
@@ -2477,10 +2477,8 @@ area.active {
     list-style-type: none; }
     .user-alarms-fieldset .alarm-menu-wrapper .alarm_login {
       float: left; }
-    .user-alarms-fieldset .alarm-menu-wrapper li {
-      margin: 0px !important; }
-      .user-alarms-fieldset .alarm-menu-wrapper li a {
-        color: #333333; }
+    .user-alarms-fieldset .alarm-menu-wrapper li a {
+      color: #333333; }
   .user-alarms-fieldset .user-alarm-wrapper .alarm-user-list {
     margin-bottom: 0.50em !important; }
 

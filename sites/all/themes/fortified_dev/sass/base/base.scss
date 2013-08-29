@@ -738,8 +738,8 @@ form{
 
 
 
-#homebox-add-link {
-	display:none;
+.clear-block{
+	background:#eee;
 }
 
 .side-bar-header{
@@ -2247,7 +2247,6 @@ nav{
 	  	float:left;
 	  }
 		li{
-			margin:0px !important;
 			a{
 				color:#333333;
 		    }

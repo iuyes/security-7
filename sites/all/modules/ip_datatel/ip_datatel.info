@@ -3,9 +3,14 @@ description = Functions for accessing Ipdatatels api.
 package = Fortified
 core = 7.x
 configure = admin/config/people/ipdatatel
+files[] = ip_datatel.module
+files[] = ip_datatel.install
+files[] = handler/ip_datatel_alarm_processor.inc
 files[] = handler/ip_datatel_accounts.inc
 files[] = handler/ip_datatel_json.inc
 files[] = handler/ip_datatel_utility.inc
 files[] = handler/ip_datatel_event_log.inc
+files[] = handler/ip_datatel_permissions.inc
 files[] = handler/ip_datatel_scrapper.inc
+files[] = handler/ip_datatel_alarm_profile.inc
 

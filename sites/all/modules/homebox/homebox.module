@@ -381,17 +381,26 @@ function homebox_build($page) {
   for ($i = 1; $i <= count($regions); $i++) {
     ksort($regions[$i]);
   }
-
+	
   // Add block links
   if ($user->uid) {
     $add_links = array();
+    /*
+    	added by Colton Echols @8-20-13. Added Custom permissions for certian blocks.
+    */
+    $custom_block_settings_per_role = fr_user_dash_usable_homebox_blocks();
     foreach ($allowed_blocks as $module => $blocks) {
       foreach ($blocks as $delta => $info) {
-        $options = array();
-        if (isset($info['used'])) {
-          $options['attributes'] = array('class' => 'used');
-        }
-        $add_links[] = homebox_add_link($info['info'], $page, $module, $delta, $options);
+      	if(in_array($delta, array_keys($custom_block_settings_per_role))){
+	        $options = array();
+	        if (isset($info['used'])) {
+	          $options['attributes'] = array('class' => 'used');
+	        }
+	        $add_links[] = array(
+	        	'data' => homebox_add_link($info['info'], $page, $module, $delta, $options),
+	        	'class' => array('button', 'add'),
+	        );
+	      }
       }
     }
     $add_links['restore'] = l(t('Restore to defaults'), 'homebox/' . $page->name . '/restore', array('attributes' => array('class' => 'restore')));
@@ -477,11 +486,13 @@ function homebox_save_form($form, &$form_state, $page) {
   );
   $form['save'] = array(
     '#type' => 'submit',
-    '#value' => t('Save'),
+    '#value' => t('Save Block Layout'),
     '#ajax' => array(
       'callback' => 'homebox/js/' . $page->name . '/save',
       'event' => 'click',
     ),
+    '#prefix' => '<div class="button star">',
+    '#suffix' => '</div>',
   );
 
   return $form;

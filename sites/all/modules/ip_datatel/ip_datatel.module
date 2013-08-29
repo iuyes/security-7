@@ -9,19 +9,19 @@
 *
 */
 function ip_datatel_block_info(){
-  // This example comes from node.module.
-  $blocks['alarm_settings'] = array(
-    'info' => t('Alarm Settings'),
-    'cache' => DRUPAL_NO_CACHE,
-  );
-  $ipdatatel = variable_get('ip_datatel_block_status');
-  if($ipdatatel == 1){
-    $blocks['ipdatatel_block'] = array(
-      'info' => t('IpDatatel'),
-      'cache' => DRUPAL_NO_CACHE,
-    );
-  }
-  return $blocks;
+	// This example comes from node.module.
+	$blocks['alarm_settings'] = array(
+		'info' => t('Alarm Settings'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+	$ipdatatel = variable_get('ip_datatel_block_status');
+	if($ipdatatel == 1){
+		$blocks['ipdatatel_block'] = array(
+			'info' => t('IpDatatel'),
+			'cache' => DRUPAL_NO_CACHE,
+		);
+	}
+	return $blocks;
 }
 
 
@@ -29,12 +29,12 @@ function ip_datatel_block_info(){
 
 
 function ip_datatel_permission(){
-  return array(
-    'edit_delete' => array(
-      'title' => t('Edit / Delete Ipdatatel Users and Customers'),
-      'description' => t('Allow Users To Edit Ipdatatel Users and Customers.'),
-    ),
-  );
+	return array(
+		'edit_delete' => array(
+			'title' => t('Edit / Delete Ipdatatel Users and Customers'),
+			'description' => t('Allow Users To Edit Ipdatatel Users and Customers.'),
+		),
+	);
 }
 
 
@@ -47,25 +47,25 @@ function ip_datatel_permission(){
 *
 */
 function ip_datatel_block_view($delta = ''){
-  switch($delta){
-  case'alarm_settings':
-    $content['wrapper'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Alarm Manager'),
-      '#collapsible' => FALSE,
-      '#collapsed' => FALSE,
-    );
-    $content['wrapper']['form'] = array(
-      '#type' => 'markup',
-      '#markup' => '',//render(build_alarm_block('')),
-    );
+	switch($delta){
+	case'alarm_settings':
+		$content['wrapper'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('Alarm Manager'),
+			'#collapsible' => FALSE,
+			'#collapsed' => FALSE,
+		);
+		$content['wrapper']['form'] = array(
+			'#type' => 'markup',
+			'#markup' => '',//render(build_alarm_block('')),
+		);
 
-    $block['subject'] = t('Alarm Settings');
-    $block['content'] = $content;
+		$block['subject'] = t('Alarm Settings');
+		$block['content'] = $content;
 
-    break;
-  case'ipdatatel_block':
-    /*$content['wrapper'] = array(
+		break;
+	case'ipdatatel_block':
+		/*$content['wrapper'] = array(
       '#type' => 'fieldset',
       '#title' => t('Alarm Manager'),
       '#collapsible' => FALSE,
@@ -77,11 +77,11 @@ function ip_datatel_block_view($delta = ''){
     );
     $block['subject'] = t('Alarm Settings');
     $block['content'] = $content;*/
-    $block['content'] = '';
-    break;
-  }
+		$block['content'] = '';
+		break;
+	}
 
-  return $block;
+	return $block;
 }
 
 
@@ -91,73 +91,255 @@ function ip_datatel_block_view($delta = ''){
  *
  */
 function ip_datatel_menu() {
-  $items['alarm-settings/%'] = array(
-    'page callback' => 'ip_datatel_load_alarm_profile',
-    'page arguments' => array(1, 2, 3, 4),
-    'access callback' => TRUE,
-    'type' => MENU_NORMAL_ITEM,
-  );
-  $items['ip_datatel_alarm_zones'] = array(
-    'page callback' => 'ip_datatel_alarm_zones',
-    'access callback' => TRUE,
-    'type' => MENU_NORMAL_ITEM,
-  );
-  $items['ip_datatel_save_alarm_zones'] = array(
-    'page callback' => 'ip_datatel_save_alarm_zones',
-    'access callback' => TRUE,
-    'type' => MENU_NORMAL_ITEM,
-  );
-  $items['admin/config/people/ipdatatel'] = array(
-    'title' => 'Ipdatatel',
-    'description' => 'Configure Ipdatatel',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('_ip_datatel_settings_form'),
-    'access arguments' => array('access ipdatatel'),
-    'type' => MENU_NORMAL_ITEM,
-    'file' => 'ip_datatel.admin.inc',
-  );
+	$items['alarm-settings/%'] = array(
+		'page callback' => 'ip_datatel_load_alarm_profile',
+		'page arguments' => array(1, 2, 3, 4),
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	$items['ip_datatel_alarm_zones'] = array(
+		'page callback' => 'ip_datatel_alarm_zones',
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	$items['ip_datatel_save_alarm_zones'] = array(
+		'page callback' => 'ip_datatel_save_alarm_zones',
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	$items['ajax/alarm-processor'] = array(
+		'page callback' => 'ip_datatel_ajax_alarm_notifications',
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	$items['ajax/alarm-processor-modal'] = array(
+		'page callback' => 'ip_datatel_ajax_process_event_modal',
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	$items['admin/config/people/ipdatatel'] = array(
+		'title' => 'Ipdatatel',
+		'description' => 'Configure Ipdatatel',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('_ip_datatel_settings_form'),
+		'access arguments' => array('access ipdatatel'),
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'ip_datatel.admin.inc',
+	);
 
-  return $items;
+	return $items;
 }
+
+
+function ip_datatel_ajax_process_event_modal(){
+	$event_data = $_POST['event'];
+	$html= array();
+	if($event_data){
+		foreach($event_data as $event_label => $event_value){
+			switch($event_label){
+				case'account_name':
+					$account_name = $event_value;
+					$html['account_name'] = array(
+						'type' => 'markup',
+						'#markup' => 'Account Name: ' . $account_name,
+					);
+					break;
+				case'signal':
+					$signal = $event_value;
+					break;
+				case'zone':
+					$zone = $event_value;
+					break;
+				case'datetime':
+					$date = $event_value;
+					break;
+			}
+		}
+	}
+	drupal_json_output(array('html' => drupal_render($html)));
+	exit();
+	
+}
+
+
+
+function ip_datatel_ajax_alarm_notifications(){
+	$settings = !empty($_POST['settings']) ? $_POST['settings'] : NULL;
+	$return_data = '';
+	if(!empty($settings)){
+		$alarmProcessor = new IpdatatelProcessEvents();
+		$processing_accounts =  unserialize($settings['processing_accounts']);
+		$account_variables = $settings['account_variables'];
+		$uid = $settings['uid'];
+		$session = $settings['session'];
+		$ajax = TRUE;
+		$start_time = !empty($settings['start_time']) ? $settings['start_time'] : 0;
+		$new_events = !empty($settings['new_events']) ? $settings['new_events'] : NULL;
+		$ran_processor = !empty($settings['ran_processor']) ? $settings['ran_processor'] : NULL;
+		$return_data = $alarmProcessor->processConstruct($processing_accounts, $account_variables, $uid, $ajax, $session, $start_time, $new_events, $ran_processor);
+		$return = array('status' => $return_data);
+		drupal_json_output($return);
+		exit();
+	}
+}
+
+
+
+
+/**
+ * implements ip_datatel_process_alarm_notifications
+ * 
+ *
+ */
+ function ip_datatel_process_alarm_notifications($uid = NULL, $user_args = NULL){
+ 	 $return_data = NULL;
+	 if(empty($uid)){
+		 global $user;
+		 $uid = $user->uid;
+	 }
+	 	if($user_args){
+		 	$processing_variable = fr_user_dash_query_customer_variables($uid);
+			if(!empty($processing_variable['processing'])){
+				 $AlarmProcessor = new IpdatatelAlarmProcessor($uid, $user_args);
+				 $processing_accounts = $AlarmProcessor->setProcessingAccounts($processing_variable);
+				 $get_events = $AlarmProcessor->queryAlarmEvents($AlarmProcessor->processing_accounts);
+				 $return_data = $get_events;
+			}
+		}
+		return $return_data;
+ }
+ 
+ 
+ function ip_datatel_check_processing_permissions($uid, $user_args = NULL, $check_permissions = NULL){
+ 		$account_permisisons = NULL;
+	 	$AlarmProcessor = new IpdatatelAlarmProcessor($uid, $user_args);
+	 	 $processing_accounts = $AlarmProcessor->setProcessingAccounts();
+		 $permissions = new IpdatatelPermissons($AlarmProcessor->account_data, $check_permissions);
+		 $return_permissions = $permissions->structureAccountPermissions($permissions->account_data, $permissions->permissions, TRUE);
+		 if(!empty($return_permissions)){
+			$account_permisisons = $return_permissions;
+		}
+		return $account_permisisons;
+ }
 
 
 
 
 /*
 *
-*@ impements hook_load_alarm_profile()
+* impements hook_load_alarm_profile()
 *
 */
 function ip_datatel_load_alarm_profile($uid, $utility, $arg, $nid){
-  global $user;
-  $arg = !empty($arg) ? $arg : NULL;
-  $nid = !empty($nid) ? $nid : NULL;
-  $run_utility = '';
-  if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles) || in_array('Customer', $user->roles)){
-    $data = 'You need to update this users IpDatel username and password <a href="../../user/'.$uid.'/edit">here</a>. Then you can change this users settings.';
-    $api = new ipDatatel();
-    $has_data = $api->loadAccountInformation($uid);
-    //if($has_data == TRUE){
-    $account_info = array();
-    $accounts = $has_data;
-    if(!empty($accounts)){
-      $ipdatatelAccounts = new IpdatatelAccounts;
-      $build_accounts = $ipdatatelAccounts->buildAccounts($accounts);
-      $account_info = $build_accounts['account_information'];
-      $usernames = $build_accounts['usernames'];
-      $passwords = $build_accounts['passwords'];
-      $mac_addrs = $build_accounts['mac_addrs'];
-      $account_users = $build_accounts['account_users'];
-      $account_id = $build_accounts['account_id'];
-      $node_id = $build_accounts['node_id'];
-      $uid = $api->uid;
-      $IpdatatelUtility = new ipdatatelUtility($account_info, $uid, $nid);
-      $run_utility = $IpdatatelUtility->requestedUtility($utility, $arg);
-    } 
-    return $run_utility;
-  }else{
-    return drupal_not_found();
-  }
+	global $user;
+	$arg = !empty($arg) ? $arg : NULL;
+	$nid = !empty($nid) ? $nid : NULL;
+	$run_utility = '';
+	if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles) || in_array('Customer', $user->roles)){
+		$data = 'You need to update this users IpDatel username and password <a href="../../user/'.$uid.'/edit">here</a>. Then you can change this users settings.';
+		$api = new ipDatatel();
+		$has_data = $api->loadAccountInformation($uid);
+		//if($has_data == TRUE){
+		$account_info = array();
+		$accounts = $has_data;
+		if(!empty($accounts)){
+			$ipdatatelAccounts = new IpdatatelAccounts;
+			$build_accounts = $ipdatatelAccounts->buildAccounts($accounts);
+			$account_info = $build_accounts['account_information'];
+			$usernames = $build_accounts['usernames'];
+			$passwords = $build_accounts['passwords'];
+			$mac_addrs = $build_accounts['mac_addrs'];
+			$account_users = $build_accounts['account_users'];
+			$account_id = $build_accounts['account_id'];
+			$node_id = $build_accounts['node_id'];
+			$uid = $api->uid;
+			$IpdatatelUtility = new ipdatatelUtility($account_info, $uid, $nid);
+			$run_utility = $IpdatatelUtility->requestedUtility($utility, $arg);
+		}
+		return $run_utility;
+	}else{
+		return drupal_not_found();
+	}
+}
+
+
+
+
+function ip_datatel_load_alarm_notifications($uid = NULL, $args = NULL, $account_info = NULL, $num_of_events = NULL, $process = FALSE){
+	if($process){
+		$process = ip_datatel_process_alarms();
+	}
+	
+	$top_events = array();
+	$event_list = 'No Events Found';
+	if(!$account_info){
+		$alarmNotes = new ipDatatel();
+		$account_data = $alarmNotes->loadAccountInformation($uid, 'admin');
+		$accounts = current($account_data);
+	}else{
+		$accounts = $account_info;
+		$account_data = $account_info;
+	}
+	$events = new IpdatatelEventLogs();
+	$event_list = _ip_datatel_find_top_events($account_data, $accounts, $events, $num_of_events);
+
+
+	return $event_list;
+}
+
+
+function ip_datatel_process_alarms(){
+	global $user;
+	$process_form = drupal_get_form('ip_datatel_alarm_process_form');
+
+}
+
+
+function ip_datatel_alarm_process_form($node, &$form_state){
+	
+}
+
+
+function _ip_datatel_alarm_process_submit($form, &$form_state){
+	
+}
+
+
+
+function _ip_datatel_find_top_events($account_data, $accounts, $events, $num_of_events){
+	$top_events = '';
+	$new_event_list = array();
+	$event_list = array();
+	if(count($account_data) == 1){
+		foreach($accounts as $account_name => $account){
+			$events->constructAccountInformation($accounts, $account_name);
+			$return_accounts = $events->structorEventRequest(NULL);
+			if($return_accounts['status']){
+				$logs = $return_accounts['event_logs'];
+				$top_events[$account_name] = $logs[0];
+			}
+			if(!empty($top_events)){
+				$display_args = array('sort_form' => FALSE, 'account' => TRUE);
+				$event_list = $events->sortFormDashboard($top_events, $display_args);
+			}
+		}
+	}else{
+		$account_name = $accounts['username'];
+		$events->constructAccountInformation($accounts, $account_name);
+		$return_accounts = $events->structorEventRequest(NULL);
+		if($return_accounts['status']){
+			$logs = $return_accounts['event_logs'];
+			$top_events[$account_name] = $num_of_events ? array_slice($logs, 0, $num_of_events, TRUE) : $logs[0];
+			if(!empty($top_events)){
+				$top_events = current($top_events);
+				foreach($top_events as $key => $value){
+					$display_args = array('sort_form' => FALSE, 'account' => FALSE);
+					$event_list = $events->sortFormDashboard($top_events, $display_args);
+				}
+			}
+		}
+	}
+	return $event_list;
 }
 
 
@@ -167,22 +349,22 @@ function ip_datatel_load_alarm_profile($uid, $utility, $arg, $nid){
 
 
 function _mod_user_form($form, &$form_state){
-  $sort_data = array();
-  $bad_data = array('submit', 'form_build_id', 'form_token', 'form_id', 'op');
-  foreach($form_state['values'] as $key => $value){
-    foreach($bad_data as $delta => $bad){
-      if($bad == $key ){
-        unset($form_state['values'][$key]);
-      }
-    }
-  }
-  $message = default_form();
-  $data = $form_state['values'];
-  $ipdatateljson = new IpdatatelJson();
-  $ipDatatel_mod_cust = $ipdatateljson->jsonData('cust_mod', $data, '', '');
-  $send_json_data = $ipdatateljson->jsonRequest($ipDatatel_mod_cust);
-  $message['wrapper']['message'] = status_message($send_json_data->message);
-  return $message;
+	$sort_data = array();
+	$bad_data = array('submit', 'form_build_id', 'form_token', 'form_id', 'op');
+	foreach($form_state['values'] as $key => $value){
+		foreach($bad_data as $delta => $bad){
+			if($bad == $key ){
+				unset($form_state['values'][$key]);
+			}
+		}
+	}
+	$message = default_form();
+	$data = $form_state['values'];
+	$ipdatateljson = new IpdatatelJson();
+	$ipDatatel_mod_cust = $ipdatateljson->jsonData('cust_mod', $data, '', '');
+	$send_json_data = $ipdatateljson->jsonRequest($ipDatatel_mod_cust);
+	$message['wrapper']['message'] = status_message($send_json_data->message);
+	return $message;
 }
 
 
@@ -191,128 +373,128 @@ function _mod_user_form($form, &$form_state){
 
 
 function _add_user_form($form, &$form_state){
-  $message = t('Something Unknown Happened. Please Try Again');
-  $bad_data = array('submit', 'form_build_id', 'form_token', 'form_id', 'op', 're_password', 'account_number');
-  $ip_datatel_data = array();
-  foreach($form_state['values'] as $key => $value){
-    switch($key){
-    case'newuser':
+	$message = t('Something Unknown Happened. Please Try Again');
+	$bad_data = array('submit', 'form_build_id', 'form_token', 'form_id', 'op', 're_password', 'account_number');
+	$ip_datatel_data = array();
+	foreach($form_state['values'] as $key => $value){
+		switch($key){
+		case'newuser':
 
-      $ip_datatel_data[$key] = $value;
+			$ip_datatel_data[$key] = $value;
 
-      break;
+			break;
 
-    case'newpass':
+		case'newpass':
 
-      $ip_datatel_data[$key] = $value;
+			$ip_datatel_data[$key] = $value;
 
-      break;
+			break;
 
-    case'email':
+		case'email':
 
-      $ip_datatel_data[$key] = $value;
+			$ip_datatel_data[$key] = $value;
 
-      break;
+			break;
 
-    case'account_master_pass':
+		case'account_master_pass':
 
-      $account_master_pass = $value;
-      unset($form_state['values'][$key]);
-      break;
-    case'parent_id':
+			$account_master_pass = $value;
+			unset($form_state['values'][$key]);
+			break;
+		case'parent_id':
 
-      break;
-    case're_password':
+			break;
+		case're_password':
 
-      $re_pass = $value;
+			$re_pass = $value;
 
-      break;
-    case'account_number':
-      unset($form_state['values'][$key]);
-      break;
-    }
-    foreach($bad_data as $delta => $bad){
-      if($bad == $key ){
-        unset($form_state['values'][$key]);
-      }
-    }
-  }
+			break;
+		case'account_number':
+			unset($form_state['values'][$key]);
+			break;
+		}
+		foreach($bad_data as $delta => $bad){
+			if($bad == $key ){
+				unset($form_state['values'][$key]);
+			}
+		}
+	}
 
-  if($form_state['values']['newpass'] != $re_pass){
-    form_set_error('newpass', 'Your passwords do not match!');
-    form_set_error('re_password', 'Your passwords do not match!');
-    unset($form_state['clicked_button']);
-    unset($form_state['triggering_element']);
-    unset($form_state['buttons']);
-    return $form_state;
-  }else{
-    $uid = $form_state['values']['uid'];
-    $data = $form_state['values'];
-    $ipdatateljson = new IpdatatelJson();
-    $ipDatatel_mod_cust = $ipdatateljson->jsonData('cust_add', $data, '', '');
-    $send_json_data = $ipdatateljson->jsonRequest($ipDatatel_mod_cust);
-    if($send_json_data->message == 'Success' && !empty($send_json_data->data)){
-      foreach($form_state['account_ids'] as $key => $value){
-        if($form_state['values']['parent_id'] == $key){
-          $node = node_load($value);
-          if(!empty($node->field_alarm_atatched_users['und'])){
-            $count_users = count($node->field_alarm_atatched_users['und']);
-            $node->field_alarm_atatched_users['und'][($count_users + 1)] = array(
-              'value' => $send_json_data->data->newuser,
-              'format' => NULL,
-              'safe_value' => $send_json_data->data->newuser,
-            );
-            node_save($node);
-          }
-        }
-      }
-      ctools_include('ajax');
-      ctools_add_js('ajax-responder');
-      $commands[] = ctools_ajax_command_redirect('../../alarm-settings/'.$uid.'/cust_info/'.$data['newuser'].'');
-      print ajax_render($commands);
-      exit;
-    }else{
-      unset($form_state['clicked_button']);
-      unset($form_state['triggering_element']);
-      unset($form_state['buttons']);
-      form_set_error('', $send_json_data->message);
-      return $form_state;
-    }
-  }
+	if($form_state['values']['newpass'] != $re_pass){
+		form_set_error('newpass', 'Your passwords do not match!');
+		form_set_error('re_password', 'Your passwords do not match!');
+		unset($form_state['clicked_button']);
+		unset($form_state['triggering_element']);
+		unset($form_state['buttons']);
+		return $form_state;
+	}else{
+		$uid = $form_state['values']['uid'];
+		$data = $form_state['values'];
+		$ipdatateljson = new IpdatatelJson();
+		$ipDatatel_mod_cust = $ipdatateljson->jsonData('cust_add', $data, '', '');
+		$send_json_data = $ipdatateljson->jsonRequest($ipDatatel_mod_cust);
+		if($send_json_data->message == 'Success' && !empty($send_json_data->data)){
+			foreach($form_state['account_ids'] as $key => $value){
+				if($form_state['values']['parent_id'] == $key){
+					$node = node_load($value);
+					if(!empty($node->field_alarm_atatched_users['und'])){
+						$count_users = count($node->field_alarm_atatched_users['und']);
+						$node->field_alarm_atatched_users['und'][($count_users + 1)] = array(
+							'value' => $send_json_data->data->newuser,
+							'format' => NULL,
+							'safe_value' => $send_json_data->data->newuser,
+						);
+						node_save($node);
+					}
+				}
+			}
+			ctools_include('ajax');
+			ctools_add_js('ajax-responder');
+			$commands[] = ctools_ajax_command_redirect('../../alarm-settings/'.$uid.'/cust_info/'.$data['newuser'].'');
+			print ajax_render($commands);
+			exit;
+		}else{
+			unset($form_state['clicked_button']);
+			unset($form_state['triggering_element']);
+			unset($form_state['buttons']);
+			form_set_error('', $send_json_data->message);
+			return $form_state;
+		}
+	}
 
 }
 
 
 function status_message($data){
-  $message = array(
-    '#type' => 'markup',
-    '#markup' => $data,
-    '#prefix' => '<div class="messages status">',
-    '#suffix' => '</div>',
-  );
-  return $message;
+	$message = array(
+		'#type' => 'markup',
+		'#markup' => $data,
+		'#prefix' => '<div class="messages status">',
+		'#suffix' => '</div>',
+	);
+	return $message;
 }
 
 
 
 function default_form(){
-  $form = array();
-  $form['wrapper'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Alarm Manager'),
-    '#collapsible' => FALSE,
-    '#collapsed' => FALSE,
-    '#attributes'=>array(
-      'id' => 'mod-cust-wrapper',
-    ),
-  );
-  $form['wrapper']['back'] = array(
-    '#type' => 'markup',
-    '#markup' => 'Go back',
-    '#prefix' => '<div onclick="window.history.back();" class="button radius small">',
-    '#suffix' => '</div>',
-  );
-  return $form;
+	$form = array();
+	$form['wrapper'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Alarm Manager'),
+		'#collapsible' => FALSE,
+		'#collapsed' => FALSE,
+		'#attributes'=>array(
+			'id' => 'mod-cust-wrapper',
+		),
+	);
+	$form['wrapper']['back'] = array(
+		'#type' => 'markup',
+		'#markup' => 'Go back',
+		'#prefix' => '<div onclick="window.history.back();" class="button radius small">',
+		'#suffix' => '</div>',
+	);
+	return $form;
 }
 
 
@@ -322,41 +504,40 @@ function default_form(){
 
 
 function ip_datatel_add_user_form($node, &$form_state){
-  $arg = arg();
-  $uid = '';
+	$arg = arg();
+	$uid = '';
 	global $user;
-  if(!empty($arg[1]) && is_numeric($arg[1])){
-    $uid = $arg[1];
-    $ipdatatel = new ipDatatel();
-    $auth = $ipdatatel->loadAccountInformation($uid);
-    $ipdatatelAccounts = new IpdatatelAccounts();
-    $accounts = $ipdatatelAccounts->buildAccounts($auth);
-    //dpm($accounts);
-    if(!empty($accounts)){
-      $node_id = array();
-      foreach($accounts['account_information'] as $key => $value){
-        foreach($value as $parent => $name){
-        	if(in_array('add_users', $name['permissions']) || in_array('administrator', $user->roles)){
-	          $account_master_id[$name['account_id']] = $name['username'];
-	          $node_id[$name['account_id']] = $name['node_id'];
+	if(!empty($arg[1]) && is_numeric($arg[1])){
+		$uid = $arg[1];
+		$ipdatatel = new ipDatatel();
+		$auth = $ipdatatel->loadAccountInformation($uid);
+		$ipdatatelAccounts = new IpdatatelAccounts();
+		$accounts = $ipdatatelAccounts->buildAccounts($auth);
+		if(!empty($accounts)){
+			$node_id = array();
+			foreach($accounts['account_information'] as $key => $value){
+				foreach($value as $parent => $name){
+					if(in_array('add_users', $name['permissions']) || in_array('administrator', $user->roles)){
+						$account_master_id[$name['account_id']] = $name['username'];
+						$node_id[$name['account_id']] = $name['node_id'];
 					}
-        }
-      }
-    }
-    $form_state['account_ids'] = $node_id;
-    if(!empty($account_master_id)){
+				}
+			}
+		}
+		$form_state['account_ids'] = $node_id;
+		if(!empty($account_master_id)){
 
-      $form['wrapper'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('Add User'),
-        '#collapsible' => FALSE,
-        '#collapsed' => FALSE,
-        '#attributes'=> array(
-          //'id' => 'mod-cust-wrapper',
-        ),
-      );
+			$form['wrapper'] = array(
+				'#type' => 'fieldset',
+				'#title' => t('Add User'),
+				'#collapsible' => FALSE,
+				'#collapsed' => FALSE,
+				'#attributes'=> array(
+					//'id' => 'mod-cust-wrapper',
+				),
+			);
 
-      /*$form['wrapper']['account_number'] = array(
+			/*$form['wrapper']['account_number'] = array(
         '#type' => 'select',
         '#title' => t('Account Number'),
         '#options' => $account_id,
@@ -365,378 +546,379 @@ function ip_datatel_add_user_form($node, &$form_state){
         '#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
       );*/
 
-      $form['wrapper']['parent_id'] = array(
-        '#type' => 'select',
-        '#title' => t('Select Account'),
-        '#options' => $account_master_id,
-      );
+			$form['wrapper']['parent_id'] = array(
+				'#type' => 'select',
+				'#title' => t('Select Account'),
+				'#options' => $account_master_id,
+			);
 
-      $form['wrapper']['uid'] = array(
-        '#type' => 'hidden',
-        '#title' => t('Username'),
-        '#default_value' => $ipdatatel->uid,
-        '#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
-      );
+			$form['wrapper']['uid'] = array(
+				'#type' => 'hidden',
+				'#title' => t('Username'),
+				'#default_value' => $ipdatatel->uid,
+				'#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
+			);
 
-      $form['wrapper']['newuser'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Username'),
-        '#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
-      );
-      $form['wrapper']['email'] = array(
-        '#type' => 'textfield',
-        '#title' => t('E-mail'),
-      );
-      $form['wrapper']['newpass'] = array(
-        '#type' => 'password',
-        '#title' => t('Password'),
-      );
-      $form['wrapper']['re_password'] = array(
-        '#type' => 'password',
-        '#title' => t('Re-type Password'),
-      );
-      $form['wrapper']['submit'] = array(
-        '#type' => 'submit',
-        '#value' => 'Save',
-        '#submit' => '_add_user_form',
-        '#ajax' => array(
-          'callback' => '_add_user_form',
-          'wrapper' => 'mod-cust-wrapper',
-        ),
-      );
-      //$form['#validate'][] = 'add_user_form_validate';
-      $form['#prefix'] = '<div id="mod-cust-wrapper" class"mod-cust-wrapper">';
-      $form['#suffix'] = '</div>';
-    }else{
-      $form['markup'] = array(
-        '#type' => 'markup',
-        '#markup' => t('You need to enter in Ipdatatel password <a href="../../user/'.$uid.'/edit">here</a> for this user first!'),
-      );
-    }
-  }
-  return $form;
+			$form['wrapper']['newuser'] = array(
+				'#type' => 'textfield',
+				'#title' => t('Username'),
+				'#description' => t('Note: sometimes it is best to use the same email for the username and password.'),
+			);
+			$form['wrapper']['email'] = array(
+				'#type' => 'textfield',
+				'#title' => t('E-mail'),
+			);
+			$form['wrapper']['newpass'] = array(
+				'#type' => 'password',
+				'#title' => t('Password'),
+			);
+			$form['wrapper']['re_password'] = array(
+				'#type' => 'password',
+				'#title' => t('Re-type Password'),
+			);
+			$form['wrapper']['submit'] = array(
+				'#type' => 'submit',
+				'#value' => 'Save',
+				'#submit' => '_add_user_form',
+				'#ajax' => array(
+					'callback' => '_add_user_form',
+					'wrapper' => 'mod-cust-wrapper',
+				),
+			);
+			//$form['#validate'][] = 'add_user_form_validate';
+			$form['#prefix'] = '<div id="mod-cust-wrapper" class"mod-cust-wrapper">';
+			$form['#suffix'] = '</div>';
+		}else{
+			$form['markup'] = array(
+				'#type' => 'markup',
+				'#markup' => t('You need to enter in Ipdatatel password <a href="../../user/'.$uid.'/edit">here</a> for this user first!'),
+			);
+		}
+	}
+	return $form;
 }
 
 function ip_datatel_mod_user_form($node, &$form_state){
-  $cust_data = variable_get('alarm_customer_data');
-  if(!empty($cust_data)){
-    $form['wrapper'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('IpDatatel User'),
-      '#collapsible' => FALSE,
-      '#collapsed' => FALSE,
-      '#attributes'=>array(
-        'id' => 'mod-cust-wrapper',
-      ),
-    );
-    foreach($cust_data as $key => $value){
-      $status = FALSE;
-      switch($key){
-      case'user':
-        $status = TRUE;
-        break;
+	$cust_data = variable_get('alarm_customer_data');
+	if(!empty($cust_data)){
+		$form['wrapper'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('IpDatatel User'),
+			'#collapsible' => FALSE,
+			'#collapsed' => FALSE,
+			'#attributes'=>array(
+				'id' => 'mod-cust-wrapper',
+			),
+		);
+		foreach($cust_data as $key => $value){
+			$status = FALSE;
+			switch($key){
+			case'user':
+				$status = TRUE;
+				break;
 
-      case'user_id':
-        $status = TRUE;
-        break;
-      }
-      $form['wrapper'][$key] = array(
-        '#type' => 'textfield',
-        '#title' => t($key),
-        '#disabled' => $status,
-        '#default_value' => $value,
-      );
-    }
-    $form['wrapper']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => 'Save',
-      '#submit' => '_mod_user_form',
-      '#ajax' => array(
-        'callback' => '_mod_user_form',
-        'wrapper' => 'mod-cust-wrapper',
-      ),
-    );
-  }
-  return $form;
+			case'user_id':
+				$status = TRUE;
+				break;
+			}
+			$form['wrapper'][$key] = array(
+				'#type' => 'textfield',
+				'#title' => t($key),
+				'#disabled' => $status,
+				'#default_value' => $value,
+			);
+		}
+		$form['wrapper']['submit'] = array(
+			'#type' => 'submit',
+			'#value' => 'Save',
+			'#submit' => '_mod_user_form',
+			'#ajax' => array(
+				'callback' => '_mod_user_form',
+				'wrapper' => 'mod-cust-wrapper',
+			),
+		);
+	}
+	return $form;
 }
 
 
 
 
 function ip_datatel_remove_user_form($node, &$form_state){
-  $form['test'] = array(
-    '#type' => 'markup',
-    '#markup' => 'Coming Soon'
-  );
-  return $form;
+	$form['test'] = array(
+		'#type' => 'markup',
+		'#markup' => 'Coming Soon'
+	);
+	return $form;
 }
 
 function ip_datatel_modify_user_form($node, &$form_state){
-  $form['test'] = array(
-    '#type' => 'markup',
-    '#markup' => 'Coming Soon'
-  );
-  return $form;
+	$form['test'] = array(
+		'#type' => 'markup',
+		'#markup' => 'Coming Soon'
+	);
+	return $form;
 }
 
 
 
 function build_modals($value){
-  $content = array(
-    '#type' => 'markup',
-    '#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><br/><div>'.drupal_render(drupal_get_form('ip_datatel_'.$value.'_form')).'</div>',
-    '#prefix' => '<div id="'.$value.'" class="reveal-modal xlarge">',
-    '#suffix' => '</div>',
-  );
-  return $content;
+	$content = array(
+		'#type' => 'markup',
+		'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><br/><div>'.drupal_render(drupal_get_form('ip_datatel_'.$value.'_form')).'</div>',
+		'#prefix' => '<div id="'.$value.'" class="reveal-modal xlarge">',
+		'#suffix' => '</div>',
+	);
+	return $content;
 }
 
 
 
 
 function ip_datatel_page_alter(&$page){
-  $arg = arg();
-  if(!empty($arg[0]) && $arg[0] == 'alarm-settings' || $arg[0] == 'user' && !empty($arg[2]) && $arg[2] == 'dashboard'){
-    $tools = array('add_user', 'modify_user', 'remove_user');
-    foreach($tools as $key => $value){
-      $page['modal'][$value] = build_modals($value);
-    }
-  }
-  if(!empty($arg[0]) && $arg[0] == 'alarm-settings' && !empty($arg[2]) && $arg[2] == 'all'){
-	  $page['modal']['alarm'] = array(
+	$arg = arg();
+	if(!empty($arg[0]) && $arg[0] == 'alarm-settings' || $arg[0] == 'user' && !empty($arg[2]) && $arg[2] == 'dashboard'){
+		$tools = array('add_user', 'modify_user', 'remove_user');
+		foreach($tools as $key => $value){
+			$page['modal'][$value] = build_modals($value);
+		}
+	}
+	if(!empty($arg[0]) && $arg[0] == 'alarm-settings' && !empty($arg[2]) && $arg[2] == 'all'){
+		$page['modal']['alarm'] = array(
 			'#type' => 'markup',
 			'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><div class="alarm-modal">
 				Having issues logging in or navigating?<a href="https://fortifiedss.alarmdealer.com/index.php?mod=auth&action=login"> Click here.</a></div>',
 			'#prefix' => '<div id="myAlarmModal" class="reveal-modal xlarge">',
 			'#suffix' => '</div>',
 		);
-  }
-  return $page;
+	}
+	return $page;
 }
 
 
 
 
 function ip_datatel_sort_events_form($node, &$form_state){
-    $format = 'm-d-Y H:i';
-    $timestamp = time(); 
-    $d = new DateTime();
-    $value = $d->format($format);
-    $arg = arg();
-    if(!empty($arg[1]) && $arg[0] == 'alarm-settings'){
-      $uid = $arg[1];
-      $username = $arg[3];
-    }
-    $form = array();
-    $form['wrapper'] = array(
-      '#type' => 'container',
-      '#attributes' => array(
-        'class' => array('sort-event-logs', 'row'),
-      ),
-    );
-    
-     //form title
-    $form['wrapper']['markup'] = array(
-        '#type' => 'markup',
-        '#markup' => t(strtoupper("".$username."'s Event Log")),
-        '#weight' => -100,
-        '#prefix' => '<div class="event-logs-title">',
-        '#suffix' => '</div>',
-      );
-    
-    //hidden form items
-    $form['wrapper']['user'] = array(
-      '#type' => 'hidden',
-      '#title' => t('uid'),
-      '#default_value' => $uid,
-      '#size' => 50,
-      '#weight' => 100,
-      '#prefix' => '<div class="large-4 columns">',
-      '#suffix' => '</div>',
-    );
-    $form['wrapper']['username'] = array(
-      '#type' => 'hidden',
-      '#title' => t('username'),
-      '#default_value' => $username,
-      '#size' => 50,
-      '#weight' => 100,
-      '#prefix' => '<div class="large-4 columns">',
-      '#suffix' => '</div>',
-    );
-    
-    //sort dates
-    $form['wrapper']['date_wrappers'] = array(
-      '#type' => 'container',
-      '#attributes' => array(
-        'class' => array('sort-event-logs-date-wrapper', 'row', ''),
-      ),
-      '#weight' => 99,
-    );
-    $form['wrapper']['date_wrappers']['start_date']  = array(
-      '#type' => 'date_popup',
-      '#date_format' => $format,
-      '#date_year_range' => '-1:+0',
-      '#title' => t('Start Date'),
-      '#default_value' => '',
-      '#prefix' => '<div class="large-5 columns">',
-      '#suffix' => '</div>',
-      '#weight' => 99,
-    );
-    
-    $form['wrapper']['date_wrappers']['end_date']  = array(
-      '#type' => 'date_popup',
-      '#date_format' => $format,
-      '#date_year_range' => '-1:+0',
-      '#title' => t('End Date'),
-      '#default_value' => '',
-      '#prefix' => '<div class="large-5 columns">',
-      '#suffix' => '</div>',
-      '#weight' => 99,
-    );
-    
-    $form['wrapper']['date_wrappers']['offset'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Offset'),
-      '#size' => 50,
-      '#weight' => 100,
-      '#prefix' => '<div class="large-2 columns">',
-      '#suffix' => '</div>',
-    );
-    
-    //dynamic form items
-    $form['wrapper']['dynamic_form_items'] = array(
-      '#type' => 'container',
-      '#attributes' => array(
-        'class' => array('sort-events-dynamic-form-items', 'large-12', 'columns'),
-      ),
-      '#weight' => 101,
-    );
-      
-      $form['wrapper']['dynamic_form_items']['event_log'] = array(
-      '#type' => 'markup',
-      '#markup' => '',
-      '#weight' => 101,
-    );
-    
-    $form['wrapper']['submit_wrapper'] = array(
-      '#type' => 'container',
-      '#attributes' => array(
-        'class' => array('sort-events-submit-wrapper', 'large-12', 'columns'),
-      ),
-      '#weight' => 101,
-    );
-    //form submit
-    $form['wrapper']['submit_wrapper']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => 'Filter',
-      //'#submit' => 'fr_ipdatatel_sort_events_log',
-      '#weight' => 100,
-      '#ajax' => array(
-        'callback' => 'fr_ipdatatel_sort_events_log',
-        'wrapper' => 'event-logs-form',
-      ),
-      '#prefix' => '<div class="large-12 columns">',
-      '#suffix' => '</div>',
-    );
-    
-    //form wrapper
-    $form['#prefix'] = '<div id="event-logs-form" class="event-logs-form">';
-    $form['#suffix'] = '</div>';
-      
-      
-      //$form['#submit'][] = 'fr_ipdatatel_sort_events_log';
-    return $form;
+	$format = 'm-d-Y H:i';
+	$timestamp = time();
+	$d = new DateTime();
+	$value = $d->format($format);
+	$arg = arg();
+	if(!empty($arg[1]) && $arg[0] == 'alarm-settings'){
+		$uid = $arg[1];
+		$username = $arg[3];
+	}
+	$form = array();
+	$form['wrapper'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'class' => array('sort-event-logs', 'row'),
+		),
+	);
+
+	//form title
+	$form['wrapper']['markup'] = array(
+		'#type' => 'markup',
+		'#markup' => t(strtoupper("".$username."'s Event Log")),
+		'#weight' => -100,
+		'#prefix' => '<div class="event-logs-title">',
+		'#suffix' => '</div>',
+	);
+
+	//hidden form items
+	$form['wrapper']['user'] = array(
+		'#type' => 'hidden',
+		'#title' => t('uid'),
+		'#default_value' => $uid,
+		'#size' => 50,
+		'#weight' => 100,
+		'#prefix' => '<div class="large-4 columns">',
+		'#suffix' => '</div>',
+	);
+	$form['wrapper']['username'] = array(
+		'#type' => 'hidden',
+		'#title' => t('username'),
+		'#default_value' => $username,
+		'#size' => 50,
+		'#weight' => 100,
+		'#prefix' => '<div class="large-4 columns">',
+		'#suffix' => '</div>',
+	);
+
+	//sort dates
+	$form['wrapper']['date_wrappers'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'class' => array('sort-event-logs-date-wrapper', 'row', ''),
+		),
+		'#weight' => 99,
+	);
+	$form['wrapper']['date_wrappers']['start_date']  = array(
+		'#type' => 'date_popup',
+		'#date_format' => $format,
+		'#date_year_range' => '-1:+0',
+		'#title' => t('Start Date'),
+		'#default_value' => '',
+		'#prefix' => '<div class="large-5 columns">',
+		'#suffix' => '</div>',
+		'#weight' => 99,
+	);
+
+	$form['wrapper']['date_wrappers']['end_date']  = array(
+		'#type' => 'date_popup',
+		'#date_format' => $format,
+		'#date_year_range' => '-1:+0',
+		'#title' => t('End Date'),
+		'#default_value' => '',
+		'#prefix' => '<div class="large-5 columns">',
+		'#suffix' => '</div>',
+		'#weight' => 99,
+	);
+
+	$form['wrapper']['date_wrappers']['offset'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Offset'),
+		'#size' => 50,
+		'#weight' => 100,
+		'#prefix' => '<div class="large-2 columns">',
+		'#suffix' => '</div>',
+	);
+
+	//dynamic form items
+	$form['wrapper']['dynamic_form_items'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'class' => array('sort-events-dynamic-form-items', 'large-12', 'columns'),
+		),
+		'#weight' => 101,
+	);
+
+	$form['wrapper']['dynamic_form_items']['event_log'] = array(
+		'#type' => 'markup',
+		'#markup' => '',
+		'#weight' => 101,
+	);
+
+	$form['wrapper']['submit_wrapper'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'class' => array('sort-events-submit-wrapper', 'large-12', 'columns'),
+		),
+		'#weight' => 101,
+	);
+	//form submit
+	$form['wrapper']['submit_wrapper']['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Filter',
+		//'#submit' => 'fr_ipdatatel_sort_events_log',
+		'#weight' => 100,
+		'#ajax' => array(
+			'callback' => 'fr_ipdatatel_sort_events_log',
+			'wrapper' => 'event-logs-form',
+		),
+		'#prefix' => '<div class="large-12 columns">',
+		'#suffix' => '</div>',
+	);
+
+	//form wrapper
+	$form['#prefix'] = '<div id="event-logs-form" class="event-logs-form">';
+	$form['#suffix'] = '</div>';
+
+
+	//$form['#submit'][] = 'fr_ipdatatel_sort_events_log';
+	return $form;
 }
 
 
 
 function fr_ipdatatel_sort_events_log($form, &$form_state){
-  $values = array();
-  $args = array();
-  $form_values = $form_state['values'];
-  $return_events = NULL;
-  foreach($form_values as $key => $value){
-    switch($key){
-      case'user':
-        $uid = $value;
-        break;
-      case'username':
-        $username = $value;
-        break;
-      case'start_date':
-        $values['start_date'] = !empty($value) ? date('m-d-Y h:i', strtotime($value)) : '';
-        break;
-      case'end_date':
-        $values['end_date'] = !empty($value) ? date('m-d-Y h:i', strtotime($value)) : '';
-        break;
-      case'offset':
-        $values['offset'] = !empty($value) ? $value : '';
-        break;
-    }
-  }
-  foreach($values as $type => $val){
-    if(!empty($val)){
-      $args[$type] = $val;
-      switch($type){
-        case'start_date':
-          $type = t('Start Date');
-          break;
-        case'end_date':
-          $type = t('End Date');
-          break;
-      }
-      $search .= '<strong>'.$type.':</strong> '.$val.' ';
-    }
-  }
-  //dpm($args);
-  if(!empty($uid) && !empty($username)){
-   $search_results = array();
-   $load_account = new  ipDatatel();
-   $account_info = $load_account->loadAccountInformation($uid);
-   $EventLog = new IpdatatelEventLogs();
-   $EventLog->constructAccountInformation($account_info, $username);
-   $get_logs = $EventLog->structorEventRequest($args);
-   if($get_logs['status'] == TRUE){
-      $form_state['rebuild'] = TRUE;
-      $event_logs = $get_logs['event_logs'];
-      $return_events = $EventLog->sortLogs($event_logs);
-      unset($form_state['clicked_button']);
-      unset($form_state['triggering_element']);
-      unset($form_state['buttons']);
-      
-      $search_results['return'] = array(
-      '#type' => 'container',
-      '#attributes' => array(
-        'class' => array('sort-events-search-results', 'row'),
-      ),
-      '#weight' => -100,
-    );
-      $search_results['return']['results'] = array(
-        '#type' => 'markup',
-        '#markup' => 'Your Search Results For: '.$search.'',
-        '#weight' => -100,
-        '#prefix' => '<div class="sort-events-search-title">',
-        '#suffix' => '</div>',
-      );
-      $search_results['return']['events'] = $return_events;
-      $form_state['wrapper'] = $search_results;
-      //$form_state['return']['events']['#weight'] = 100;
-    }
-  }
-  return $form_state;
+	$values = array();
+	$args = array();
+	$form_values = $form_state['values'];
+	$return_events = NULL;
+	foreach($form_values as $key => $value){
+		switch($key){
+		case'user':
+			$uid = $value;
+			break;
+		case'username':
+			$username = $value;
+			break;
+		case'start_date':
+			$values['start_date'] = !empty($value) ? date('m-d-Y h:i', strtotime($value)) : '';
+			break;
+		case'end_date':
+			$values['end_date'] = !empty($value) ? date('m-d-Y h:i', strtotime($value)) : '';
+			break;
+		case'offset':
+			$values['offset'] = !empty($value) ? $value : '';
+			break;
+		}
+	}
+	foreach($values as $type => $val){
+		if(!empty($val)){
+			$args[$type] = $val;
+			switch($type){
+			case'start_date':
+				$type = t('Start Date');
+				break;
+			case'end_date':
+				$type = t('End Date');
+				break;
+			}
+			$search .= '<strong>'.$type.':</strong> '.$val.' ';
+		}
+	}
+
+	if(!empty($uid) && !empty($username)){
+		$search_results = array();
+		$load_account = new  ipDatatel();
+		$account_info = $load_account->loadAccountInformation($uid);
+		$EventLog = new IpdatatelEventLogs();
+		$EventLog->constructAccountInformation($account_info, $username);
+		$get_logs = $EventLog->structorEventRequest($args);
+		if($get_logs['status'] == TRUE){
+			$form_state['rebuild'] = TRUE;
+			$event_logs = $get_logs['event_logs'];
+			$return_events = $EventLog->sortLogs($event_logs);
+			unset($form_state['clicked_button']);
+			unset($form_state['triggering_element']);
+			unset($form_state['buttons']);
+
+			$search_results['return'] = array(
+				'#type' => 'container',
+				'#attributes' => array(
+					'class' => array('sort-events-search-results', 'row'),
+				),
+				'#weight' => -100,
+			);
+			$search_results['return']['results'] = array(
+				'#type' => 'markup',
+				'#markup' => 'Your Search Results For: '.$search.'',
+				'#weight' => -100,
+				'#prefix' => '<div class="sort-events-search-title">',
+				'#suffix' => '</div>',
+			);
+			$search_results['return']['events'] = $return_events;
+			$form_state['wrapper'] = $search_results;
+			//$form_state['return']['events']['#weight'] = 100;
+		}
+	}
+	return $form_state;
 }
 
 
 function ip_datatel_form_alter(&$form, &$form_state, $form_id){
 	switch($form_id){
-		case'alarm_node_form':
-			
-			break;
+	case'alarm_node_form':
+
+		break;
 	}
 }
 
+
 function ip_datatel_alarm_zones(){
-	
+
 	$data = $_POST;
 	$username = $data['username'];
 	$password = $data['password'];
@@ -747,7 +929,7 @@ function ip_datatel_alarm_zones(){
 	if($utility == 'user_aliase'){
 		$redirect_url = 'http://www.alarmdealer.com/index.php?mod=zone_alias&action=index';
 	}
-	
+
 	$scrapper = new IpdatatelScrapper();
 	$url = 'https://www.alarmdealer.com/';
 	$post_url = 'index.php?mod=auth&action=authenticate';
@@ -770,7 +952,7 @@ function ip_datatel_alarm_zones(){
 	$scrapper->curlSetCookieLocation($cookies);
 	$scrapper->curlSettings($curl_settings);
 	$resuts = $scrapper->curlExecute($curl_redirect);
-	
+
 	$zones = new Scraper($resuts);
 	$scrape = array(
 		'filterZoneNames' => 'filterZoneNames',
@@ -781,7 +963,7 @@ function ip_datatel_alarm_zones(){
 	$alarm_zones_output = render_alarm_zones($alarm_zones);
 	$return = array('results' => $alarm_zones_output, 'alarm_zones' => $alarm_zones);
 	drupal_json_output($return);
-  drupal_exit();
+	drupal_exit();
 }
 
 function render_alarm_zones($zones){
@@ -812,5 +994,205 @@ function ip_datatel_save_alarm_zones(){
 	}
 	$status = array('status' => $check);
 	drupal_json_output($status);
-  drupal_exit();
+	drupal_exit();
+}
+
+
+
+
+
+// FIELDS
+
+/**
+ * hook_field_info
+ *
+ */
+function ip_datatel_field_info() {
+	return array(
+		'ip_datatel' => array(
+			'label' => t('Bat Trigger Fields'),
+			'description' => t("Custom Alarm Triggers"),
+			'default_widget' => 'ip_datatel_widget',
+			'default_formatter' => 'ip_datatel_formatter',
+		),
+	);
+}
+
+
+
+
+/**
+ * hook_field_validate
+ *
+ */
+function ip_datatel_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+	foreach ($items as $delta => $item) {
+		
+	}
+
+}
+
+
+
+
+/**
+ * hook_field_is_empty
+ *
+ */
+function ip_datatel_field_is_empty($item, $field) {
+	$is_empty = $item['wrapper']['event_type'] == 'none' ? TRUE : FALSE;
+	return $is_empty;
+}
+
+
+
+
+/**
+ * hook_field_widget_info
+ *
+ */
+function ip_datatel_field_widget_info() {
+	return array(
+		'ip_datatel_widget' => array(
+			'label' => t('Custom Trigger Fields'),
+			'field types' => array('ip_datatel'),
+		),
+	);
+}
+
+
+function _ip_datatel_form_default_values($items, $delta){
+	$default_values = array();
+	foreach($items as $key => $field){
+		foreach($field as $field_name => $field_value){
+			$default_values[$field_name] = !empty($items[$delta][$field_name]) ? $items[$delta][$field_name] : NULL;
+		}
+	}
+	return $default_values;
+}
+
+
+
+function ip_datatel_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+	//Default values
+	switch ($instance['widget']['type']) {
+	case 'ip_datatel_widget':
+	$default_values = _ip_datatel_form_default_values($items, $delta);
+
+	$element['wrapper'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Custom Alarm Triggers'),
+		'#collapsible' => TRUE,
+		'#collapsed' => FALSE,
+	);
+	
+	$element['wrapper']['event_type'] = array(
+		'#type' => 'select',
+		'#title' => t('Event Type'),
+		'#default_value' => $default_values['event_type'],
+		'#options' => array(
+			'none' => 'none',
+			'all' => 'All',
+			'100' => 'Alarms',
+			'200' => 'Supervisory',
+			'300' => 'Troubles',
+			'400' => 'Open/Close',
+			'500' => 'Bypass/Disables',
+			'600' => 'Test/Misc',
+		),
+		'#weight' => -100,
+	);
+	
+	$element['wrapper']['partition'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Partition'),
+		'#default_value' => $default_values['partition'],
+		'#weight' => -100,
+	);
+	
+	$element['wrapper']['signal'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Signal Type'),
+		'#default_value' => $default_values['signal'],
+		'#description' => t('Ex: Open, Close, Armed, Alarm'),
+		'#weight' => -100,
+	);
+	
+	$element['wrapper']['extra'] = array(
+		'#type' => 'select',
+		'#title' => t('Extra'),
+		'#default_value' => $default_values['extra'],
+		'#description' => t('Ex: User or Zone'),
+		'#options' => array(
+			'all' => 'All',
+			'user' => 'User',
+			'zone' => 'Zone',
+		),
+		'#weight' => -100,
+	);
+	
+	$element['wrapper']['zone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Zone'),
+		'#default_value' => $default_values['zone'],
+		'#description' => t('Bat Zone Alias or User Alias'),
+		'#weight' => -100,
+	);
+	return $element;
+	}
+}
+
+
+
+/**
+ * Implements hook_field_presave().
+ */
+function ip_datatel_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+	foreach ($items as $delta => $value) {
+		_ip_datatel_process($items[$delta], $delta, $field, $entity);
+
+	}
+}
+
+
+
+function _ip_datatel_process(&$items, $delta = 0, $field, $entity) {
+	$item = array();
+	if($items['wrapper']){
+		$all_items = current($items);
+		foreach($all_items as $field_name => $field_value){
+			$item[$field_name] = $field_value;
+		}
+		unset($items['wrapper']);
+		$items = $item;
+	}
+	return $items;
+}
+
+
+
+
+/**
+ * hook_field_elementatter_info()
+ *
+ */
+
+function ip_datatel_field_formatter_info() {
+	return array(
+		'ip_datatel_formatter' => array(
+			'label' => t('Virtual Tours formatter'),
+			'field types' => array('ip_datatel'),
+		),
+	);
+}
+
+
+
+/**
+ * hook_field_formatter_view()
+ *
+ */
+function ip_datatel_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+
+
 }

@@ -174,45 +174,7 @@ div.homebox-colors {
 }
 
 /* Page configure UI */
-#homebox-add {
-  margin: 10px 0;
-}
-#homebox-add ul {
-  margin: 0;
-  padding: 0;
-}
-#homebox-add li {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: block;
-  background: none;
-  float: left;
-  margin: 0 10px 10px 0;
-}
-#homebox-add .last {
-  margin: 0;
-}
-#homebox-add a {
-  display: block;
-  width: 130px;
-  height: 40px;
-  background: #f4f4f4 url("images/stripe.png");
-  padding: 5px;
-  overflow: hidden;
-  border-top: 1px solid transparent;
-  outline: 1px solid transparent;
-}
-#homebox .used {
-  background: #F0F0F0;
-  border-top: 1px solid #FFFFFF;
-  outline: 1px solid #DDDDDD;
-}
-#homebox .restore {
-  background: none;
-  border-top: none;
-  outline: none;
-}
+
 .homebox-msg {
   margin-right: 10px;
 }
@@ -235,10 +197,7 @@ div.homebox-colors {
 #homebox-add a {
   font-weight: bold;
 }
-#homebox-add a.used,
-#homebox-add a.restore {
-  font-weight: normal;
-}
+
 #center #homebox-save-form {
   margin: 0;
   padding: 0;
@@ -251,5 +210,5 @@ div.homebox-colors {
   cursor: pointer;
 }
 .homebox-auto-save #homebox-save-form {
-  display: none;
+  
 }

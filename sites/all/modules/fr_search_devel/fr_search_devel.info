@@ -1,0 +1,5 @@
+name = Search Devel
+description = This Module creates a way to search through dpm data.
+package = Fortified
+core = 7.x 
+scripts[] = fr_search_devel.js

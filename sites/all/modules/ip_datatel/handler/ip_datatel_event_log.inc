@@ -2,50 +2,54 @@
 class IpdatatelEventLogs extends IpdatatelJson {
 
   public $event_logs = array();
+  const RUN_ERROR = 'RUNTIME ERROR PLEASE CHECK ACCOUNT DATA';
+  public $return_event_logs = array();
   
-  public function constructAccountInformation($account_information, $username){
+  public function constructAccountInformation($account_information, $username = NULL){
     $render_events = NULL;
     $status = array();
-    foreach($account_information as $key => $value){
-      foreach($value as $delta => $account_data){
-        if($account_data['username'] == $username){
-          $this->requested_name = $username;
-          $this->customer_requested_mac_addr = $account_data['mac_addr'];
-        }
-      }
+	  $desired_account_events = !empty($account_information[$username]) ? $account_information[$username] : ''; 
+    if(!$desired_account_events){
+	    $desired_account_events = !empty($username) && $username == $account_information['username'] ? $account_information : '';
+    }
+    if($desired_account_events){
+	  	$this->requested_name = $username;
+      $this->customer_requested_mac_addr = $desired_account_events['mac_addr'];
     }
   }
   
   public $logs = array();
-  public function structorEventRequest($args){
-      $username = $this->requested_name;
-      $device_mac = $this->customer_requested_mac_addr;
-      $utility = 'event_log';
-      $structure_event_data = array('device' => $device_mac);
-      if(!empty($args) && is_array($args)){
-        $structure_event_data = array_merge($args, $structure_event_data);
-      }
-      $event_data_build_request = $this->jsonData($utility, $structure_event_data, '', '');
-      //dpm($event_data_build_request);
-      $event_data_send_request = $this->jsonRequest($event_data_build_request);
-      
-      if(!empty($event_data_send_request->logs)){
-        $this->logs = $event_data_send_request->logs;
-        $this->user = $event_data_send_request->name;
-        $this->amount = $event_data_send_request->count;
-        $status = TRUE;
-      }else{
-        $status[] = 'No Events Found';
-      }
-      return array('status' => $status, 'event_logs' => $this->logs);
+  public function structorEventRequest($args = NULL){
+  		$errors = !empty($this->requested_name) ? FALSE : self::RUN_ERROR;
+  		if(!empty($this->requested_name)){
+	      $username  = $this->requested_name;
+	      $device_mac = $this->customer_requested_mac_addr;
+	      $utility = 'event_log';
+	      $structure_event_data = array('device' => $device_mac);
+	      if(!empty($args) && is_array($args)){
+	        $structure_event_data = array_merge($args, $structure_event_data);
+	      }
+	      $event_data_build_request = $this->jsonData($utility, $structure_event_data, '', '');
+	      $event_data_send_request = $this->jsonRequest($event_data_build_request);
+	      
+	      if(!empty($event_data_send_request->logs)){
+	        $this->logs = $event_data_send_request->logs;
+	        $this->user = $event_data_send_request->name;
+	        $this->amount = $event_data_send_request->count;
+	        $status = TRUE;
+	        return $events = $errors ? $errors : array('status' => $status, 'event_logs' => $this->logs);
+	      }
+	    }else{
+		    return array('status' => FALSE, 'error_msg' => $errors, 'event_logs' => NULL);
+	    }
   }
   
   
   
   
 
-  public function sortLogs($logs){
-    $logs = $this->logs;
+  public function sortLogs($logs, $account = NULL){
+    $logs = !empty($logs) ? $logs : $this->logs;
     $rows = array();
     $headers = array(
       'Date',
@@ -56,6 +60,10 @@ class IpdatatelEventLogs extends IpdatatelJson {
       'Extra',
       'zone',
     );
+    if($account){
+	    array_unshift($headers, 'Account');
+    }
+    $i = 0;
     foreach($logs as $key => $event){
       $rows[] = array(
         'data' => array(
@@ -82,6 +90,10 @@ class IpdatatelEventLogs extends IpdatatelJson {
           ),
         ),
       );
+			if($account){
+	    	array_unshift($rows[$i]['data'], array('data' => $key));
+			}
+			$i++;
     }
     $event_logs['table'] = array(
       '#theme' => 'table',
@@ -93,13 +105,15 @@ class IpdatatelEventLogs extends IpdatatelJson {
     return $event_logs;
   }
   
-  
+  public function sortFormDashboard($logs, $args){
+	  $event_logs = $this->sortLogs($logs, $args['account']);
+	  return $event_logs;
+  }
   
   public function sortForm($title, $args){
-    
     $form = array();
-    $form = drupal_get_form('ip_datatel_sort_events_form');
       if($args['sort_form'] == TRUE){
+      $form = drupal_get_form('ip_datatel_sort_events_form');
       $logs = $this->logs;
       $form['wrapper']['dynamic_form_items']['event_logs'] = $this->sortLogs($logs);
     }
