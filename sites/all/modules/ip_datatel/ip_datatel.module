@@ -1077,7 +1077,14 @@ function ip_datatel_field_widget_form(&$form, &$form_state, $field, $instance, $
 	//Default values
 	switch ($instance['widget']['type']) {
 	case 'ip_datatel_widget':
-	$default_values = _ip_datatel_form_default_values($items, $delta);
+	
+	$fields = array();
+	if(empty($items)){
+		$fields[0] = array('event_type' => '', 'partition' => '', 'signal' => '', 'extra' => '', 'zone' => '');
+	}else{
+		$fields = $items;
+	}
+	$default_values = _ip_datatel_form_default_values($fields, $delta);
 
 	$element['wrapper'] = array(
 		'#type' => 'fieldset',

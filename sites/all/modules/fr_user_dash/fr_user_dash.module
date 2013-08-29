@@ -1766,7 +1766,7 @@ function fr_user_dash_form($node, &$form_state){
 	);
 	
 	$customer_variables = fr_user_dash_query_customer_variables($uid);
-	$data = isset($customer_variables) ? $customer_variables : '';
+	$data = isset($customer_variables) && !empty($customer_variables) ? $customer_variables : array();
 	//dpm($data);
 	if($role == 'admin'){
 		$default_proc_val = !empty($data['processing'][$customer->name]['status']) ? $data['processing'][$customer->name]['status'] : 0;

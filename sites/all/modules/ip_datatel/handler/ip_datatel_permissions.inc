@@ -15,6 +15,7 @@ class IpdatatelPermissons {
 		$accounts = current($account_data);
 		$requested_permissions = array();
 		$has_access = array();
+		if(is_array($accounts)){
 		foreach($accounts as $account_name => $account_data){
 			foreach($permissions as $permission_name => $permission){
 				if($bool){
@@ -26,5 +27,6 @@ class IpdatatelPermissons {
 		}
 		return $has_access;
 	}
+}
 	
 }
