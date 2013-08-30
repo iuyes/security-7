@@ -14,6 +14,10 @@ function fr_user_dash_block_info(){
 		'info' => t('MY ALARM'),
 		'cache' => DRUPAL_NO_CACHE,
 	);
+	$blocks['my_dvr'] = array(
+		'info' => t('MY CAMERAS'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
 	$blocks['my_reports'] = array(
 		'info' => t('INCIDENT REPORTS NEW AND UNSAVED'),
 		'cache' => DRUPAL_NO_CACHE,
@@ -47,7 +51,7 @@ function fr_user_dash_block_info(){
 		'cache' => DRUPAL_NO_CACHE,
 	);
 	$blocks['alarm_processing'] = array(
-		'info' => 'Alarm Processing <strong>Beta</strong>',
+		'info' => 'Alarm Processing Beta',
 		'cache' => DRUPAL_NO_CACHE,
 	);
 	/*
@@ -82,6 +86,8 @@ function fr_user_dash_usable_homebox_blocks(){
 			$blocks['my_events'] = TRUE;
 			$blocks['saved'] = TRUE;
 			$blocks['my_reports'] = TRUE;
+			$blocks['my_dvr'] = TRUE;
+			$blocks['alarm_processing'] = TRUE;
 			
 		}
 	}else{
@@ -89,6 +95,7 @@ function fr_user_dash_usable_homebox_blocks(){
 		$blocks['tours_today'] = TRUE;
 		$blocks['admin'] = TRUE;
 		$blocks['admin_tools'] = TRUE;
+		$blocks['alarm_processing'] = TRUE;
 	}
 	return $blocks;
 }
@@ -127,7 +134,7 @@ function fr_user_dash_block_view($delta = ''){
 
 	switch($delta){
 	case'my_menu':
-		$customer_dash = drupal_render(fr_user_dash_build_dash());
+		$customer_dash = drupal_render(fr_user_dash_build_dash('menu'));
 		$data = '';
 		if(!empty($customer_dash)){
 			$content['wrapper']['extra']['joyride'] = joyWrapper('user_menu', 'first_stop');
@@ -188,6 +195,24 @@ function fr_user_dash_block_view($delta = ''){
 		$block['content'] = $data;
 		break;
 		// end alarm processing
+		
+		case'my_dvr':
+		$data = '';
+		if(!in_array('administrator', $user->roles) || !in_array('supervisor', $user->roles)){
+			$dvrs = new FortifiedDvrs();
+			$dvrs->queryDvrs($user->uid);
+			if($dvrs->has_dvr == TRUE){
+				$content['wrapper']['extra']['joyride'] = joyWrapper('my_dvrs', 'twelveth_stop');
+				$content['wrapper']['extra']['content'] = array(
+					'#type' => 'markup',
+					'#markup' => drupal_render(fr_user_dash_build_dash('dvr')),
+				);
+				$data = $content;
+			}
+		}
+
+		$block['content'] = $data;
+		break;
 
 	case'my_reports':
 		$data = '';
@@ -1512,7 +1537,7 @@ function fr_user_dash_delete_callback() {
 * Genderate the menu
 *
 */
-function _fr_menu_generate_list ($list_items) {
+function _fr_menu_generate_list ($list_items, $type = FALSE) {
 
 	$list = array();
 	$options = array();
@@ -1520,9 +1545,9 @@ function _fr_menu_generate_list ($list_items) {
 
 	$options['query'] = !empty($list_item['query']) ? $list_item['query'] : array('');
 	$options['html'] = TRUE;
-
-	$list['cameras'] = fr_user_dash_fieldset('Camera Details', array('user-cameras-wrapper', 'large-12', 'columns'));
-	$list['buttons'] = fr_user_dash_fieldset('Settings', array('user-button-wrapper', 'large-12', 'columns'));
+	if($type == 'menu'){
+		$list['buttons'] = fr_user_dash_fieldset('Settings', array('user-button-wrapper', 'large-12', 'columns'));
+	}
 
 	foreach ($list_items as $delta => $items) {
 		foreach($items as $key => $delt){
@@ -1530,6 +1555,7 @@ function _fr_menu_generate_list ($list_items) {
 				$type = $list_item->type;
 				switch($list_item->type){
 				case'cam':
+					$list['cameras'] = fr_user_dash_fieldset('Camera Details', array('user-cameras-wrapper', 'large-12', 'columns'));
 					$options = array(
 						'attributes' => array(
 							'class' => array('user-dash-button'),
@@ -1601,89 +1627,84 @@ function fr_user_dash_markup($markup, $class){
 
 
 
-function fr_user_dash_build_dash(){
+function fr_user_dash_build_dash($type){
 
 	$dash = new dashPage;
 	$user = $dash->user;
 	$user_pro = $dash->user_pro;
 	$items = array();
-
+	$menu = NULL;
 	if($user_pro){
-		// load this users profile info
-		$modals = FALSE;
-		$dash->profileInfo($modals);
-		if(!empty($dash->service_type)){
-			$service_type = $dash->service_type;
-			foreach($service_type as $key => $type){
-				switch($type){
-				case'cam':
-					if(!empty($dash->dvr_data)){
-						foreach($dash->dvr_data as $nid => $data){
-							$items['cam'][$key][$nid] = new stdClass();
-							$items['cam'][$key][$nid]->type = 'cam';
-							$items['cam'][$key][$nid]->title = t($data->dvr_title);
-							$items['cam'][$key][$nid]->path = 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'';
-							$items['cam'][$key][$nid]->query = array('cameras' => $nid);
-							$items['cam'][$key][$nid]->tours = !empty($data->dvr_tour_times) && $data->dvr_tour_times == 'yes'  ? 'Yes' : 'No';
-							$items['cam'][$key][$nid]->tour_times = !empty($data->dvr_tour_times['tour_time']) ? str_replace(',', ' - ', $data->dvr_tour_times['tour_time']):NULL;
-							$items['cam'][$key][$nid]->tour_days = !empty($data->dvr_tour_times['tour_time_days']) ? 'Everyday' : NULL;
-							$items['cam'][$key][$nid]->Class = array('button radius small user_cameras reveal-link');
-							$items['cam'][$key][$nid]->id = 'myDvrModal';
+		if($type == 'dvr'){
+			// load this users profile info
+			$modals = FALSE;
+			$dash->profileInfo($modals);
+			if(!empty($dash->service_type)){
+				$service_type = $dash->service_type;
+				foreach($service_type as $key => $type){
+					switch($type){
+					case'cam':
+						if(!empty($dash->dvr_data)){
+							foreach($dash->dvr_data as $nid => $data){
+								$items['cam'][$key][$nid] = new stdClass();
+								$items['cam'][$key][$nid]->type = 'cam';
+								$items['cam'][$key][$nid]->title = t($data->dvr_title);
+								$items['cam'][$key][$nid]->path = 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'';
+								$items['cam'][$key][$nid]->query = array('cameras' => $nid);
+								$items['cam'][$key][$nid]->tours = !empty($data->dvr_tour_times) && $data->dvr_tour_times == 'yes'  ? 'Yes' : 'No';
+								$items['cam'][$key][$nid]->tour_times = !empty($data->dvr_tour_times['tour_time']) ? str_replace(',', ' - ', $data->dvr_tour_times['tour_time']):NULL;
+								$items['cam'][$key][$nid]->tour_days = !empty($data->dvr_tour_times['tour_time_days']) ? 'Everyday' : NULL;
+								$items['cam'][$key][$nid]->Class = array('button radius small user_cameras reveal-link');
+								$items['cam'][$key][$nid]->id = 'myDvrModal';
+							}
 						}
+						break;
+					case'alarm':
+						/*$items['alarm'][$key][0] = new stdClass();
+		            $items['alarm'][$key][0]->type = 'alarm';
+		            $items['alarm'][$key][0]->title = t("My Virtual Alarm");
+		            $items['alarm'][$key][0]->path = ''.$_SERVER['REQUEST_URI'].'#';
+		            $items['alarm'][$key][0]->query = '';
+		            $items['alarm'][$key][0]->Class = array('button radius small revealMyAlarmModal');
+		            $items['alarm'][$key][0]->id = 'myAlarmModal';*/
+						break;
 					}
-					break;
-				case'alarm':
-					/*$items['alarm'][$key][0] = new stdClass();
-	            $items['alarm'][$key][0]->type = 'alarm';
-	            $items['alarm'][$key][0]->title = t("My Virtual Alarm");
-	            $items['alarm'][$key][0]->path = ''.$_SERVER['REQUEST_URI'].'#';
-	            $items['alarm'][$key][0]->query = '';
-	            $items['alarm'][$key][0]->Class = array('button radius small revealMyAlarmModal');
-	            $items['alarm'][$key][0]->id = 'myAlarmModal';*/
-					break;
 				}
 			}
 		}
-		$key = empty($key) ? 0 : $key;
-		$uid = $dash->user->uid;
-		$items['account'][$key][0] = new stdClass();
-		$items['account'][$key][0]->type = 'account';
-		$items['account'][$key][0]->title = t("Edit My Account");
-		$items['account'][$key][0]->path = 'edit';
-		$items['account'][$key][0]->query = '';
-		$items['account'][$key][0]->Class = array('button radius small');
-		$items['account'][$key][0]->id = '';
+		if($type == 'menu'){
+			$key = empty($key) ? 0 : $key;
+			$uid = $dash->user->uid;
+			$items['account'][$key][0] = new stdClass();
+			$items['account'][$key][0]->type = 'account';
+			$items['account'][$key][0]->title = t("Edit My Account");
+			$items['account'][$key][0]->path = 'edit';
+			$items['account'][$key][0]->query = '';
+			$items['account'][$key][0]->Class = array('button radius small');
+			$items['account'][$key][0]->id = '';
+	
+			$items['prefrences'][$key][0] = new stdClass();
+			$items['prefrences'][$key][0]->type = 'prefrences';
+			$items['prefrences'][$key][0]->title = t("My Prefrences");
+			$items['prefrences'][$key][0]->path = 'prefrences';
+			$items['prefrences'][$key][0]->query = '';
+			$items['prefrences'][$key][0]->Class = array('button radius small');
+			$items['prefrences'][$key][0]->id = 'myPrefrences';
+		}
 
-		$items['prefrences'][$key][0] = new stdClass();
-		$items['prefrences'][$key][0]->type = 'prefrences';
-		$items['prefrences'][$key][0]->title = t("My Prefrences");
-		$items['prefrences'][$key][0]->path = 'prefrences';
-		$items['prefrences'][$key][0]->query = '';
-		$items['prefrences'][$key][0]->Class = array('button radius small');
-		$items['prefrences'][$key][0]->id = 'myPrefrences';
-
-
-		$menu_list = _fr_menu_generate_list($items);
-		/*$menu = array(
-      '#theme' => 'item_list',
-      '#items' => $menu_list,
-      //'#title' => t('Sign Up Today'),
-      '#type' => 'ul',
-      '#attributes' => array('id' => 'navigation'),
-      '#container_id' => '',
-      '#prefix' => '<section>',
-      '#suffix' => '</section>',
-    );*/
-		$menu = array();
-		$menu['wrapper'] = array(
-			'#type' => 'container',
-			'#attributes' => array(
-				'id' => 'navigation',
-				'class' => array(''),
-			),
-		);
-		$menu['wrapper']['user_menu'] = $menu_list;
-		//dpm(render($menu));
+		if(!empty($items)){
+			$menu_list = _fr_menu_generate_list($items, $type);
+			$menu = array();
+			$menu['wrapper'] = array(
+				'#type' => 'container',
+				'#attributes' => array(
+					'id' => 'navigation',
+					'class' => array(''),
+				),
+			);
+			$menu['wrapper']['user_menu'] = $menu_list;
+			//dpm(render($menu));
+		}
 		return $menu;
 	}
 }
