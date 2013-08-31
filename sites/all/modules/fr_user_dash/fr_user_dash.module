@@ -612,7 +612,7 @@ class FortifiedAuthenticate extends dashboard{
 	public function alarmSettings($arg){
 		$profile = $this->user_pro;
 		$access = FALSE;
-		$get_alarm_settings = $profile['customer']->field_cust_alarm_settings;
+		$get_alarm_settings = !empty($profile['customer']->field_cust_alarm_settings) ? $profile['customer']->field_cust_alarm_settings : NULL;
 		if(!empty($get_alarm_settings['und'])){
 			foreach($get_alarm_settings['und'] as $key => $value){
 				if($value['value'] == $arg){
