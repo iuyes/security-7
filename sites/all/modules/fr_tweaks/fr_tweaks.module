@@ -2,42 +2,17 @@
 
 function fr_tweaks_form_profile2_form_alter(&$form, &$form_state) {
 	if(!empty($form['profile_customer'])){
-		$form['profile_customer']['field_cust_multiple_cameras']['#states'] = array(
-			'visible' => array(
-				':input[name="profile_customer[field_cust_service_type][und][cam]"]' => array('checked' => TRUE),
-			),
-		);
 
-		$form['profile_customer']['field_cust_account']['#states'] = array(
-			'visible' => array(
-				':input[name="profile_customer[field_cust_multiple_cameras][und]"]' => array('value' => 'yes'),
-			),
-		);
-
-		$form['profile_customer']['field_cust_dvr_url']['#states'] = array(
-			'visible' => array(
-				':input[name="profile_customer[field_cust_service_type][und][cam]"]' => array('checked' => TRUE),
-				':input[name="profile_customer[field_cust_multiple_cameras][und]"]' => array('value' => 'no'),
-			),
-		);
 		$form['profile_customer']['field_cust_alarm_settings']['#states'] = array(
 			'visible' => array(
 				':input[name="profile_customer[field_cust_service_type][und][alarm]"]' => array('checked' => TRUE),
 			),
 		);
-		$form['profile_customer']['field_cust_device_mac']['#states'] = array(
-			'visible' => array(
-				':input[name="profile_customer[field_cust_service_type][und][alarm]"]' => array('checked' => TRUE),
-			),
-		);
 		
-		
-		unset($form['profile_customer']['field_cust_virtual_tours']['und']['#options']['_none']);
-		drupal_add_js(drupal_get_path('module', 'fr_tweaks') .'/fr_tweaks.js', array('type' => 'file', 'scope' => 'footer'));
-		$form['#submit'][] = 'customer_profile_submit';
 		$form['profile_customer']['field_cust_folders']['#type'] = 'hidden';
 		$form['profile_customer']['field_cust_alarm_url']['#type'] = 'hidden';
 		$form['profile_customer']['field_cust_tour_urls']['#type'] = 'hidden';
+		
 
 		/*$form['notifications'] = array(
 			'#type' => 'container',
@@ -46,7 +21,7 @@ function fr_tweaks_form_profile2_form_alter(&$form, &$form_state) {
 			);
 		);
 		$form['notifications']['profile_name'] = array();*/
-
+		$form['#submit'][] = 'customer_profile_submit';
 		$form['#validate'][] = 'fr_val_cust';
 		//dpm($form);
 		return $form;
@@ -61,16 +36,6 @@ function fr_val_cust($form, &$form_state){
 	$user_name = $this_user->name;
 	if($user_name != $profile_name){
 		form_set_error('profile_customer][field_cust_name', 'This Customers "Company Name/First Name" must match thier "Account Name". This Customers Account Name is: '.$user_name.'');
-	}
-	$service_type = $form_state['values']['profile_customer']['field_cust_service_type']['und'];
-	foreach($service_type as $key => $service){
-		switch($service['value']){
-			case'cam':
-				if(empty($form_state['values']['profile_customer']['field_cust_dvr_url']['und'][0]['value'])){
-					form_set_error('profile_customer][field_cust_dvr_url', 'The DVR url cannot be empty!');
-				}
-			break;
-		}
 	}
 }
 
@@ -125,12 +90,16 @@ function customer_profile_submit($form, &$form_state){
 
 	}
 	if($alarms == TRUE){
-		$form_state['values']['profile_customer']['field_cust_alarm_url']['und'][0]['value'] =
-			'https://ldecholsenterprises.alarmdealer.com/index.php?mod=auth&action=login';
+		$form_state['values']['profile_customer']['field_cust_alarm_url']['und'][0]['value'] = 'https://ldecholsenterprises.alarmdealer.com/index.php?mod=auth&action=login';
 	}
-	$has_tours = $form_state['values']['profile_customer']['field_cust_virtual_tours']['und'][0]['value'];
-	$this_user = $form_state['profiles']['customer']->uid;
-	if($dvr == TRUE && $has_tours == 'yes'){
+}
+
+
+function fr_tweaks_dvr_form_submit($form, &$form_state){
+	$has_tours = !empty($form_state['values']['field_cust_virtual_tours']['und'][0]['value']) ? $form_state['values']['field_cust_virtual_tours']['und'][0]['value'] : NULL;
+	$this_user = !empty($form_state['values']['field_alarm_customer']['und'][0]['target_id']) ? $form_state['values']['field_alarm_customer']['und'][0]['target_id'] : NULL;
+	$dvr_name = strtolower($form_state['values']['title']);
+	/*if($has_tours == 'yes'){
 		$actions = array('fortified-events' => 'Event', 'fortified-virtual-tours' => 'Virtual Tour', 'fortified-incident-reports' => 'Incident Report');
 		$i=0;
 		foreach($actions as $name => $action){
@@ -145,23 +114,11 @@ function customer_profile_submit($form, &$form_state){
 			$form_state['values']['profile_customer']['field_cust_tour_urls']['und'][$i]['_weight'] = $i;
 			$i++;
 		}
-	}
-	$has_folders = $form_state['values']['profile_customer']['field_cust_folders']['und'][0]['value'];
-	if($has_folders != TRUE){
-		$service = $form_state['values']['profile_customer']['field_cust_service_type']['und'][0]['value'];
-		switch($service){
-		case'cam':
-			$account_name = $form_state['values']['profile_customer']['field_cust_name']['und'][0]['value'];
-			$has_tours = $form_state['values']['profile_customer']['field_cust_virtual_tours']['und'][0]['value'];
-			switch($has_tours){
-			case'yes':
-				$account_folder = _create_folders($account_name);
-				if($account_folder == TRUE){
-					$form_state['values']['profile_customer']['field_cust_folders']['und'][0]['value'] = TRUE;
-				}
-				break;
-			}
-			break;
+	}*/
+	$has_folders = file_exists('./sites/default/files/fortified/'.$dvr_name.'/');
+	if(!$has_folders){
+		if($has_tours == 'yes'){
+			$account_folder = _create_folders($dvr_name);
 		}
 	}
 }
@@ -176,28 +133,28 @@ function _create_folders($account_name){
     $old_umask = umask(0);
     if(!file_exists($path.'/'.$account_name)){
       try{
-		    $account_folder = mkdir($path.'/'.strtolower($account_name).'/', 0777);
+		    $account_folder = mkdir($path.'/'.$account_name.'/', 0777);
 		  }
 		  catch (Exception $e){
   		  throw new Exception('The folder cannot be created do to a permission error!');
 		  }
 		  if($account_folder){
   		  try{
-    		  chmod($path.'/'.strtolower($account_name), 0777);
+    		  chmod($path.'/'.$account_name, 0777);
   		  }
   		  catch (Exception $e){
     		  throw new Exception('The folder was created but its permissions could not be set! ');
   		  }
         foreach($folders as $key => $value){
           try{
-    		    $sub_folders = mkdir($path.'/'.strtolower($account_name).'/'.$value.'/', 0777);
+    		    $sub_folders = mkdir($path.'/'.$account_name.'/'.$value.'/', 0777);
     		  }
     		  catch (Exception $e){
     		    throw new Exception('The sub folder '.$value.' could not be created do to a permissions error! ');
     		  }
     		  if($sub_folders){
     		    try{
-    		      chmod($path.'/'.strtolower($account_name).'/'.$value, 0777);
+    		      chmod($path.'/'.$account_name.'/'.$value, 0777);
     		    }
     		    catch (Exception $e){
     		      throw new Exception('The sub folder '.$value.' permissions could not be changed do to a permissions error!');
@@ -208,10 +165,8 @@ function _create_folders($account_name){
   		if($account_folder){
     		$created = TRUE;
   		}
-  }else{
-    if(is_writable($path.'/'.$account_name)){
-      $created = TRUE;
-    }
+  }elseif(is_writable($path.'/'.$account_name)){
+  	$created = TRUE;
   }
   return $created;
 }
@@ -387,6 +342,11 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 			);
 		
 		break;
+		case 'dvr_node_form':
+			unset($form['profile_customer']['field_cust_virtual_tours']['und']['#options']['_none']);
+			drupal_add_js(drupal_get_path('module', 'fr_tweaks') .'/fr_tweaks.js', array('type' => 'file', 'scope' => 'footer'));
+			$form['#submit'][] = 'fr_tweaks_dvr_form_submit';
+			break;
 	}
 }
 

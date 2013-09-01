@@ -562,7 +562,6 @@ class dashboard{
 		if($profile_load){
 			$profile = $profile_load;
 			if($profile['customer']){
-			$accounts = $profile['customer']->field_cust_account;
 			foreach($profile_load as $key => $value){
 				$service = !empty($value->field_cust_service_type['und']) ? $value->field_cust_service_type['und'] : FALSE;
 				if($service){
@@ -665,6 +664,9 @@ class FortifiedDvrs{
 					case'field_fr_vt_tour_times':
 						$DvrData[$key]->dvr_tour_times = !empty($values['und'][0]) ? $values['und'][0] : NULL;
 						break;
+					case 'field_dvr_address':
+						$DvrData[$key]->field_dvr_address = !empty($values['und'][0]) ? $values['und'][0] : NULL;
+						break;
 					}
 				}
 			}
@@ -686,6 +688,8 @@ class FortifiedDvrs{
  */
 class dashPage extends dashboard{
 
+	public $admin = FALSE;
+
 	function __construct(){
 		global $user;
 		$user->name = !empty($user->name) ? $user->name : '';
@@ -695,6 +699,10 @@ class dashPage extends dashboard{
 			'name' => $user->name,
 			'roles' => $user->roles,
 		);
+		$admins = array('administrator', 'supervisor', 'guard', 'editor');
+		if(array_intersect($admins, $user->roles)){
+			$this->admin = TRUE;
+		}
 		$this->constructDash($args);
 		$this->loadProfile($user->uid);
 		$args = arg();
@@ -922,12 +930,13 @@ class dashPage extends dashboard{
 
 	/*
 	 *
-	 * @ Build the camaer modal for admin customer
+	 * @ Build the camaer modal for admins to manage customers
 	 *
 	 */
 	public function requestCustCameras($info){
+		$auth = array('administrator', 'supervisor', 'editor');
 		$roles = $this->user_roles;
-		if(!in_array('anonymous user', $roles)){
+		if(array_intersect($auth, $roles)){
 			$uid = $info['customers'];
 			$dvr = $info['dvr'];
 
@@ -1055,6 +1064,9 @@ class dashPage extends dashboard{
 			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_joyride.js', array('type' => 'file', 'scope' => 'footer'));
 			$this->addJoyRide();
 		}
+		if($this->admin == TRUE){
+			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
+		}
 	}
 
 
@@ -1159,12 +1171,11 @@ class dashPage extends dashboard{
 	}
 
 
-	public function redirect($get){
+	public static function redirectToDashboard($get, $uid){
 		if(!empty($get[1]) && $get[1] != 'password'){
 			if(empty($get[2])){
 				if(!empty($get[0]) && $get[0] == 'user'){
-					if(!empty($get[1]) && $get[1] == $this->user->uid){
-						$uid = $this->user->uid;
+					if(!empty($get[1]) && $get[1] == $uid){
 						$path = 'user/'.$uid.'/dashboard';
 						$options = array('');
 						$http_response_code = 302;
@@ -1183,12 +1194,16 @@ class dashPage extends dashboard{
 
 function fr_user_dash_page_alter(&$page){
 
-	$dash = new dashPage;
-	$dash->loadPage($page);
-
-	$user = $dash->user;
-	$user_pro = $dash->user_pro;
-	if(!empty($dash->arg[1]) && $dash->arg[1] == $dash->user->uid){
+	global $user;
+	$arg = arg();
+	//redirect users to there dashboard
+	if($arg[0] == 'user'){
+		dashPage::redirectToDashboard($arg, $user->uid);
+	}
+	if(!empty($arg[1]) && $arg[1] == $user->uid && !empty($arg[2]) && $arg[2] == 'dashboard'){
+		$dash = new dashPage;
+		$dash->loadPage($page);
+		$user_pro = $dash->user_pro;
 		if($user_pro){
 			$dash->globalJsFiles();
 			$modals = TRUE;
@@ -1235,9 +1250,6 @@ function fr_user_dash_page_alter(&$page){
 		//add all the modals and js files to the page last
 		$dash->finishAllModals();
 		$page = $dash->page;
-	}
-	if($dash->arg[0] == 'user'){
-		$dash->redirect(arg());
 	}
 	//dpm($dash->user);
 	return $page;
@@ -1402,6 +1414,18 @@ class getRequest{
 		}
 		return $status;
 	}
+	
+	public function loadCustProfile($uid){
+		$this->cust_profile = profile2_load_by_user($uid, $type_name = NULL);
+	}
+	
+	
+	public function loadCustDvrs($uid){
+		$dvrs = new FortifiedDvrs();
+		$get_dvrs = $dvrs->queryDvrs($uid);
+		$this->dvr_data = $get_dvrs;
+		return $get_dvrs;
+	}
 
 }
 
@@ -1441,8 +1465,61 @@ function fr_user_dash_menu() {
 		'page callback' => 'fr_preview_cust_data',
 		'type' => MENU_CALLBACK
 	);
+	$items['fr_user_dash_tooltip_dvr'] = array(
+		'access callback' => TRUE,
+		'page callback' => 'fr_user_dash_tooltip_dvr',
+		'type' => MENU_CALLBACK
+	);
 
 	return $items;
+}
+
+
+
+function fr_user_dash_tooltip_dvr(){
+	global $user;
+	$admin_uid = $user->uid;
+	$uid = $_POST['variables'];
+	$content = fr_user_dash_markup('Sorry, no Information was found for this customer', 'error');
+	$dvrs = new getRequest();
+	$cust_dvrs = $dvrs->loadCustDvrs($uid);
+	if(!empty($cust_dvrs)){
+		$content = array();
+		foreach($cust_dvrs as $nid => $data){
+			$content[$nid]['wrapper'] = array(
+				'#type' => 'container',
+				'#attributes' => array(
+					'class' => array('row'),
+					'style' => array('border:1px solid #d0d0d0; padding:5px;'),
+				),
+			);
+			foreach($data as $field_name => $field_data){
+				switch($field_name){
+					case 'field_dvr_address':
+						if(!empty($field_data)){
+							$address = '<div class="admin-dash">Address:</div>';
+							$address .= $field_data['thoroughfare'].'<br/>';
+							$address .= $field_data['locality'].', '.$field_data['administrative_area'].' '.$field_data['postal_code'].'<br/>';
+							$content[$nid]['wrapper']['adress'] = fr_user_dash_markup($address, 'large-5 columns');
+						}
+						break;
+					case 'dvr_title':
+						
+						break;
+					case 'dvr_tour_times':
+					
+						break;
+					case 'dvr_url':
+						$link = l($data->dvr_title, 'http://'.$_SERVER['HTTP_HOST'].'/user/'.$admin_uid.'/dashboard/?customers='.$uid.'&dvr='.$field_data, array());
+						$content[$nid]['wrapper']['dvr_url'] = fr_user_dash_markup($link, 'button next large-6 columns');
+						break;
+				}
+			}
+		}
+	}
+	$html = array('html' => drupal_render($content));
+	drupal_json_output($html);
+	drupal_exit();
 }
 
 
@@ -1461,7 +1538,7 @@ function fr_preview_cust_data(){
 function fr_user_dash_save_callback(){
 	$nid = $_POST['files'];
 	//dpm($_POST);
-	$getRequest = new getRequest;
+	$getRequest = new getRequest();
 	$view = $getRequest->saveFiles($nid);
 	drupal_json_output($view);
 	drupal_exit();
@@ -1474,7 +1551,7 @@ function fr_user_dash_data_callback(){
 	$uid = $_POST['uids'];
 	$type = $_POST['types'];
 	//dpm($_POST);
-	$getRequest = new getRequest;
+	$getRequest = new getRequest();
 	$view = $getRequest->getView($uid, $type);
 	drupal_json_output($view);
 	drupal_exit();
@@ -1487,7 +1564,7 @@ function fr_user_dash_data_callback(){
 
 function fr_user_dash_download_callback(){
 	$nid = $_POST['nids'];
-	$getRequest = new getRequest;
+	$getRequest = new getRequest();
 	$getRequest->loadUser();
 	$link = $getRequest->requestDownload($nid);
 	if(!empty($getRequest->status)){
@@ -1548,6 +1625,9 @@ function _fr_menu_generate_list ($list_items, $type = FALSE) {
 	if($type == 'menu'){
 		$list['buttons'] = fr_user_dash_fieldset('Settings', array('user-button-wrapper', 'large-12', 'columns'));
 	}
+	if($type == 'dvr'){
+		$list['cameras'] = fr_user_dash_fieldset('Camera Details', array('user-cameras-wrapper', 'large-12', 'columns'));
+	}
 
 	foreach ($list_items as $delta => $items) {
 		foreach($items as $key => $delt){
@@ -1555,7 +1635,6 @@ function _fr_menu_generate_list ($list_items, $type = FALSE) {
 				$type = $list_item->type;
 				switch($list_item->type){
 				case'cam':
-					$list['cameras'] = fr_user_dash_fieldset('Camera Details', array('user-cameras-wrapper', 'large-12', 'columns'));
 					$options = array(
 						'attributes' => array(
 							'class' => array('user-dash-button'),
@@ -1641,8 +1720,8 @@ function fr_user_dash_build_dash($type){
 			$dash->profileInfo($modals);
 			if(!empty($dash->service_type)){
 				$service_type = $dash->service_type;
-				foreach($service_type as $key => $type){
-					switch($type){
+				foreach($service_type as $key => $types){
+					switch($types){
 					case'cam':
 						if(!empty($dash->dvr_data)){
 							foreach($dash->dvr_data as $nid => $data){
@@ -1651,7 +1730,7 @@ function fr_user_dash_build_dash($type){
 								$items['cam'][$key][$nid]->title = t($data->dvr_title);
 								$items['cam'][$key][$nid]->path = 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'';
 								$items['cam'][$key][$nid]->query = array('cameras' => $nid);
-								$items['cam'][$key][$nid]->tours = !empty($data->dvr_tour_times) && $data->dvr_tour_times == 'yes'  ? 'Yes' : 'No';
+								$items['cam'][$key][$nid]->tours = !empty($data->dvr_tour_times['tour_time_days']) ? 'Yes' : 'No';
 								$items['cam'][$key][$nid]->tour_times = !empty($data->dvr_tour_times['tour_time']) ? str_replace(',', ' - ', $data->dvr_tour_times['tour_time']):NULL;
 								$items['cam'][$key][$nid]->tour_days = !empty($data->dvr_tour_times['tour_time_days']) ? 'Everyday' : NULL;
 								$items['cam'][$key][$nid]->Class = array('button radius small user_cameras reveal-link');

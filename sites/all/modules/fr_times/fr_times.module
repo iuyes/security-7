@@ -354,7 +354,6 @@ function _fr_times_process(&$item, $delta = 0, $field, $entity) {
 }
 
 function _fr_times_flatten_values ($item, $entity) {
-  dpm($item);
   $everyday = !empty($item['tour_times']['everyday']) ? $item['tour_times']['everyday'] : '';
   $tour_amount = !empty($item['tour_times']['tour_amount']) ? $item['tour_times']['tour_amount'] : '';
   $times = array();
@@ -378,7 +377,6 @@ function _fr_times_flatten_values ($item, $entity) {
     $item['tour_time_days'] = !empty($days) ? $days : '';
     $item['tour_time_day'] = !empty($tour_amount) ? $tour_amount : '';
   }
-  dpm($item);
   return $item;
 }
 
@@ -646,11 +644,15 @@ function fr_admin_users_dash_formatter($items, $uid){
 
 
 function fr_times_load_customers(){
+	$markup = '';
   $tours = new ToursToday();
   $customers = $tours->loadCustomers();
+  //dpm($customers);
   $tour_customers = $tours->sortCustomer($customers);
-  $times = $tours->getTImes($tour_customers);
-  $markup = $tours->renderMarkup($times);
+  if(!empty($tours->sorted)){
+  	$times = $tours->sorted;
+		$markup = $tours->renderMarkup($times);
+	}
   return $markup;
 }
 
@@ -660,55 +662,45 @@ function fr_times_load_customers(){
 class ToursToday{
 
   public $profiles = array();
-
+	
   public function loadCustomers(){
-    $return = NULL;
-    $sql = "SELECT uid FROM {users}
-            WHERE uid != :args";
-    $result = db_query($sql, array(':args' => 0));
-    if(!empty($result)){
-      foreach ($result as $uid) {
-        //dpm($pid);
-        $load_profiles = profile2_load_by_user($uid->uid, $type_name = NULL);
-        if(!empty($load_profiles)){
-          $profiles[$uid->uid] = $load_profiles;
-        }
-      }
-      $return = $profiles;
-    }
-    //dpm($return);
-    return $return;
+  	$profiles = array();
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'dvr')
+		->fieldCondition('field_cust_virtual_tours', 'value', 'yes', '=');
+	  $result = $query->execute();
+	  if(!empty($result['node'])){
+		  foreach($result['node'] as $nid => $data){
+			  $profiles[$nid] = node_load($nid);
+		  }
+	  }
+	  return $profiles;
   }
 
   public function sortCustomer($profiles){
+  	$this->profile_name_to_pid = array();
+		$times = array();
+		$today = array();
+		$complete = array();
     if(!empty($profiles)){
       foreach($profiles as $key => $profile){
-        //dpm($profile);
-        if(!empty($profile['customer']->field_cust_virtual_tours['und'][0]['value']) && $profile['customer']->field_cust_virtual_tours['und'][0]['value'] == 'yes'){
-          $this->profiles[] = $profile['customer'];
-        }
-      }
-      return $this->profiles;
-    }
-  }
-
-
-  public function getTimes($profiles){
-    $this->profile_name_to_pid = array();
-    $times = array();
-    $today = array();
-    $complete = array();
-    foreach($profiles as $key => $profile){
-      if(!empty($profile->field_fr_vt_tour_times['und'])){
-        $name = $profile->field_cust_name['und'][0]['value'];
-        $times[$name] = $profile->field_fr_vt_tour_times['und'][0]['tour_time'];
-        $today[$name] = $this->getDay($profile->field_fr_vt_tour_times['und'][0]['tour_time_days']);
-        $this->profile_name_to_pid[$name] = $profile;
+        if(!empty($profile->field_cust_virtual_tours['und'][0]['value']) && $profile->field_cust_virtual_tours['und'][0]['value'] == 'yes'){
+					if(!empty($profile->field_fr_vt_tour_times['und'])){
+						$this->profiles[] = $profile;
+						$name = $profile->title;
+						$times[$name] = $profile->field_fr_vt_tour_times['und'][0]['tour_time'];
+						$today[$name] = $this->getDay($profile->field_fr_vt_tour_times['und'][0]['tour_time_days']);
+						$this->profile_name_to_pid[$name] = $profile;
+					}
+				}
       }
     }
     $sorted = $this->sortTimes($times);
-    return $sorted;
+    $this->sorted = $sorted;
+    return $this->profiles;
   }
+
 
   private function getDay($days){
     $today = strtolower(date('w'));
@@ -792,13 +784,11 @@ class ToursToday{
       'Customer',
       'Times',
     );
-    
-    
     foreach($times['upcoming'] as $key => $value){
       $done = FALSE;
       foreach($profiles as $name => $data){
         if($key == $name){
-          $view = field_view_field('profile2', $data, 'field_fr_vt_tour_times', 'tour_times');
+         	$view = field_view_field('node', $data, 'field_fr_vt_tour_times', 'tour_times');
           $tours_completed = variable_get('tours_done_today');
           $display = 'visible';
           if(!empty($tours_completed)){
