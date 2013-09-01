@@ -684,7 +684,7 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 			$path = '../user';
 			$options = array('');
 			$http_response_code = 302;
-			drupal_goto($path, $options, $http_response_code);
+			drupal_goto($path);
 		}
 		$objects['back_wrapper'] = array(
 			'#type' => 'container',

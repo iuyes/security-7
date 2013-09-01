@@ -1179,7 +1179,7 @@ class dashPage extends dashboard{
 						$path = 'user/'.$uid.'/dashboard';
 						$options = array('');
 						$http_response_code = 302;
-						drupal_goto($path, $options, $http_response_code);
+						drupal_goto($path);
 					}
 				}
 			}
