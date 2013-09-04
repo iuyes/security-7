@@ -5,6 +5,12 @@
   font-size: 86%;
 }
 
+.inner-homebox-block-content{
+	position:relative;
+	display:inline-block;
+	width:100%;
+}
+
 /*
 ** Columns/regions
 */
@@ -17,7 +23,6 @@
 }
 
 #homebox .homebox-column-wrapper {
-  float: left;
 }
 #homebox .homebox-maximized {
   width: 100%;
@@ -60,7 +65,7 @@
 }
 #homebox .homebox-portlet .homebox-portlet-inner {
   border: 1px solid #c0c0c0;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 #homebox .portlet-content {
   padding: 4px;
@@ -75,6 +80,7 @@
   background: #e4f0f8; /* matches garland */
   color: #494949;
   min-height: 18px;
+  max-height:35px;
   font-size: 1em;
 }
 #homebox .homebox-draggable .portlet-header:hover {

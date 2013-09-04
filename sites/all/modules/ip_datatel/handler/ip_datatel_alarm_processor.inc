@@ -28,7 +28,8 @@ class IpdatatelProcessEvents {
 	
 	
 	public function runAfterProcesses(){
-		if($this->ran >= 14){
+		// logic needs to be 14
+		if($this->ran >= 16){
 			$this->saveSession();
 		}
 	}
@@ -255,7 +256,7 @@ class IpdatatelProcessEvents {
 				$event_data = ( object ) $event_data;
 							if(!empty($event_data->datetime) && $event_data->type != 'default' && $event_data->session == $this->session){
 								
-								$color = $this->colorAramBySignal($event_data->signal_code);
+								$color = 'rgb(80, 201, 80)';//$this->colorAramBySignal($event_data->signal_code);
 								$rows[] = array(
 									'data' => array(
 										array(
@@ -289,10 +290,10 @@ class IpdatatelProcessEvents {
 											'class' => array(''),
 										),
 										array(
-											'data' => '<div class="processing-link-view">View</div>',
+											'data' => '<div data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" class="alarm-event-wrapper" >View</div>',
 											'style' => array('background:'.$color.';'),
-											'class' => array('processing-link-view'),
-											'data-event-id' => $new_event_date,
+											'class' => array('view-proccesed-link'),
+											'data-event' => $new_event_date,
 										),
 									),
 								);

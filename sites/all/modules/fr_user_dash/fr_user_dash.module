@@ -1479,40 +1479,42 @@ function fr_user_dash_menu() {
 function fr_user_dash_tooltip_dvr(){
 	global $user;
 	$admin_uid = $user->uid;
-	$uid = $_POST['variables'];
-	$content = fr_user_dash_markup('Sorry, no Information was found for this customer', 'error');
-	$dvrs = new getRequest();
-	$cust_dvrs = $dvrs->loadCustDvrs($uid);
-	if(!empty($cust_dvrs)){
-		$content = array();
-		foreach($cust_dvrs as $nid => $data){
-			$content[$nid]['wrapper'] = array(
-				'#type' => 'container',
-				'#attributes' => array(
-					'class' => array('row'),
-					'style' => array('border:1px solid #d0d0d0; padding:5px;'),
-				),
-			);
-			foreach($data as $field_name => $field_data){
-				switch($field_name){
-					case 'field_dvr_address':
-						if(!empty($field_data)){
-							$address = '<div class="admin-dash">Address:</div>';
-							$address .= $field_data['thoroughfare'].'<br/>';
-							$address .= $field_data['locality'].', '.$field_data['administrative_area'].' '.$field_data['postal_code'].'<br/>';
-							$content[$nid]['wrapper']['adress'] = fr_user_dash_markup($address, 'large-5 columns');
-						}
-						break;
-					case 'dvr_title':
+	$uid = !empty($_POST['arguments']['data']) ? $_POST['arguments']['data'] : false;
+	if($uid){
+		$content = fr_user_dash_markup('Sorry, no Information was found for this customer', 'error');
+		$dvrs = new getRequest();
+		$cust_dvrs = $dvrs->loadCustDvrs($uid);
+		if(!empty($cust_dvrs)){
+			$content = array();
+			foreach($cust_dvrs as $nid => $data){
+				$content[$nid]['wrapper'] = array(
+					'#type' => 'container',
+					'#attributes' => array(
+						'class' => array('row'),
+						'style' => array('border:1px solid #d0d0d0; padding:5px;'),
+					),
+				);
+				foreach($data as $field_name => $field_data){
+					switch($field_name){
+						case 'field_dvr_address':
+							if(!empty($field_data)){
+								$address = '<div class="admin-dash">Address:</div>';
+								$address .= $field_data['thoroughfare'].'<br/>';
+								$address .= $field_data['locality'].', '.$field_data['administrative_area'].' '.$field_data['postal_code'].'<br/>';
+								$content[$nid]['wrapper']['adress'] = fr_user_dash_markup($address, 'large-5 columns');
+							}
+							break;
+						case 'dvr_title':
+							
+							break;
+						case 'dvr_tour_times':
 						
-						break;
-					case 'dvr_tour_times':
-					
-						break;
-					case 'dvr_url':
-						$link = l($data->dvr_title, 'http://'.$_SERVER['HTTP_HOST'].'/user/'.$admin_uid.'/dashboard/?customers='.$uid.'&dvr='.$field_data, array());
-						$content[$nid]['wrapper']['dvr_url'] = fr_user_dash_markup($link, 'button next large-6 columns');
-						break;
+							break;
+						case 'dvr_url':
+							$link = l($data->dvr_title, 'http://'.$_SERVER['HTTP_HOST'].'/user/'.$admin_uid.'/dashboard/?customers='.$uid.'&dvr='.$field_data, array());
+							$content[$nid]['wrapper']['dvr_url'] = fr_user_dash_markup($link, 'button next large-6 columns');
+							break;
+					}
 				}
 			}
 		}

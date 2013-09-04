@@ -824,18 +824,30 @@ table {
     float: left !important; } }
 /*GLOBAL*/
 .f-tooltip-wrapper {
-  position: relative; }
+  position: relative;
+  z-index: 99999 !important; }
 
 .f-tooltip-open {
   box-shadow: 0 5px 20px 5px #666;
   background: white;
   position: absolute;
   border-radius: 5px;
-  z-index: 99999999999999;
-  padding: 15px;
-  min-width: 600px; }
+  z-index: 99999 !important;
+  padding: 15px; }
 
-.f-tooltip-open:before {
+.f-tooltip-medium {
+  min-width: 450px !important;
+  float: left; }
+
+.f-tooltip-small {
+  max-width: 300px;
+  float: left; }
+
+.f-tooltip-large {
+  max-width: 700px;
+  float: left; }
+
+.tooltip-before:before {
   content: "";
   display: block;
   width: 0;
@@ -845,8 +857,27 @@ table {
   border-bottom-style: solid;
   position: absolute;
   top: -12px;
+  /* -12px; */
   left: 10px;
+  /* 10px; */
   z-index: 99999; }
+
+.tooltip-after:after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 20px solid #fff;
+  position: absolute;
+  bottom: -5px;
+  /* -12px; */
+  left: 10px;
+  /* 10px; */
+  z-index: 99999; }
+
+.ui-accordion-content.ui-helper-reset.ui-widget-content.ui-corner-bottom.ui-accordion-content-active {
+  overflow: visibled !important; }
 
 /* Hexadecimal entities for the icons */
 .add:before {

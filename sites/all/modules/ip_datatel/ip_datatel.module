@@ -131,34 +131,69 @@ function ip_datatel_menu() {
 }
 
 
+function ip_datatel_container($class){
+	return array(
+		'#type' => 'container',
+		'#attributes' => array(
+		'class' => $class,
+		),
+	);
+		
+}
+
+
+function ip_datatel_markup($markup, $class){
+	return array(
+		'#type' => 'markup',
+		'#markup' => $markup,
+		'#prefix' => '<div class="'.$class.'">',
+		'#suffix' => '</div>',
+	);
+}
+
+
 function ip_datatel_ajax_process_event_modal(){
-	$event_data = $_POST['event'];
-	$html= array();
+	$html = 'Sorry, no data for this event!';
+	$event_data = !empty($_POST['arguments']['drupalData']) ? $_POST['arguments']['drupalData'] : NULL;
 	if($event_data){
-		foreach($event_data as $event_label => $event_value){
-			switch($event_label){
-				case'account_name':
-					$account_name = $event_value;
-					$html['account_name'] = array(
-						'type' => 'markup',
-						'#markup' => 'Account Name: ' . $account_name,
-					);
+		$html = array();
+		$html['wrapper'] = ip_datatel_container(array('row'));
+		$html['wrapper']['container'] = ip_datatel_container(array('alarm-events', 'large-6', 'columns'));
+		foreach($event_data as $event_type => $event_value){
+			switch($event_type){
+				case 'account_name':
+					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
+					$html['wrapper']['container']['account_name'] = ip_datatel_markup($data, 'event-item event-account_name');
 					break;
-				case'signal':
-					$signal = $event_value;
+				case 'datetime':
+					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
+					$html['wrapper']['container']['date'] = ip_datatel_markup($data, 'event-item event-date');
 					break;
-				case'zone':
-					$zone = $event_value;
+				case 'event':
+					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
+					$html['wrapper']['container']['event'] = ip_datatel_markup($data, 'event-item event-event');
 					break;
-				case'datetime':
-					$date = $event_value;
+				case 'signal':
+					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
+					$html['wrapper']['container']['signal'] = ip_datatel_markup($data, 'event-item event-signal');
+					break;
+				case 'zone':
+					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
+					$html['wrapper']['container']['zone'] = ip_datatel_markup($data, 'event-item event-zone');
 					break;
 			}
 		}
 	}
-	drupal_json_output(array('html' => drupal_render($html)));
+	if(is_array($html)){
+		$html = drupal_render($html);
+	}
+	drupal_json_output(array('html' => $html));
 	exit();
-	
 }
 
 
