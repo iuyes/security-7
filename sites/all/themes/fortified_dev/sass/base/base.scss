@@ -563,8 +563,6 @@ form{
   margin-right:auto;
   overflow:hidden;
   .featured-content-item-container{
-    //margin-left:8% !important;
-  }
   .featured-content{
     overflow: hidden;
     position: relative;
@@ -601,17 +599,17 @@ form{
         margin-top:150px;
         float: right;
       }*/
-      .group_front_page_markup{
+      .group-front-page-markup{
         .front-featured-body{
           //min-height: 200px;
         }
         .field-name-field-help-images{
-          img{
+        	img{
             padding-bottom:5px;
             max-height:66px;
             max-width:110px;
             min-height:66px;
-          }
+           }
         }
       }
     }
@@ -624,8 +622,11 @@ form{
         margin-top:150px;
         text-align:center;
       }
+    }
   }
 }
+
+
   .front-featured-right{
       position: absolute;
       right:0px;

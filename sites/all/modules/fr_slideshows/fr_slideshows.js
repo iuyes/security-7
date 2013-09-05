@@ -13,7 +13,7 @@
 		var setHegiht;
 		var averageHieght;
 		var wrapperHeights = [];
-		var items = $('.group_front_page_markup').map(function() {
+		var items = $('.group-front-page-markup').map(function() {
 			var thisPxHeight = $(this).css('height');
 			var thisHeight = parseInt(thisPxHeight, 10);
 			wrapperHeights.push(thisHeight);
@@ -28,7 +28,7 @@
 		}).get();
 		var body_sum = Math.max.apply(Math, bodyHieghts); // 306  
 		//wrapper
-		var changeHeight = $('.group_front_page_markup').map(function() {
+		var changeHeight = $('.group-front-page-markup').map(function() {
 			var thisPxHeight = $(this).css('height');
 			var thisHeight = parseInt(thisPxHeight, 10);
 			var needHeight = (wrapper_sum - (thisHeight));

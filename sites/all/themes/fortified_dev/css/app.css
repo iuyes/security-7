@@ -1233,7 +1233,7 @@ form {
   margin-left: auto;
   margin-right: auto;
   overflow: hidden; }
-  .featured-content-wrapper .featured-content {
+  .featured-content-wrapper .featured-content-item-container .featured-content {
     overflow: hidden;
     position: relative;
     top: 0px;
@@ -1243,7 +1243,7 @@ form {
     left: 0px;
     padding: 2px !important;
     list-style-type: none; }
-    .featured-content-wrapper .featured-content .li-featured-content {
+    .featured-content-wrapper .featured-content-item-container .featured-content .li-featured-content {
       padding-right: 15px;
       padding-top: 10px;
       padding-bottom: 10px;
@@ -1261,12 +1261,12 @@ form {
         margin-top:150px;
         float: right;
       }*/ }
-      .featured-content-wrapper .featured-content .li-featured-content .group_front_page_markup .field-name-field-help-images img {
+      .featured-content-wrapper .featured-content-item-container .featured-content .li-featured-content .group-front-page-markup .field-name-field-help-images img {
         padding-bottom: 5px;
         max-height: 66px;
         max-width: 110px;
         min-height: 66px; }
-    .featured-content-wrapper .featured-content .li-divider {
+    .featured-content-wrapper .featured-content-item-container .featured-content .li-divider {
       height: 250px !important;
       padding-right: 15px;
       width: 2px;
