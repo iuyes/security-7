@@ -8,6 +8,10 @@ sites/*/files
 sites/*/private
 sites/default/files/fortified
 
+#Ignore temp and private directories
+tmp/
+private/
+
 # Ignore default text files
 .htaccess
 robots.txt
@@ -39,4 +43,3 @@ xmlrpc.php
 /profiles
 /scripts
 /themes
-private/
