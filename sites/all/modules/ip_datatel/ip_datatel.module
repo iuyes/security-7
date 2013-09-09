@@ -14,13 +14,6 @@ function ip_datatel_block_info(){
 		'info' => t('Alarm Settings'),
 		'cache' => DRUPAL_NO_CACHE,
 	);
-	$ipdatatel = variable_get('ip_datatel_block_status');
-	if($ipdatatel == 1){
-		$blocks['ipdatatel_block'] = array(
-			'info' => t('IpDatatel'),
-			'cache' => DRUPAL_NO_CACHE,
-		);
-	}
 	return $blocks;
 }
 
@@ -63,21 +56,6 @@ function ip_datatel_block_view($delta = ''){
 		$block['subject'] = t('Alarm Settings');
 		$block['content'] = $content;
 
-		break;
-	case'ipdatatel_block':
-		/*$content['wrapper'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Alarm Manager'),
-      '#collapsible' => FALSE,
-      '#collapsed' => FALSE,
-    );
-    $content['wrapper']['form'] = array(
-      '#type' => 'markup',
-      '#markup' => render(build_alarm_block()),
-    );
-    $block['subject'] = t('Alarm Settings');
-    $block['content'] = $content;*/
-		$block['content'] = '';
 		break;
 	}
 

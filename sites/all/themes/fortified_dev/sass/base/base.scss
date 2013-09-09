@@ -65,7 +65,7 @@
 @mixin f-tooltip-arrow-down(){
 	content: "";
 	width: 0; 
-	height: 0; 
+	height: 0;
 	border-left: 20px solid transparent;
 	border-right: 20px solid transparent;
 	border-top: 20px solid #fff;
@@ -74,6 +74,23 @@
 	left: 10px; /* 10px; */
 	z-index: 99999;
 }
+
+.tooltip-throbber{
+	//min-height:35px;
+	padding-left:35px;
+	background: #fff url(../images/throbber.gif) no-repeat 70% 70%;
+	display:inline;
+	//background-attachment:fixed;
+}
+
+.close-tooltip {
+	float:right;
+}
+.close-tooltip:hover{
+	background: #d0d0d0 !important;
+	cursor:pointer;
+}
+
 
 .f-tooltip-wrapper{
 	position: relative;
@@ -99,6 +116,7 @@
 }
 
 .f-tooltip-large{
+	min-width:650px;
 	max-width:700px;
 	float:left;
 }
@@ -111,7 +129,8 @@
 	@include f-tooltip-arrow-down();
 }
 .ui-accordion-content.ui-helper-reset.ui-widget-content.ui-corner-bottom.ui-accordion-content-active{
-	overflow: visibled !important;
+	/* overflow: visible !important; */
+	overflow: scroll !important;
 }
 
 // end custom f-tooltip
@@ -833,6 +852,7 @@ a.leaf:hover{
 .close-modal:hover{
 	background: #d0d0d0 !important;
 }
+
 
 .header {
 	font-size:18px;
@@ -2354,4 +2374,14 @@ nav{
 /* Loading GIfs*/
 .loading{
 	display:none !important;
+}
+
+
+
+/***************** Alarm Processing *****************/
+
+/****************************************************/
+
+.alarm-event-wrapper{
+	cursor: pointer;
 }

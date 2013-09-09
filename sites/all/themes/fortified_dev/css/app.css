@@ -823,6 +823,18 @@ table {
     margin-right: 0;
     float: left !important; } }
 /*GLOBAL*/
+.tooltip-throbber {
+  padding-left: 35px;
+  background: white url(../images/throbber.gif) no-repeat 70% 70%;
+  display: inline; }
+
+.close-tooltip {
+  float: right; }
+
+.close-tooltip:hover {
+  background: #d0d0d0 !important;
+  cursor: pointer; }
+
 .f-tooltip-wrapper {
   position: relative;
   z-index: 99999 !important; }
@@ -844,6 +856,7 @@ table {
   float: left; }
 
 .f-tooltip-large {
+  min-width: 650px;
   max-width: 700px;
   float: left; }
 
@@ -877,7 +890,8 @@ table {
   z-index: 99999; }
 
 .ui-accordion-content.ui-helper-reset.ui-widget-content.ui-corner-bottom.ui-accordion-content-active {
-  overflow: visibled !important; }
+  /* overflow: visible !important; */
+  overflow: scroll !important; }
 
 /* Hexadecimal entities for the icons */
 .add:before {

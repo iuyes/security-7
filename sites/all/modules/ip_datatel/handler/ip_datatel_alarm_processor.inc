@@ -23,30 +23,31 @@ class IpdatatelProcessEvents {
 		$events = $this->routEventTriggers($processing_accounts);
 		$return = $this->renderAllEvents();
 		$this->runAfterProcesses();
-		return array('start_time' => $this->sessionStartTime, 'table' => drupal_render($return), 'new_events' => $this->new_events, 'ran' => $this->ran);
+		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran, 'test' => $this->test);
 	}
-	
-	
+
+
 	public function runAfterProcesses(){
 		// logic needs to be 14
-		if($this->ran >= 16){
+		if($this->ran >= 15){
 			$this->saveSession();
 		}
 	}
-	
-	
+
+
 	private function saveSession(){
 		$unserialize = FALSE;
 		$db = new IpdatatelCustDatabaseManager();
 		$uid = $this->uid;
-		$check_session = db_query('SELECT * FROM {customer_variables} WHERE uid = :uid AND delta = :delta', array(':uid' => $uid, ':delta' => $this->session));
+		$check_session = db_query('SELECT * FROM {customer_variables} WHERE uid = :uid AND delta = :delta', array(':uid' => $uid, ':delta' => $this->sessionStartTime));
 		$record = $check_session->fetchObject();
-		$events = serialize(array_keys($this->new_events));
-		$delta = $this->session;
+		$events = serialize($this->new_events);
+		$delta = $this->sessionStartTime;
 		$data = '';
-		if($record){
+		$this->test = $record;
+		if(isset($record) && !empty($record)){
 			$db->updateCustomerVariables($uid, $data, $events, $delta);
-		}else{
+		}elseif(!empty($this->new_events) && isset($this->new_events)){
 			$db->insertNewCustomerVariables($uid, $data, $events, $delta);
 		}
 	}
@@ -198,8 +199,8 @@ class IpdatatelProcessEvents {
 			$this->sortNewEvents($new_events);
 		}
 	}
-	
-	
+
+
 
 	private function sortNewEvents($new_events){
 		$this->new_events = $this->ajax_new_events;
@@ -208,13 +209,13 @@ class IpdatatelProcessEvents {
 			foreach($new_events as $new_event_date => $new_event){
 				if($new_event_date >= $this->sessionStartTime && !array_key_exists($new_event_date, $this->new_events)){
 					$this->new_events[$new_event_date] = $new_event;
-			}else{
-				//$this->new_events->$new_event_date = $new_event;
+				}else{
+					//$this->new_events->$new_event_date = $new_event;
+				}
 			}
+			krsort($this->new_events, SORT_NUMERIC);
 		}
-		krsort($this->new_events, SORT_NUMERIC);
 	}
-}
 
 
 
@@ -232,112 +233,113 @@ class IpdatatelProcessEvents {
 
 
 	public function renderAllEvents($ajax = FALSE){
-			$content = array();
-			$rows = array();
-			$headers = array(
-				'Account',
-				'Date',
-				'Signal Code',
-				'Signal',
-				'Zone',
-				'Type',
-				'View',
-			);
-			$content['wrapper'] = array(
-				'#type' => 'container',
-				'#attributes' => array(
-					'class' => array(''),
-				),
-			);
-			
-			if(!empty($this->new_events)){
+		$content = array();
+		$rows = array();
+		$headers = array(
+			'Account',
+			'Date',
+			'Signal Code',
+			'Signal',
+			'Zone',
+			'Type',
+			'View',
+		);
+
+		if(!empty($this->new_events)){
 			//drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_processing_events.js', array('type' => 'file', 'scope' => 'header'));
 			foreach($this->new_events as $new_event_date => $event_data){
 				$event_data = ( object ) $event_data;
-							if(!empty($event_data->datetime) && $event_data->type != 'default' && $event_data->session == $this->session){
-								
-								$color = 'rgb(80, 201, 80)';//$this->colorAramBySignal($event_data->signal_code);
-								$rows[] = array(
-									'data' => array(
-										array(
-											'data' => $event_data->account_name,
-											'style' => array($style),
-											'class' => array(''),
-										),
-										array(
-											'data' => $event_data->datetime,
-											'style' => array($style),
-											'class' => array(''),
-										),
-										array(
-											'data' => $event_data->event,
-											'style' => array($style),
-											'class' => array(''),
-										),
-										array(
-											'data' => $event_data->signal,
-											'style' => array($style),
-											'class' => array(''),
-										),
-										array(
-											'data' => $event_data->zone,
-											'style' => array($style),
-											'class' => array(''),
-										),
-										array(
-											'data' => $event_data->extra,
-											'style' => array($style),
-											'class' => array(''),
-										),
-										array(
-											'data' => '<div data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" class="alarm-event-wrapper" >View</div>',
-											'style' => array('background:'.$color.';'),
-											'class' => array('view-proccesed-link'),
-											'data-event' => $new_event_date,
-										),
-									),
-								);
-							}
-						}
-					}
-			$content['wrapper']['table'] = array(
-				'#theme' => 'table',
-				'#header' => $headers,
-				'#rows' => $rows,
-				'#empty' => t('No data yet...'),
-				'#group' => 'wrapper',
-				'#attributes' => array(
-					'class' => array('large-12', 'columns'),
-					'id' => 'alarm-processing-table',
-				),
-			);
-		return $content;
+				if(!empty($event_data->datetime) && $event_data->session == $this->session){
+					$style = '';
+					$color = 'rgb(80, 201, 80)';//$this->colorAramBySignal($event_data->signal_code);
+					$rows[] = array(
+						'data' => array(
+							array(
+								'data' => $event_data->account_name,
+								'style' => array($style),
+								'class' => array(''),
+							),
+							array(
+								'data' => $event_data->datetime,
+								'style' => array($style),
+								'class' => array(''),
+							),
+							array(
+								'data' => $event_data->event,
+								'style' => array($style),
+								'class' => array(''),
+							),
+							array(
+								'data' => $event_data->signal,
+								'style' => array($style),
+								'class' => array(''),
+							),
+							array(
+								'data' => $event_data->zone,
+								'style' => array($style),
+								'class' => array(''),
+							),
+							array(
+								'data' => $event_data->extra,
+								'style' => array($style),
+								'class' => array(''),
+							),
+							array(
+								'data' => '<div data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-event="click" class="alarm-event-wrapper">View</div>',
+								'style' => array('background:'.$color.';'),
+								'class' => array('view-proccesed-link'),
+							),
+						),
+					);
+				}
+			}
+		}
+		$content['table'] = array(
+			'#theme' => 'table',
+			'#header' => $headers,
+			'#rows' => $rows,
+			'#empty' => t('No data yet...'),
+			'#group' => 'wrapper',
+			'#attributes' => array(
+				'class' => array('large-12', 'columns'),
+				'id' => 'alarm-processing-table',
+			),
+		);
+
+		//buttons for processing block
+		$tools = '<div class="alarm-previous-sessions button star">';
+		$tools .= '<a class="f-tooltip top" data-callback="/ajax/prev-sessions" data-event="click" data-ajax="TRUE" data-query-data="'.$this->uid.'" data-tooltip-size="f-tooltip-large" href="#">Previous Sessions';
+		$tools .= '</a></div>';
+		$tools .= '<div class="alarm-activate-modal button next"><a href="#">Open In Modal</a></div>';
+		$return_data = array('table' => drupal_render($content['table']), 'tools' => $tools);
+
+		return $return_data;
 	}
-	
-	
+
+
 	private function colorAramBySignal($signal){
 		//@todo find the signal code from custom_triggers maybe?
 		$signal = substr($signal, 0, 1);
 		$color = '';
 		switch($signal){
-			case 1:
-				$color = 'red';
-				break;
-			case 2:
-				$color = 'orange';
-				break;
-			case 3:
-				$color = 'yellow';
-				break;
-			case 4:
-				$color = 'green';
-				break;
-			case 5:
-				$color = 'green';
-				break;
-			case 6:
-				$color = 'green';
-				break;
+		case 1:
+			$color = 'red';
+			break;
+		case 2:
+			$color = 'orange';
+			break;
+		case 3:
+			$color = 'yellow';
+			break;
+		case 4:
+			$color = 'green';
+			break;
+		case 5:
+			$color = 'green';
+			break;
+		case 6:
+			$color = 'green';
+			break;
 		}
 		return $signal;
 	}
@@ -347,26 +349,26 @@ class IpdatatelProcessEvents {
 
 class IpdatatelCustDatabaseManager{
 
-	public function updateCustomerVariables($uid, $data, $events, $sessions){
+	public function updateCustomerVariables($uid, $data, $events, $delta){
 		$update_cust_variables = db_update('customer_variables')
 		->fields(array(
 				'sessions' => $events,
 			))
 		->condition('uid', $uid, '=')
-		->condition('delta', $sessions, '=')
+		->condition('delta', $delta, '=')
 		->execute();
 	}
-	
-	public function insertNewCustomerVariables($uid, $data, $events, $sessions){
+
+	public function insertNewCustomerVariables($uid, $data, $events, $delta){
 		$insert = db_insert('customer_variables')
-			->fields(array(
+		->fields(array(
 				'uid' => $uid,
 				'data' => $data,
 				'sessions' => $events,
-				'delta' => $sessions,
+				'delta' => $delta,
 			));
-			$result = $insert->execute();
-			return $result;
+		$result = $insert->execute();
+		return $result;
 	}
 }
 
@@ -413,6 +415,7 @@ class IpdatatelAlarmProcessor extends IpdatatelProcessEvents{
 
 	private function loadJsSettings(){
 		drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_alarm_notifications.js', array('type' => 'file', 'scope' => 'header'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
 	}
 
 }

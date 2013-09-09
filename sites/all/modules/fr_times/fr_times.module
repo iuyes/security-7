@@ -31,7 +31,7 @@ function fr_times_field_validate($entity_type, $entity, $field, $instance, $lang
  *
  */
 function fr_times_field_is_empty($item, $field) {
-  $is_empty = empty($item['tour_times']['everyday']) ? TRUE : FALSE;
+  $is_empty = $item['tour_times']['everyday'] == 'none' ? TRUE : FALSE;
   return $is_empty;
 }
 
@@ -79,7 +79,7 @@ function fr_times_field_widget_form(&$form, &$form_state, $field, $instance, $la
     $days = !empty($default_values['tour_time_days']) ? $default_values['tour_time_days'] : '';
     $days = !empty($days) ? explode(',', $days) : '';
     $times = !empty($times) ? explode(',', $times) : '';
-    $everyday = !empty($default_values['tour_time_days']) ? 'yes' : '';
+    $everyday = !empty($default_values['tour_time_days']) && count(explode(',', $default_values['tour_time_days'])) >= 6 ? 'yes' : 'none';
 
     $element['tour_times'] = array(
       '#type' => 'fieldset',
@@ -89,13 +89,13 @@ function fr_times_field_widget_form(&$form, &$form_state, $field, $instance, $la
       '#tree' => TRUE,
       '#weight' => -100,
     );
-    //$days = array('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
 
     $element['tour_times']['everyday'] = array(
       '#type' => 'radios',
       '#title' => t('Will Tour Times Be The Same Each Day?'),
       '#default_value' => $everyday,
       '#options' => array(
+      	'none' => 'None',
         'yes' => 'Yes',
       ),
       '#weight' => -100,
@@ -165,8 +165,6 @@ function fr_times_field_widget_form(&$form, &$form_state, $field, $instance, $la
         //$hour = 1;
       }
       $pe = $hour;
-      //$pe[2] = array($hour, $hour);
-      //dpm($pe);
 
       $element['tour_times']['times']['wrapper'.$value.'']['time_hour_'.$value.''] = array(
         '#type' => 'select',
@@ -176,7 +174,6 @@ function fr_times_field_widget_form(&$form, &$form_state, $field, $instance, $la
         '#prefix' => '<div class="time_'.$value.' tour-times">',
         '#suffix' => '</div>',
       );
-      //dpm($element['tour_times']['times']['wrapper'.$value.'']['time_hour_'.$value.'']['#default_value']);
 
       $element['tour_times']['times']['wrapper'.$value.'']['time_minute_'.$value.''] = array(
         '#type' => 'select',
@@ -203,7 +200,6 @@ function fr_times_field_widget_form(&$form, &$form_state, $field, $instance, $la
         '#suffix' => '</div>',
       );
     }
-    //dpm($element);
     /*$days = array('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
 		$i=0;
 		foreach($days as $key => $value){
@@ -316,9 +312,7 @@ function fr_times_menu(){
  *
  */
 function _fr_times_build_default_values($items, $delta) {
-  //dpm($delta);
   $default_values = array();
-  //dpm($items);
   if(empty($items[$delta])){ return NULL; }else{
     foreach($items[$delta] as $field => $value){
       $default_values[$field] = $value;
@@ -423,7 +417,6 @@ class times{
       $completed[] = $load->title;
     }
     variable_set('tours_done_today', $completed);
-    //dpm($times);
     return $completed;
   }
 
@@ -555,7 +548,6 @@ function fr_tours_today_formatter($items, $entity){
           }elseif($difference >= 2 && $difference <= 3){
             $status = 'less-important';
           }else{
-            //dpm($done);
             if(empty($done)){
               $status = 'urgent';
             }else{
@@ -647,7 +639,6 @@ function fr_times_load_customers(){
 	$markup = '';
   $tours = new ToursToday();
   $customers = $tours->loadCustomers();
-  //dpm($customers);
   $tour_customers = $tours->sortCustomer($customers);
   if(!empty($tours->sorted)){
   	$times = $tours->sorted;
@@ -740,7 +731,6 @@ class ToursToday{
     foreach($cust as $name => $rtimes){
       sort($rtimes, SORT_NUMERIC);
       foreach($rtimes as $key => $time){
-        //dpm($time);
         if(!empty($time) && is_int($time)){
           if(($time < 0) && ($time >= -3600)){
             $passed[$name][] = $time;

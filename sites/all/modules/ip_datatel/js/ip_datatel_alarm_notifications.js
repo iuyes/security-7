@@ -28,7 +28,7 @@
 								IpDatatel.settings.ran_processor = 0;
 							}
 							if(!IpDatatel.settings.viewingEvent){
-								$('#alarm-processing-table').html(data.status.table);
+								$('#alarm-processing-table').html(data.status.content.table);
 							}
 					}
 				},

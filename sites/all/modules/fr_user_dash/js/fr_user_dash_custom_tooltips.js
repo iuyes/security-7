@@ -28,6 +28,7 @@
 				tooltip.MouseLeftTooltip = false;
 				tooltip.ajax = {
 					data: $(this).attr('data-query-data'),
+					event: $(this).attr('data-event'),
 					method: $(this).attr('data-method'),
 					callback: $(this).attr('data-callback'),
 					tooltipSize: $(this).attr('data-tooltip-size'),
@@ -37,29 +38,75 @@
 					drupalSetting: $(this).attr('data-drupal-setting'),
 					tooltipDialog: $(this),
 				};
+				if(!tooltip.ajax.event){
+					tooltip.ajax.event = 'mouseenter';
+				}
 				if(tooltip.ajax.drupalSettings){
 					tooltip.ajax.drupalData = Drupal.settings[tooltip.ajax.drupalSetting];
 					tooltip.ajax.drupalData = tooltip.ajax.drupalData[tooltip.ajax.arguments];
 				}
 				
-				//show the tooltip
-				tooltipFunctions.showFTooltip($(this));
-				
-				// get html if requested
-				if (tooltip.ajax.useAjax) {
-					tooltipFunctions.ajaxTooltipHtml($(this));
+				if(tooltip.ajax.event == 'mouseenter'){
+					tooltipFunctions.activateTooltip(tooltip.ajax.tooltipDialog);
+				}else{
+					tooltipFunctions.triggeringEvent();
 				}
 			}
-			
-			//used to close the tooltip
-			$(document).off('.f-tooltip').on('mouseleave', '.f-tooltip', function() {
-				var openTooltipWrapper = $(this).parent().find('.f-tooltip-wrapper');
-				tooltip.MouseLeftTooltip = true;
-				checkToCloseTooltip = setTimeout(function() {
-					tooltipFunctions.mouseLeftTooltip(openTooltipWrapper)
-				}, 2000);
-			});
+			//listener for close button
+			tooltipFunctions.closeTooltipButton();
 		});
+		
+		
+		
+		tooltipFunctions.closeTooltipButton = function(){
+			$(document).on('click', '.close-tooltip', function(){
+				tooltip.ajax.tooltipDialog.parent().find('.f-tooltip-wrapper').remove();
+				tooltipFunctions.updateTooltipStatus();
+			});
+		}
+		
+		
+		//used to close the tooltip
+			tooltipFunctions.hoverTooltip = function(){
+				$(document).off('.f-tooltip').on('mouseleave', '.f-tooltip', function(){
+					var openTooltipWrapper = $(this).parent().find('.f-tooltip-wrapper');
+					tooltip.MouseLeftTooltip = true;
+					checkToCloseTooltip = setTimeout(function() {
+						tooltipFunctions.mouseLeftTooltip(openTooltipWrapper)
+					}, 1500);
+				});
+			}
+		
+		
+		
+		/**
+		* @ Set listener for disired tooltip activate event set in the triggering elements data-event
+		*
+		*/
+		tooltipFunctions.triggeringEvent = function(){
+			if(!tooltip.open){
+				$(document).off('.f-tooltip');
+				$(document).on(tooltip.ajax.event, '.f-tooltip', function(e){
+					e.preventDefault();
+					tooltipFunctions.activateTooltip($(this));
+				});
+			}
+	}
+		
+		
+		
+		/**
+		* @ start the tooltip animation
+		*
+		*/
+		tooltipFunctions.activateTooltip = function(triggerElement){
+			// get html if requested
+				//show the tooltip
+				tooltipFunctions.showFTooltip(triggerElement);
+				if (tooltip.ajax.useAjax) {
+					tooltipFunctions.ajaxTooltipHtml(triggerElement);
+				}
+		}
 		
 		
 		
@@ -78,7 +125,7 @@
 				var openedTooltipWrapper = $(this).parent();
 				var checkToCloseTooltipk = setTimeout(function() {
 					tooltipFunctions.mouseOnTooltip(openedTooltipWrapper)
-				}, 2000);
+				}, 1500);
 				break;
 			}
 		});
@@ -121,6 +168,8 @@
 		*/
 		tooltipFunctions.updateTooltipStatus = function() {
 			tooltip.open = false;
+			tooltip.MouseOnTooltip = false;
+			tooltip.MouseLeftTooltip = true;
 		}
 		
 		
@@ -131,13 +180,16 @@
 		*
 		*/
 		tooltipFunctions.showFTooltip = function(element) {
+			tooltip.closeTooltipElement = '<div class="close-tooltip">&#215;</div>';
 			//get the lements offset
 			tooltip.offset = element.offset();
 			// top offset
 			var topOffset = tooltip.offset.top;
 			// tooltip element
 			tooltip.Element = '<div class="f-tooltip-wrapper">';
-			tooltip.Element += '<div class="f-tooltip-open '+tooltip.ajax.tooltipSize+'">Loading Customer Information...</div>';
+			tooltip.Element += '<div class="f-tooltip-open '+tooltip.ajax.tooltipSize+'">'+tooltip.closeTooltipElement+'';
+			tooltip.Element += '<div style="display:inline;">Loading...</div><div class="tooltip-throbber"></div>';
+			tooltip.Element += '</div>';
 			tooltip.Element += '</div>';
 			
 			//append the tooltip to the document
@@ -171,7 +223,7 @@
 					$('.f-tooltip-open').css({'top' : tooltip.Style.top}).addClass('tooltip-before');
 					break;
 				case 'top':
-					tooltip.Style.top = (tooltip.toolTipHeight + (tooltip.elementHeight * 3)) * -1;
+					tooltip.Style.top = ((tooltip.toolTipHeight + 10) + (tooltip.elementHeight * 3)) * -1;
 					$('.f-tooltip-open').css({'top' : tooltip.Style.top}).addClass('tooltip-after');
 					break;
 			}
@@ -197,7 +249,7 @@
 				if(tooltip.ajax.drupalData){
 					ajaxData.drupalData = tooltip.ajax.drupalData;	
 				}
-				if(tooltip.ajax.method == ''){
+				if(!tooltip.ajax.method){
 					tooltip.ajax.method = 'POST';
 				}
 			var openTooltip = tooltip.ajax.tooltipDialog.parent().find('.f-tooltip-open');
@@ -205,11 +257,14 @@
 				type: tooltip.ajax.method,
 				url: tooltip.ajax.callback,
 				data: { 
-					arguments: ajaxData 
+					arguments: ajaxData,
 				},
 				success: function(data) {
 				//replace the tooltip html
-					openTooltip.html(data.html);
+					var closeTooltip = '<div class="close-tooltip">&#215;</div>';
+					closeTooltip += data.html;
+					openTooltip.html(closeTooltip);
+					//openTooltip.p(tooltip.closeTooltipElement);
 					tooltipFunctions.toolTipStyles();
 				},
 				complete: function(data) {}
