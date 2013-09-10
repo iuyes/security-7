@@ -860,6 +860,10 @@ table {
   max-width: 700px;
   float: left; }
 
+.f-tooltip-auto {
+  min-width: 600px;
+  float: left; }
+
 .tooltip-before:before {
   content: "";
   display: block;
@@ -2568,3 +2572,33 @@ area.active {
 /* Loading GIfs*/
 .loading {
   display: none !important; }
+
+/***************** Alarm Processing *****************/
+/****************************************************/
+.alarm-event-wrapper {
+  cursor: pointer; }
+
+.expand-event-sessions {
+  display: none;
+  float: left;
+  width: 100%; }
+
+.session-wrapper.active {
+  background: #eee; }
+
+#prev-sessions-list {
+  list-style-type: none; }
+  #prev-sessions-list li {
+    float: left;
+    width: 100%; }
+    #prev-sessions-list li .session-wrapper {
+      float: left; }
+
+.session-pages {
+  float: right;
+  width: 100%; }
+
+.close-tooltip {
+  position: absolute;
+  top: 5px;
+  right: 10px; }

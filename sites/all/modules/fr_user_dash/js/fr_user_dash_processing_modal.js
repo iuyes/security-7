@@ -20,6 +20,14 @@
 			$('#homebox-block-fr_user_dash_alarm_processing').html(processingHtml.table);
 		}
 		
+		processingHtml.ExpandPrevSessios = $(document).on('click', '.trigger-expand-session', function(){
+			$('.expand-event-sessions').slideUp('slow');
+			$('.session-wrapper').removeClass('active');
+			$(this).removeClass('admin-dash-label');
+			$(this).addClass('admin-dash-label');
+			$(this).parent().addClass('active');
+			$(this).parent().find('.expand-event-sessions').slideDown('slow').addClass('admin-dash-content');
+		});
+		
 	});
-	
 })(jQuery);

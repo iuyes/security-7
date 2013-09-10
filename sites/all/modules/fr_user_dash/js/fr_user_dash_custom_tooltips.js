@@ -11,6 +11,7 @@
 		tooltip.ajax = {};
 		tooltip.open = false;
 		tooltip.MouseLeftTooltip = false;
+		tooltip.triggeredEvent = false;
 		var checkToCloseTooltip;		
 		var tooltipFunctions = function(){}
 		
@@ -47,13 +48,14 @@
 				}
 				
 				if(tooltip.ajax.event == 'mouseenter'){
-					tooltipFunctions.activateTooltip(tooltip.ajax.tooltipDialog);
+					tooltipFunctions.activateTooltipElement(tooltip.ajax.tooltipDialog);
 				}else{
 					tooltipFunctions.triggeringEvent();
 				}
 			}
 			//listener for close button
 			tooltipFunctions.closeTooltipButton();
+			tooltipFunctions.hoverTooltip();
 		});
 		
 		
@@ -84,11 +86,15 @@
 		*
 		*/
 		tooltipFunctions.triggeringEvent = function(){
-			if(!tooltip.open){
-				$(document).off('.f-tooltip');
+			if(!tooltip.open && !tooltip.triggeredEvent){
+				//$(document).off('.f-tooltip');
 				$(document).on(tooltip.ajax.event, '.f-tooltip', function(e){
 					e.preventDefault();
-					tooltipFunctions.activateTooltip($(this));
+					if(e.type == tooltip.ajax.event){
+						tooltip.triggeredEvent = true;
+						Drupal.settings.hoveringEvent = true;
+						tooltipFunctions.activateTooltipElement($(this));
+					}
 				});
 			}
 	}
@@ -99,7 +105,7 @@
 		* @ start the tooltip animation
 		*
 		*/
-		tooltipFunctions.activateTooltip = function(triggerElement){
+		tooltipFunctions.activateTooltipElement = function(triggerElement){
 			// get html if requested
 				//show the tooltip
 				tooltipFunctions.showFTooltip(triggerElement);
@@ -118,9 +124,11 @@
 		tooltipFunctions.mouseOnTooltipDialog = $(document).on('hover mouseleave', ".f-tooltip-open", function(e) {
 			switch (e.type) {
 			case 'mouseenter':
+				Drupal.settings.hoveringEvent = true;
 				tooltip.MouseOnTooltip = true;
 				break;
 			case 'mouseleave':
+				Drupal.settings.hoveringEvent = false;
 				tooltip.MouseOnTooltip = false;
 				var openedTooltipWrapper = $(this).parent();
 				var checkToCloseTooltipk = setTimeout(function() {
@@ -170,6 +178,8 @@
 			tooltip.open = false;
 			tooltip.MouseOnTooltip = false;
 			tooltip.MouseLeftTooltip = true;
+			Drupal.settings.hoveringEvent = false;
+			tooltip.triggeredEvent = false;
 		}
 		
 		
@@ -192,17 +202,21 @@
 			tooltip.Element += '</div>';
 			tooltip.Element += '</div>';
 			
+			
+			
 			//append the tooltip to the document
-			element.parent().append(tooltip.Element);
-			//setting sstyle for tooltip based on class
-			tooltip.position = 'bottom';
-			if(element.hasClass('top')){
-				tooltip.position = 'top';
+			if( !element.parent().find('.f-tooltip-wrapper').get(0) ){
+				element.parent().append(tooltip.Element);
+				//setting sstyle for tooltip based on class
+				tooltip.position = 'bottom';
+				if(element.hasClass('top')){
+					tooltip.position = 'top';
+				}
+				//get the trigger element hight
+				tooltip.elementHeight = parseInt(element.css('height'));
+				tooltipFunctions.toolTipStyles();
+				tooltip.open = true;	
 			}
-			//get the trigger element hight
-			tooltip.elementHeight = parseInt(element.css('height'));
-			tooltipFunctions.toolTipStyles();
-			tooltip.open = true;
 		}
 		
 		
@@ -266,6 +280,7 @@
 					openTooltip.html(closeTooltip);
 					//openTooltip.p(tooltip.closeTooltipElement);
 					tooltipFunctions.toolTipStyles();
+					tooltip.open = true;
 				},
 				complete: function(data) {}
 			});

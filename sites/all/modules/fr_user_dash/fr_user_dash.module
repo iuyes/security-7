@@ -320,7 +320,7 @@ function fr_user_dash_block_view($delta = ''){
 	case'admin':
 		//This is thr admin dashbored we only display to admins
 		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
-
+			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
 			$view = views_embed_view('admin_users_dash', $display_id = 'block');
 
 			$help_title = variable_get('tours', '');
@@ -1473,18 +1473,47 @@ function fr_processing_prev_sessions(){
 			}
 		}
 		if(isset($event_data) && !empty($event_data)){
-			$content['row'] = fr_user_dash_fieldset('container',array('alarm-proc-previous-sessions', 'row'), 'container');
+			$headers = array(
+				'Account',
+				'Date',
+				'Signal Code',
+				'Signal',
+				'Zone',
+				'Type',
+				'View',
+			);
+			$content['row'] = fr_user_dash_fieldset('Previous Alarm Processing Sessions', array('alarm-proc-previous-sessions', 'large-12', 'columns'), '');
 			krsort($event_data, SORT_NUMERIC);
+			$rows = array();
+			$table_rows = array();
+			$table_content = array();
 			foreach($event_data as $event_date => $event_data){
 				$date = date('Y-m-d H:i:s', $event_date);
-				$content['row'][$event_date]['wrapper'] = fr_user_dash_fieldset($event_date, array('collapsible', 'collapsed'));
-				$values = '';
-				foreach($event_data as $key => $obj){
-					foreach($obj as $value_title => $value){
-						$values .= '<label class="admin-dash-label large-2 columns">'.$value_title.'</label><div class="admin-dash-content large-2 columns">'.$value.'</div>';
-					}
+				$obj = current($event_data);
+			  $table = array(
+					'#theme' => 'table',
+					'#header' => $headers,
+					'#rows' => $table_rows[$event_date] = IpdatatelProcessEvents::buildEventTable($event_data, NULL, FALSE),
+					'#empty' => t('Sorry, no data for this session.'),
+					'#attributes' => array(
+						'class' => array('large-12', 'columns'),
+					),
+				);
+			  $rows[] = '<div class="session-wrapper"><div class="trigger-expand-session">'.$date.'</div><div class="expand-event-sessions">'.drupal_render($table).'</div></div>';
+			}
+			if(!empty($rows)){
+				if(count($rows > 10)){
+					$pager = array_chunk($rows, 10);
+					$rows = array_slice($rows, 0, 10, TRUE);
 				}
-				$content['row'][$event_date]['wrapper']['data'] = fr_user_dash_markup($values, 'alarm-processing-event');
+				$content['row']['item_list'] = array(
+					'#theme' => 'item_list',
+					'#items' => $rows,
+					'#attributes' => array(
+						'id' => 'prev-sessions-list',
+					),
+					'#weight' => 100,
+				);
 			}
 		}
 		$return = !empty($content) ? drupal_render($content) : '<div>Sorry, it looks like you have no sessions! <br/>Sessions are saved automatically every 2 minutes.</div>';
@@ -1501,7 +1530,7 @@ function fr_user_dash_tooltip_dvr(){
 	$admin_uid = $user->uid;
 	$uid = !empty($_POST['arguments']['data']) ? $_POST['arguments']['data'] : false;
 	if($uid){
-		$content = fr_user_dash_markup('Sorry, no Information was found for this customer', 'error');
+		$content = fr_user_dash_markup('Sorry, no Information was found for this customer', '');
 		$dvrs = new getRequest();
 		$cust_dvrs = $dvrs->loadCustDvrs($uid);
 		if(!empty($cust_dvrs)){
@@ -1521,7 +1550,7 @@ function fr_user_dash_tooltip_dvr(){
 								$address = '<div class="admin-dash">Address:</div>';
 								$address .= $field_data['thoroughfare'].'<br/>';
 								$address .= $field_data['locality'].', '.$field_data['administrative_area'].' '.$field_data['postal_code'].'<br/>';
-								$content[$nid]['wrapper']['adress'] = fr_user_dash_markup($address, 'large-6 columns');
+								$content[$nid]['wrapper']['adress'] = fr_user_dash_markup($address, 'large-6 columns', 100);
 							}
 							break;
 						case 'dvr_title':
@@ -1539,7 +1568,7 @@ function fr_user_dash_tooltip_dvr(){
 								),
 							);
 							$link = l($data->dvr_title, 'http://'.$_SERVER['HTTP_HOST'].'/user/'.$admin_uid.'/dashboard#', $options);
-							$content[$nid]['wrapper']['dvr_url'] = fr_user_dash_markup($link, 'button next large-4 columns');
+							$content[$nid]['wrapper']['dvr_url'] = fr_user_dash_markup($link, 'button next large-4 columns', -100);
 							break;
 					}
 				}
@@ -1725,12 +1754,13 @@ function fr_user_dash_fieldset($title, $class, $arg = NULL){
 	}
 }
 
-function fr_user_dash_markup($markup, $class){
+function fr_user_dash_markup($markup, $class, $weight = 100){
 	return array(
 		'#type' => 'markup',
 		'#markup' => $markup,
 		'#prefix' => '<div class="'.$class.'">',
 		'#suffix' => '</div>',
+		'#weight' => $weight,
 	);
 }
 

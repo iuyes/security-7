@@ -120,6 +120,10 @@
 	max-width:700px;
 	float:left;
 }
+.f-tooltip-auto{
+	min-width:600px;
+	float:left;
+}
 
 .tooltip-before:before{
 	@include f-tooltip-arrow-up(-12px, 10px);
@@ -2384,4 +2388,31 @@ nav{
 
 .alarm-event-wrapper{
 	cursor: pointer;
+}
+.expand-event-sessions{
+	display:none;
+	float:left;
+	width:100%;
+}
+.session-wrapper.active{
+	background:#eee;
+}
+#prev-sessions-list{
+	list-style-type: none;
+	li{
+		float:left;
+		width:100%;
+		.session-wrapper{
+			float:left;
+		}
+	}
+}
+.session-pages{
+	float:right;
+	width:100%;
+}
+.close-tooltip{
+	position: absolute;
+	top:5px;
+	right:10px;
 }

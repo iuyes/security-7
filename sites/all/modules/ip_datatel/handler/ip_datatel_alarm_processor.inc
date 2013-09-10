@@ -23,7 +23,7 @@ class IpdatatelProcessEvents {
 		$events = $this->routEventTriggers($processing_accounts);
 		$return = $this->renderAllEvents();
 		$this->runAfterProcesses();
-		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran, 'test' => $this->test);
+		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran);
 	}
 
 
@@ -40,11 +40,16 @@ class IpdatatelProcessEvents {
 		$db = new IpdatatelCustDatabaseManager();
 		$uid = $this->uid;
 		$check_session = db_query('SELECT * FROM {customer_variables} WHERE uid = :uid AND delta = :delta', array(':uid' => $uid, ':delta' => $this->sessionStartTime));
+		$check_num_session = fr_user_dash_query_processing_sessiosn($this->uid);
 		$record = $check_session->fetchObject();
+		if(!empty($check_num_session) && count($check_num_session) > 15){
+			$tenth = array_values($check_num_session);
+			$tenth_oldest = $tenth[14]->delta;
+			$db->deleteCustomerSessions($uid, $tenth_oldest);
+		}
 		$events = serialize($this->new_events);
 		$delta = $this->sessionStartTime;
 		$data = '';
-		$this->test = $record;
 		if(isset($record) && !empty($record)){
 			$db->updateCustomerVariables($uid, $data, $events, $delta);
 		}elseif(!empty($this->new_events) && isset($this->new_events)){
@@ -246,10 +251,66 @@ class IpdatatelProcessEvents {
 		);
 
 		if(!empty($this->new_events)){
-			//drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_processing_events.js', array('type' => 'file', 'scope' => 'header'));
-			foreach($this->new_events as $new_event_date => $event_data){
+			$rows = self::buildEventTable($this->new_events, $this->session);
+		}
+		$content['table'] = array(
+			'#theme' => 'table',
+			'#header' => $headers,
+			'#rows' => $rows,
+			'#empty' => t('No data yet...'),
+			'#group' => 'wrapper',
+			'#attributes' => array(
+				'class' => array('large-12', 'columns'),
+				'id' => 'alarm-processing-table',
+			),
+		);
+
+		//buttons for processing block
+		$tools = '<div class="alarm-previous-sessions button star">';
+		$tools .= '<a class="f-tooltip top" data-callback="/ajax/prev-sessions" data-event="click" data-ajax="TRUE" data-query-data="'.$this->uid.'" data-tooltip-size="f-tooltip-auto" href="#">Previous Sessions';
+		$tools .= '</a></div>';
+		$tools .= '<div class="alarm-activate-modal button next"><a href="#">Open In Modal</a></div>';
+		$return_data = array('table' => drupal_render($content['table']), 'tools' => $tools);
+
+		return $return_data;
+	}
+
+
+	private function colorAramBySignal($signal){
+		//@todo find the signal code from custom_triggers maybe?
+		$signal = substr($signal, 0, 1);
+		$color = '';
+		switch($signal){
+		case 1:
+			$color = 'red';
+			break;
+		case 2:
+			$color = 'orange';
+			break;
+		case 3:
+			$color = 'yellow';
+			break;
+		case 4:
+			$color = 'green';
+			break;
+		case 5:
+			$color = 'green';
+			break;
+		case 6:
+			$color = 'green';
+			break;
+		}
+		return $signal;
+	}
+	
+	
+	public static function buildEventTable($new_events, $session, $ajax = TRUE){
+		//drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_processing_events.js', array('type' => 'file', 'scope' => 'header'));
+			$rows = array();
+			$event = $ajax == FALSE ? '' : 'click' ;
+			foreach($new_events as $new_event_date => $event_data){
 				$event_data = ( object ) $event_data;
-				if(!empty($event_data->datetime) && $event_data->session == $this->session){
+				if(!empty($event_data->datetime) && $event_data->session == $session && $ajax == TRUE || $ajax == FALSE){
 					$style = '';
 					$color = 'rgb(80, 201, 80)';//$this->colorAramBySignal($event_data->signal_code);
 					$rows[] = array(
@@ -285,7 +346,7 @@ class IpdatatelProcessEvents {
 								'class' => array(''),
 							),
 							array(
-								'data' => '<div data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-event="click" class="alarm-event-wrapper">View</div>',
+								'data' => '<div class="alarm-event-wrapper"><a data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-event="'.$event.'" class="f-tooltip top" href="#">View</a></div>',
 								'style' => array('background:'.$color.';'),
 								'class' => array('view-proccesed-link'),
 							),
@@ -293,58 +354,10 @@ class IpdatatelProcessEvents {
 					);
 				}
 			}
-		}
-		$content['table'] = array(
-			'#theme' => 'table',
-			'#header' => $headers,
-			'#rows' => $rows,
-			'#empty' => t('No data yet...'),
-			'#group' => 'wrapper',
-			'#attributes' => array(
-				'class' => array('large-12', 'columns'),
-				'id' => 'alarm-processing-table',
-			),
-		);
-
-		//buttons for processing block
-		$tools = '<div class="alarm-previous-sessions button star">';
-		$tools .= '<a class="f-tooltip top" data-callback="/ajax/prev-sessions" data-event="click" data-ajax="TRUE" data-query-data="'.$this->uid.'" data-tooltip-size="f-tooltip-large" href="#">Previous Sessions';
-		$tools .= '</a></div>';
-		$tools .= '<div class="alarm-activate-modal button next"><a href="#">Open In Modal</a></div>';
-		$return_data = array('table' => drupal_render($content['table']), 'tools' => $tools);
-
-		return $return_data;
+			return $rows;
 	}
 
-
-	private function colorAramBySignal($signal){
-		//@todo find the signal code from custom_triggers maybe?
-		$signal = substr($signal, 0, 1);
-		$color = '';
-		switch($signal){
-		case 1:
-			$color = 'red';
-			break;
-		case 2:
-			$color = 'orange';
-			break;
-		case 3:
-			$color = 'yellow';
-			break;
-		case 4:
-			$color = 'green';
-			break;
-		case 5:
-			$color = 'green';
-			break;
-		case 6:
-			$color = 'green';
-			break;
-		}
-		return $signal;
-	}
-
-}
+} //end Class
 
 
 class IpdatatelCustDatabaseManager{
@@ -357,6 +370,15 @@ class IpdatatelCustDatabaseManager{
 		->condition('uid', $uid, '=')
 		->condition('delta', $delta, '=')
 		->execute();
+	}
+	
+	
+	public function deleteCustomerSessions($uid, $delta){
+		db_delete('customer_variables')
+	  ->condition('delta', $delta, '<')
+	  ->condition('delta', 0, '!=')
+	  ->condition('uid', $uid)
+	  ->execute();
 	}
 
 	public function insertNewCustomerVariables($uid, $data, $events, $delta){
@@ -389,6 +411,7 @@ class IpdatatelAlarmProcessor extends IpdatatelProcessEvents{
 
 	public function setProcessingAccounts($account_variables = NULL){
 		$ipdatatel = new ipDatatel();
+		$this->account_variables = NULL;
 		$this->account_data = $ipdatatel->loadAccountInformation($this->uid, $this->args);
 		$all_accounts = !empty($this->account_data) ? current($this->account_data) : NULL;
 		if($all_accounts && !empty($account_variables['processing'])){
