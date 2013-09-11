@@ -20,6 +20,7 @@
 					settings: IpDatatel.settings,
 				},
 				success: function(data) {
+				console.log(data.status);
 					if (data.status) {
 							IpDatatel.settings.start_time = data.status.start_time * 1;
 							IpDatatel.settings.new_events = data.status.new_events;
@@ -36,6 +37,14 @@
 				complete: function(data) {}
 			});
 		}
+		
+		$(document).on('click', '.view-event', function(){
+			$(this).parents('td').siblings().css('background', 'rgb(58, 209, 58)');
+			var clickedEvent = $(this).attr('data-arguments');
+			console.log(clickedEvent);
+			console.log(IpDatatel.settings.new_events[clickedEvent])
+			IpDatatel.settings.new_events[clickedEvent].clicked = 'TRUE';
+		});
 		
 	});
 })(jQuery);

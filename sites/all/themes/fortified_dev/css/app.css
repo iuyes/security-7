@@ -889,8 +889,7 @@ table {
   position: absolute;
   bottom: -5px;
   /* -12px; */
-  left: 10px;
-  /* 10px; */
+  left: 50%;
   z-index: 99999; }
 
 .ui-accordion-content.ui-helper-reset.ui-widget-content.ui-corner-bottom.ui-accordion-content-active {

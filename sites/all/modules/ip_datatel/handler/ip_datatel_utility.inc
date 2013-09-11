@@ -52,6 +52,7 @@ class ipdatatelUtility {
   private function loadEvents($utility, $arg){
     $event_logs = NULL;
     $accounts = current($this->account_information);
+    $return = '';
     if(array_key_exists($arg, $accounts)){
 	    $EventLogs = new IpdatatelEventLogs();
 	    $EventLogs->constructAccountInformation($accounts[$arg], $arg);

@@ -4,7 +4,6 @@ class IpdatatelProcessEvents {
 
 	public $queryable_accounts;
 	public $all_new_events = array();
-	public $custom_trigger_signals = array();
 	public $default_events = array();
 	public $session;
 	public $new_events_overflow = array();
@@ -23,7 +22,7 @@ class IpdatatelProcessEvents {
 		$events = $this->routEventTriggers($processing_accounts);
 		$return = $this->renderAllEvents();
 		$this->runAfterProcesses();
-		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran);
+		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran, 'test' => $this->test);
 	}
 
 
@@ -147,7 +146,6 @@ class IpdatatelProcessEvents {
 					if(!empty($values->events) && isset($values->events)){
 						$custom_trigger = $values->custom_trigger;
 						$top_3 = array_slice($values->events, 0, 5, TRUE);
-						$this->custom_trigger_signals[$account_name][$custom_trigger->event] = TRUE;
 						foreach($top_3 as $key => $object){
 							$matches = 0;
 							foreach($object as $event_name => $event_value){
@@ -212,6 +210,8 @@ class IpdatatelProcessEvents {
 		if(!empty($new_events) && !empty($this->sessionStartTime)){
 			$test = array();
 			foreach($new_events as $new_event_date => $new_event){
+				$this->test[$new_event_date] = array('event_date' => date('Y-m-d h:i:s', $new_event_date), 'start_date' => date('Y-m-d h:i:s', $this->sessionStartTime), 'diff' => $new_event_date - $this->sessionStartTime, 'now' => date('Y-m-d h:i:s'));
+				krsort($this->test, SORT_NUMERIC);
 				if($new_event_date >= $this->sessionStartTime && !array_key_exists($new_event_date, $this->new_events)){
 					$this->new_events[$new_event_date] = $new_event;
 				}else{
@@ -267,87 +267,65 @@ class IpdatatelProcessEvents {
 
 		//buttons for processing block
 		$tools = '<div class="alarm-previous-sessions button star">';
-		$tools .= '<a class="f-tooltip top" data-callback="/ajax/prev-sessions" data-event="click" data-ajax="TRUE" data-query-data="'.$this->uid.'" data-tooltip-size="f-tooltip-auto" href="#">Previous Sessions';
+		$tools .= '<a class="f-tooltip top" data-callback="/ajax/prev-sessions" data-tooltip-yposition="top" data-tooltip-xposition="center" data-event="click" data-ajax="TRUE" data-query-data="'.$this->uid.'" data-tooltip-size="f-tooltip-auto" href="#">Previous Sessions';
 		$tools .= '</a></div>';
 		$tools .= '<div class="alarm-activate-modal button next"><a href="#">Open In Modal</a></div>';
 		$return_data = array('table' => drupal_render($content['table']), 'tools' => $tools);
 
 		return $return_data;
 	}
-
-
-	private function colorAramBySignal($signal){
-		//@todo find the signal code from custom_triggers maybe?
-		$signal = substr($signal, 0, 1);
-		$color = '';
-		switch($signal){
-		case 1:
-			$color = 'red';
-			break;
-		case 2:
-			$color = 'orange';
-			break;
-		case 3:
-			$color = 'yellow';
-			break;
-		case 4:
-			$color = 'green';
-			break;
-		case 5:
-			$color = 'green';
-			break;
-		case 6:
-			$color = 'green';
-			break;
-		}
-		return $signal;
-	}
+	
 	
 	
 	public static function buildEventTable($new_events, $session, $ajax = TRUE){
 		//drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_processing_events.js', array('type' => 'file', 'scope' => 'header'));
 			$rows = array();
 			$event = $ajax == FALSE ? '' : 'click' ;
+			$colors = new IpdatatelSignalCodes();
 			foreach($new_events as $new_event_date => $event_data){
 				$event_data = ( object ) $event_data;
 				if(!empty($event_data->datetime) && $event_data->session == $session && $ajax == TRUE || $ajax == FALSE){
 					$style = '';
-					$color = 'rgb(80, 201, 80)';//$this->colorAramBySignal($event_data->signal_code);
+					if(empty($event_data->clicked)){
+						$color = 'background:'.$colors->signalCodes($event_data->signal_code).'; font-weight:bold;';
+					}else{
+						$color = 'background:rgb(58, 209, 58); font-weight:bold;';
+					}
 					$rows[] = array(
 						'data' => array(
 							array(
 								'data' => $event_data->account_name,
-								'style' => array($style),
+								'style' => array($color),
 								'class' => array(''),
 							),
 							array(
 								'data' => $event_data->datetime,
-								'style' => array($style),
+								'style' => array($color),
 								'class' => array(''),
 							),
 							array(
 								'data' => $event_data->event,
-								'style' => array($style),
+								'style' => array($color),
 								'class' => array(''),
 							),
 							array(
 								'data' => $event_data->signal,
-								'style' => array($style),
+								'style' => array($color),
 								'class' => array(''),
 							),
 							array(
 								'data' => $event_data->zone,
-								'style' => array($style),
+								'style' => array($color),
 								'class' => array(''),
 							),
 							array(
 								'data' => $event_data->extra,
-								'style' => array($style),
+								'style' => array($color),
 								'class' => array(''),
 							),
 							array(
-								'data' => '<div class="alarm-event-wrapper"><a data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-event="'.$event.'" class="f-tooltip top" href="#">View</a></div>',
-								'style' => array('background:'.$color.';'),
+								'data' => '<div class="alarm-event-wrapper"><a data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-tooltip-yposition="top" data-tooltip-xposition="center" data-event="'.$event.'" class="f-tooltip view-event" href="#">View</a></div>',
+								'style' => array($color),
 								'class' => array('view-proccesed-link'),
 							),
 						),
@@ -392,6 +370,26 @@ class IpdatatelCustDatabaseManager{
 		$result = $insert->execute();
 		return $result;
 	}
+}
+
+
+class IpdatatelSignalCodes{
+
+	public function signalCodes($signal){
+		$color = '';
+		$signal_codes = array(
+			'yellow' => array('E401', 'R401', 'E403', 'R403', 'E406', 'E570',),
+			'rgb(255, 82, 0)' => array('R333', 'R356', 'R353', 'E301', 'R301', 'R131', 'E131', 'R383', 'E383'),
+			'orange' => array('R570'),
+		);
+		foreach($signal_codes as $colors => $codes){
+			if(in_array($signal, $codes)){
+				$color = $colors;
+			}
+		}
+		return $color;
+	}
+	
 }
 
 

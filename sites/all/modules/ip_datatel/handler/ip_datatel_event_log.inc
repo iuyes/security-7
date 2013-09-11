@@ -1,4 +1,5 @@
 <?php
+
 class IpdatatelEventLogs extends IpdatatelJson {
 
   public $event_logs = array();
@@ -55,7 +56,7 @@ class IpdatatelEventLogs extends IpdatatelJson {
       'Date',
       'Event',
       'Partition',
-      //'Signal Code',
+      'Signal Code',
       'Signal',
       'Extra',
       'zone',
@@ -76,9 +77,9 @@ class IpdatatelEventLogs extends IpdatatelJson {
           array(
             'data' => $event->partition,
           ),
-          /*array(
+          array(
             'data' => $event->signal_code,
-          ),*/
+          ),
           array(
             'data' => $event->signal,
           ),

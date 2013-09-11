@@ -1546,6 +1546,7 @@ function fr_user_dash_tooltip_dvr(){
 				foreach($data as $field_name => $field_data){
 					switch($field_name){
 						case 'field_dvr_address':
+							dpm('here');
 							if(!empty($field_data)){
 								$address = '<div class="admin-dash">Address:</div>';
 								$address .= $field_data['thoroughfare'].'<br/>';

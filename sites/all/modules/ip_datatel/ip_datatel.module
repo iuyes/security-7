@@ -2,7 +2,6 @@
 
 
 
-
 /*
 *
 *hook_block_info
@@ -136,31 +135,31 @@ function ip_datatel_ajax_process_event_modal(){
 	if($event_data){
 		$html = array();
 		$html['wrapper'] = ip_datatel_container(array('row'));
-		$html['wrapper']['container'] = ip_datatel_container(array('alarm-events', 'large-6', 'columns'));
+		$html['wrapper']['container'] = ip_datatel_container(array('alarm-events', 'large-6', 'large-centered', 'columns'));
 		foreach($event_data as $event_type => $event_value){
 			switch($event_type){
 				case 'account_name':
-					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data = '<label class="admin-dash-label">'.$event_type.':</label>';
 					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
 					$html['wrapper']['container']['account_name'] = ip_datatel_markup($data, 'event-item event-account_name');
 					break;
 				case 'datetime':
-					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data = '<label class="admin-dash-label">Date:</label>';
 					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
 					$html['wrapper']['container']['date'] = ip_datatel_markup($data, 'event-item event-date');
 					break;
 				case 'event':
-					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data = '<label class="admin-dash-label">'.$event_type.':</label>';
 					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
 					$html['wrapper']['container']['event'] = ip_datatel_markup($data, 'event-item event-event');
 					break;
 				case 'signal':
-					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data = '<label class="admin-dash-label">'.$event_type.':</label>';
 					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
 					$html['wrapper']['container']['signal'] = ip_datatel_markup($data, 'event-item event-signal');
 					break;
 				case 'zone':
-					$data = '<label class="admin-dash-label">'.$event_type.'</label>';
+					$data = '<label class="admin-dash-label">'.$event_type.':</label>';
 					$data .= '<div class="admin-dash-content">'.$event_value.'</div>';
 					$html['wrapper']['container']['zone'] = ip_datatel_markup($data, 'event-item event-zone');
 					break;
@@ -823,7 +822,6 @@ function ip_datatel_sort_events_form($node, &$form_state){
 	$form['wrapper']['submit_wrapper']['submit'] = array(
 		'#type' => 'submit',
 		'#value' => 'Filter',
-		//'#submit' => 'fr_ipdatatel_sort_events_log',
 		'#weight' => 100,
 		'#ajax' => array(
 			'callback' => 'fr_ipdatatel_sort_events_log',
@@ -882,39 +880,45 @@ function fr_ipdatatel_sort_events_log($form, &$form_state){
 			$search .= '<strong>'.$type.':</strong> '.$val.' ';
 		}
 	}
-
 	if(!empty($uid) && !empty($username)){
 		$search_results = array();
-		$load_account = new  ipDatatel();
+		$load_account = new ipDatatel();
 		$account_info = $load_account->loadAccountInformation($uid);
 		$EventLog = new IpdatatelEventLogs();
+		if(!empty($account_info) && is_array($account_info)){
+			$account_info = current($account_info);
+		}
 		$EventLog->constructAccountInformation($account_info, $username);
 		$get_logs = $EventLog->structorEventRequest($args);
-		if($get_logs['status'] == TRUE){
-			$form_state['rebuild'] = TRUE;
-			$event_logs = $get_logs['event_logs'];
-			$return_events = $EventLog->sortLogs($event_logs);
-			unset($form_state['clicked_button']);
-			unset($form_state['triggering_element']);
-			unset($form_state['buttons']);
-
-			$search_results['return'] = array(
-				'#type' => 'container',
-				'#attributes' => array(
-					'class' => array('sort-events-search-results', 'row'),
-				),
-				'#weight' => -100,
-			);
-			$search_results['return']['results'] = array(
-				'#type' => 'markup',
-				'#markup' => 'Your Search Results For: '.$search.'',
-				'#weight' => -100,
-				'#prefix' => '<div class="sort-events-search-title">',
-				'#suffix' => '</div>',
-			);
-			$search_results['return']['events'] = $return_events;
-			$form_state['wrapper'] = $search_results;
-			//$form_state['return']['events']['#weight'] = 100;
+		if(!empty($get_logs)){
+			if($get_logs['status'] == TRUE){
+				$form_state['rebuild'] = TRUE;
+				$event_logs = $get_logs['event_logs'];
+				$return_events = $EventLog->sortLogs($event_logs);
+				unset($form_state['clicked_button']);
+				unset($form_state['triggering_element']);
+				unset($form_state['buttons']);
+	
+				$search_results['return'] = array(
+					'#type' => 'container',
+					'#attributes' => array(
+						'class' => array('sort-events-search-results', 'row'),
+					),
+					'#weight' => -100,
+				);
+				$search_results['return']['results'] = array(
+					'#type' => 'markup',
+					'#markup' => 'Your Search Results For: '.$search.'',
+					'#weight' => -100,
+					'#prefix' => '<div class="sort-events-search-title">',
+					'#suffix' => '</div>',
+				);
+				$search_results['return']['events'] = $return_events;
+				$form_state['wrapper'] = $search_results;
+				//$form_state['return']['events']['#weight'] = 100;
+			}
+		}else{
+			$form_state = 'Sorry No Events to return found, <a href="http://fortifiedsecurityservices.com/alarm-settings/'.$uid.'/event_log/'.$username.'">Go Back</a>';
 		}
 	}
 	return $form_state;

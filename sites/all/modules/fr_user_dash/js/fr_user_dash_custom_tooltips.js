@@ -33,6 +33,8 @@
 					method: $(this).attr('data-method'),
 					callback: $(this).attr('data-callback'),
 					tooltipSize: $(this).attr('data-tooltip-size'),
+					xPosition: $(this).attr('data-tooltip-xposition'),
+					yPosition: $(this).attr('data-tooltip-yposition'),
 					useAjax: $(this).attr('data-ajax'),
 					arguments: $(this).attr('data-arguments'),
 					drupalSettings: $(this).attr('data-drupal-settings'),
@@ -190,28 +192,24 @@
 		*
 		*/
 		tooltipFunctions.showFTooltip = function(element) {
+			//clode tooltip element
 			tooltip.closeTooltipElement = '<div class="close-tooltip">&#215;</div>';
-			//get the lements offset
-			tooltip.offset = element.offset();
-			// top offset
-			var topOffset = tooltip.offset.top;
 			// tooltip element
 			tooltip.Element = '<div class="f-tooltip-wrapper">';
 			tooltip.Element += '<div class="f-tooltip-open '+tooltip.ajax.tooltipSize+'">'+tooltip.closeTooltipElement+'';
 			tooltip.Element += '<div style="display:inline;">Loading...</div><div class="tooltip-throbber"></div>';
 			tooltip.Element += '</div>';
 			tooltip.Element += '</div>';
+			//trigger element width
+			tooltip.triggerElement = {
+				width : parseInt(element.css('width')),
+			};
 			
 			
 			
 			//append the tooltip to the document
 			if( !element.parent().find('.f-tooltip-wrapper').get(0) ){
 				element.parent().append(tooltip.Element);
-				//setting sstyle for tooltip based on class
-				tooltip.position = 'bottom';
-				if(element.hasClass('top')){
-					tooltip.position = 'top';
-				}
 				//get the trigger element hight
 				tooltip.elementHeight = parseInt(element.css('height'));
 				tooltipFunctions.toolTipStyles();
@@ -220,7 +218,16 @@
 		}
 		
 		
+		
+		/**
+		* @ function apply style attributes to the tooltip
+		*
+		*/
 		tooltipFunctions.toolTipStyles = function(){
+			if(!tooltip.ajax.yPosition){
+				tooltip.ajax.yPosition = 'bottom';
+			}
+			//default tooltip top style
 			tooltip.Style = {
 				top : '2px;',
 			};
@@ -231,7 +238,10 @@
 			tooltip.Style = {
 				top : '2px;',
 			};
-			switch(tooltip.position){
+			//tooltip width
+			tooltip.width = $('.f-tooltip-open').css('width');
+			//set the y-axis styles
+			switch(tooltip.ajax.yPosition){
 				case 'bottom':
 					//tooltip.Style.top = (tooltip.toolTipHeight + (tooltip.elementHeight * 3)) * -1;
 					$('.f-tooltip-open').css({'top' : tooltip.Style.top}).addClass('tooltip-before');
@@ -239,6 +249,14 @@
 				case 'top':
 					tooltip.Style.top = ((tooltip.toolTipHeight + 10) + (tooltip.elementHeight * 3)) * -1;
 					$('.f-tooltip-open').css({'top' : tooltip.Style.top}).addClass('tooltip-after');
+					switch(tooltip.ajax.xPosition){
+						case 'center':
+							//center the tooltip
+							var centerTOoltip = ( parseInt(tooltip.width) / -2 ) + ( tooltip.triggerElement.width / 2);
+							$('.f-tooltip-open').css('left', centerTOoltip);
+							//$('.f-tooltip-open:after').css('left', ( centerTOoltip * 1 ));
+							break;
+					}
 					break;
 			}
 		}
