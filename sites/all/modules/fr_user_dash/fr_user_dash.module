@@ -773,11 +773,11 @@ class dashPage extends dashboard{
 							$has_tours = $dvr_obj->hasTours($this->uid);
 							if($has_tours){
 								$this->has_tours == TRUE;
-								if(!empty($dvr_obj->each_dvr)){
-									foreach($dvr_obj->each_dvr as $nid => $dvr_url){
-										$this->buildDvrModal($nid, $dvr_url);
-									}
-								}
+							}
+							if(!empty($dvr_obj->each_dvr)){
+							  foreach($dvr_obj->each_dvr as $nid => $dvr_url){
+							  	$this->buildDvrModal($nid, $dvr_url);
+							  }
 							}
 						}
 					}
