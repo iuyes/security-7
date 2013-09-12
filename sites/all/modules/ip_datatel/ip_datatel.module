@@ -132,6 +132,7 @@ function ip_datatel_markup($markup, $class){
 function ip_datatel_ajax_process_event_modal(){
 	$html = 'Sorry, no data for this event!';
 	$event_data = !empty($_POST['arguments']['drupalData']) ? $_POST['arguments']['drupalData'] : NULL;
+	$event_date_id = !empty($_POST['arguments']['arguments']) ? $_POST['arguments']['arguments'] : NULL;
 	if($event_data){
 		$html = array();
 		$html['wrapper'] = ip_datatel_container(array('row'));
@@ -165,6 +166,7 @@ function ip_datatel_ajax_process_event_modal(){
 					break;
 			}
 		}
+		$html['wrapper']['container']['account_name'] = ip_datatel_markup('<a class="remove-event" data-event="'.$event_date_id.'" href="#">Remove</a>', '');
 	}
 	if(is_array($html)){
 		$html = drupal_render($html);

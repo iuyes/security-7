@@ -232,6 +232,7 @@ class IpdatatelProcessEvents {
 		$object->account_name = $account_name;
 		$object->session = $this->session;
 		$object->type = 'new';
+		$object->status = 'visible';
 		$return_data = $object;
 		return $return_data;
 	}
@@ -286,50 +287,48 @@ class IpdatatelProcessEvents {
 				$event_data = ( object ) $event_data;
 				if(!empty($event_data->datetime) && $event_data->session == $session && $ajax == TRUE || $ajax == FALSE){
 					$style = '';
-					if(empty($event_data->clicked)){
-						$color = 'background:'.$colors->signalCodes($event_data->signal_code).'; font-weight:bold;';
-					}else{
-						$color = 'background:rgb(58, 209, 58); font-weight:bold;';
+					$color = empty($event_data->clicked) ? 'background:'.$colors->signalCodes($event_data->signal_code).'; font-weight:bold;' : 'background:rgb(58, 209, 58); font-weight:bold;';
+					if(!empty($event_data->status) && $event_data->status != 'removed'){
+						$rows[] = array(
+							'data' => array(
+								array(
+									'data' => $event_data->account_name,
+									'style' => array($color),
+									'class' => array(''),
+								),
+								array(
+									'data' => $event_data->datetime,
+									'style' => array($color),
+									'class' => array(''),
+								),
+								array(
+									'data' => $event_data->event,
+									'style' => array($color),
+									'class' => array(''),
+								),
+								array(
+									'data' => $event_data->signal,
+									'style' => array($color),
+									'class' => array(''),
+								),
+								array(
+									'data' => $event_data->zone,
+									'style' => array($color),
+									'class' => array(''),
+								),
+								array(
+									'data' => $event_data->extra,
+									'style' => array($color),
+									'class' => array(''),
+								),
+								array(
+									'data' => '<div class="alarm-event-wrapper"><a data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-tooltip-yposition="top" data-tooltip-xposition="center" data-event="'.$event.'" class="f-tooltip view-event" href="#">View</a></div>',
+									'style' => array($color),
+									'class' => array('view-proccesed-link'),
+								),
+							),
+						);
 					}
-					$rows[] = array(
-						'data' => array(
-							array(
-								'data' => $event_data->account_name,
-								'style' => array($color),
-								'class' => array(''),
-							),
-							array(
-								'data' => $event_data->datetime,
-								'style' => array($color),
-								'class' => array(''),
-							),
-							array(
-								'data' => $event_data->event,
-								'style' => array($color),
-								'class' => array(''),
-							),
-							array(
-								'data' => $event_data->signal,
-								'style' => array($color),
-								'class' => array(''),
-							),
-							array(
-								'data' => $event_data->zone,
-								'style' => array($color),
-								'class' => array(''),
-							),
-							array(
-								'data' => $event_data->extra,
-								'style' => array($color),
-								'class' => array(''),
-							),
-							array(
-								'data' => '<div class="alarm-event-wrapper"><a data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-tooltip-yposition="top" data-tooltip-xposition="center" data-event="'.$event.'" class="f-tooltip view-event" href="#">View</a></div>',
-								'style' => array($color),
-								'class' => array('view-proccesed-link'),
-							),
-						),
-					);
 				}
 			}
 			return $rows;
