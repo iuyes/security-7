@@ -1,5 +1,5 @@
 name = User Dashboard
-description = User Dashbored Tools.
+description = Admin and Customer Dashboard module.
 package = Fortified
 core = 7.x 
-
+files[] = handler/fr_user_dash_bugs.inc

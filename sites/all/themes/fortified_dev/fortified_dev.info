@@ -33,6 +33,7 @@ scripts[] = js/foundation.min.js
 ; custom JS
 scripts[] = js/fortified/menu.js
 scripts[] = js/fortified/touch_swipe.js
+scripts[] = js/fortified/footer_accordion.js
 
 ; Source order:
 ; http://foundation.zurb.com/docs/index.html#basicHTMLMarkup

@@ -120,7 +120,20 @@ function query_footer_content(){
 		$result = $query->execute();
 		$options = array();
 		if (isset($result['node'])) {
-			$content['wrapper'][] = build_footer_content($result, $title);
+			foreach($result['node'] as $nid => $node){
+				$content['wrapper']['link_wrapper'][$nid] = array(
+					'#type' => 'container',
+					'#attributes' => array(
+						'class' => array('link-wrapper', 'large-3', 'columns'),
+					),
+				);
+				$content['wrapper']['link_wrapper'][$nid]['links'][$nid] = array(
+					'type' => 'markup',
+					'#markup' => '<div class="footer-link-title large-12 columns" data-accordion="'.$nid.'">'.$title.'</div><div class="footer-children-wrapper">'.build_footer_content($nid).'</div>',
+					'#prefix' => '<div class="footer-links-wrapper">',
+					'#suffix' => '</div>',
+				);
+			}
 		}
 	}
 	return $content;
@@ -129,62 +142,41 @@ function query_footer_content(){
 
 
 
-function build_footer_content($results, $title){
+function build_footer_content($nid){
 	$nodes = array();
-	$content['link_wrapper'] = array(
-			'#type' => 'container',
-			'#attributes' => array(
-				'class' => array('link-wrapper', 'large-3', 'small-12', 'medium-6', 'columns'),
-			),
-		);
-		
-	foreach($results['node'] as $key => $node){
-		$nodes = node_load($node->nid);
-		$highlights = $nodes->field_main_page_highlights['und'];
-		if(is_array($highlights)){
+	
+		$nodes = node_load($nid);
+		$highlights = !empty($nodes->field_main_page_highlights['und']) ? $nodes->field_main_page_highlights['und'] : NULL;
+		if(!empty($highlights) && is_array($highlights)){
+			$data = '';
 			foreach($highlights as $key => $highlight){
 				$link = $highlight['page_highlight'];
-				$url = build_footer_path($link, $type = '');
+				$url = build_footer_path($link);
 				$path = build_footer_path($nodes->title, $type = 'services');
-				
-				
 				$options = array(
-				'#attributes' => array(
-					'class' => array('large-12', 'small-4', 'columns'),
+				'attributes' => array(
+					'class' => array('large-12', 'columns'),
 				),
 				'query' => array(
 					'page' => $url,
 					'delta' => ($key + 1),
 				),
 			);
-			
-				$items[] = l($link, $path, $options);
+			$data .= '<div class="footer-link-item">'.l($link, $path, $options).'</div>';
 			}
+			return $data;
 		}
-	}
 	
 	$title_options = array(
 	 'attributes' => array('class' => array('white')),
 	);
-	$title = l($title.':', menu::escape($title), $title_options);
-	
-	$content['link_wrapper']['items'] = array(
-			'#theme' => 'item_list',
-			'#type' => 'ul',
-			'#title' => $title,
-			'#items' => $items,
-			'#attributes' => array(
-				'class' => array('vert-links'),
-			),
-			'#weight' => 100,
-		);
 	return $content;
 }
 
 
 
 
-function build_footer_path($link, $type){
+function build_footer_path($link, $type = NULL){
 	$escape = strtolower(str_replace(' / ', ' ', $link));
 	$escape = strtolower(str_replace('/', ' ', $escape));
 	$clean_url = strtolower(str_replace(' ', '-', $escape));
