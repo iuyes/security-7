@@ -1,0 +1,4 @@
+name = Fortified Groups Module
+description = This module adds the ability to attatch users to a user account	
+package = Fortified
+core = 7.x 

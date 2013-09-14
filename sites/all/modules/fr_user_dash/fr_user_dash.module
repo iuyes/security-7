@@ -64,6 +64,9 @@ function fr_user_dash_block_info(){
 }
 
 
+
+
+
 function fr_user_dash_usable_homebox_blocks(){
 	global $user;
 	$uid = $user->uid;
@@ -162,6 +165,8 @@ function fr_user_dash_block_view($delta = ''){
 
 		// for alarm block
 	case'my_alarm':
+		global $dash_auth;
+			dpm($dash_auth);
 		$auth = new FortifiedAuthenticate($user->uid);
 		$check_alarm = $auth->serviceType('alarm');
 		$data = '';
@@ -374,10 +379,14 @@ function fr_user_dash_block_view($delta = ''){
 		
 		//bugs submitted by customers
 	case 'bugs':
-		$bugs = new FortifiedBugs();
-		$bugs->queryBugs();
-		$bug_html = $bugs->renderBugs();
-		$block['content'] = $bug_html;
+		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
+			$bugs = new FortifiedBugs();
+			$bugs->queryBugs();
+			$bug_html = $bugs->renderBugs();
+			$block['content'] = $bug_html;
+		}else{
+			$block['content'] = '';
+		}
 		break;
 
 
@@ -556,7 +565,7 @@ class dashboard{
 		$profile_load = $this->profileLoad($uid);
 		if($profile_load){
 			$profile = $profile_load;
-			if($profile['customer']){
+			if(!empty($profile['customer'])){
 			foreach($profile_load as $key => $value){
 				$service = !empty($value->field_cust_service_type['und']) ? $value->field_cust_service_type['und'] : FALSE;
 				if($service){
@@ -765,7 +774,7 @@ class dashPage extends dashboard{
 	 */
 	public function profileInfo($modals){
 		$user_pro = $this->user_pro;
-		if($user_pro['customer']->field_cust_service_type){
+		if(!empty($user_pro['customer']->field_cust_service_type)){
 			for($i = 0; $i<=count($user_pro['customer']->field_cust_service_type['und']) - 1; $i++){
 				$this->service_type[] = $user_pro['customer']->field_cust_service_type['und'][$i]['value'];
 			}
@@ -1173,6 +1182,7 @@ class dashPage extends dashboard{
 
 
 }// end class
+
 
 
 

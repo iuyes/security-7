@@ -249,7 +249,7 @@ function ip_datatel_load_alarm_profile($uid, $utility, $arg, $nid){
 	$arg = !empty($arg) ? $arg : NULL;
 	$nid = !empty($nid) ? $nid : NULL;
 	$run_utility = '';
-	if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles) || in_array('Customer', $user->roles)){
+	if(array_key_exists(3, $user->roles) || array_key_exists(8, $user->roles) || array_key_exists(4, $user->roles) || array_key_exists(9, $user->roles)){
 		$data = 'You need to update this users IpDatel username and password <a href="../../user/'.$uid.'/edit">here</a>. Then you can change this users settings.';
 		$api = new ipDatatel();
 		$has_data = $api->loadAccountInformation($uid);

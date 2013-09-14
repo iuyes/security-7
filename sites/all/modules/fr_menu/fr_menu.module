@@ -124,7 +124,7 @@ function query_footer_content(){
 				$content['wrapper']['link_wrapper'][$nid] = array(
 					'#type' => 'container',
 					'#attributes' => array(
-						'class' => array('link-wrapper', 'large-3', 'columns'),
+						'class' => array('link-wrapper', 'large-3', 'medium-6', 'columns'),
 					),
 				);
 				$content['wrapper']['link_wrapper'][$nid]['links'][$nid] = array(
