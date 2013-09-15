@@ -15,7 +15,12 @@ class ipDatatel{
     $this->user_account = $user;
     $this->customer_account = user_load($uid);
     $this->customer_name = $this->customer_account->name;
-  
+    
+    $this->user_profile = profile2_load_by_user($user->uid, $type_name = NULL);
+		if(!empty($this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'])){
+			$this->account_id = $this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'];
+			$this->account_group = node_load($this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id']);
+		}
   
     $customer_name = $this->customer_name;
     $account_information = array();
@@ -27,6 +32,7 @@ class ipDatatel{
     
     $query = $this->buildQueryPerams($arg);
     $result = $this->query->execute();
+    
     if(!empty($result['node'])){
       foreach($result['node'] as $key => $node){
         $results = node_load($node->nid);
@@ -105,25 +111,26 @@ class ipDatatel{
   
   
   private function buildQueryPerams($arg){
-  	$uid = $this->uid;
-  	$auth = $this->authenticate;
-  	$this->query = new EntityFieldQuery;
-    $this->query->entityCondition('entity_type', 'node')
-    ->entityCondition('bundle', 'alarm');
-    switch($arg){
-	    case'admin':
-	    	if(array_intersect($auth, $this->user_account->roles) && $arg == 'admin'){
-					$this->query->fieldCondition('field_alarm_admin_managments', 'value', 'process_alarms', '=');
-				}	
-	    	break;
-	    case'user':
-	    	$this->query->fieldCondition('field_alarm_customer', 'target_id', $uid, '=');
-	    	$this->query->fieldCondition('field_alarm_management', 'value', 'process_alarms', '=');
-	    	break;
-	    default:
-	    	$this->query->fieldCondition('field_alarm_customer', 'target_id', $uid, '=');
-	    	break;
-    }
+  		$account_id = !empty($this->account_id) ? $this->account_id : NULL ;
+	  	$uid = $this->uid;
+	  	$auth = $this->authenticate;
+	  	$this->query = new EntityFieldQuery;
+	    $this->query->entityCondition('entity_type', 'node')
+	    ->entityCondition('bundle', 'alarm');
+	    switch($arg){
+		    case'admin':
+		    	if(array_intersect($auth, $this->user_account->roles) && $arg == 'admin'){
+						$this->query->fieldCondition('field_alarm_admin_managments', 'value', 'process_alarms', '=');
+					}	
+		    	break;
+		    case'user':
+		    	$this->query->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
+		    	$this->query->fieldCondition('field_alarm_management', 'value', 'process_alarms', '=');
+		    	break;
+		    default:
+		    	$this->query->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
+		    	break;
+	  }
   }
   
 

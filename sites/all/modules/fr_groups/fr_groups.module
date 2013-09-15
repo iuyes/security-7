@@ -1,1 +1,363 @@
 <?php
+
+
+/**
+ * Implements hook_menu()
+ *
+ */
+function fr_groups_menu() {
+	$items['cust/%/dashboard'] = array(
+		'page callback' => 'fr_groups_account_page',
+		'page arguments' => array(1),
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	return $items;
+}
+
+/**
+ * Main class for all account and account page
+ *
+ */
+class FortifiedGroups{
+
+	public $user;
+	public $user_type;
+	public $user_profile;
+	public $account_group;
+	public $account_id;
+	public $account_information;
+	public $has_dvr = FALSE;
+	public $has_tours = FALSE;
+	public $has_alarm = FALSE;
+
+	public function __construct($user){
+		$this->user = $user;
+		$this->user_profile = profile2_load_by_user($user->uid, $type_name = NULL);
+		if(!empty($this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'])){
+			$this->account_id = $this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'];
+			$this->account_group = node_load($this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id']);
+			if($this->account_group){
+				$this->account_information = new stdClass();
+				foreach($this->account_group as $fields => $values){
+					switch($fields){
+					case'title':
+						$this->account_information->account_title = $values;
+						break;
+					case'field_cust_account_number':
+						$this->account_information->account_name = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+						break;
+					case'field_cust_last_name':
+						$this->account_information->account_last_name = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+						break;
+					case'field_cust_service_type':
+						$this->account_information->service_types = !empty($values['und']) ? $values['und'] : NULL;
+						if(!empty($values['und'])){
+							foreach($values['und'] as $delta => $value){
+								switch($value['value']){
+								case'cam':
+									$this->has_dvr = TRUE;
+									break;
+								case'alarm':
+									$this->has_alarm = TRUE;
+									break;
+								}
+							}
+						}
+						break;
+					case'field_cust_alarm_settings':
+						$this->account_information->alarm_settings = !empty($values['und']) ? $values['und'] : NULL;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+
+	/**
+	 * Get all the dvrs attatched to Customer Group
+	 *
+	 */
+	public function queryDvrs($account_id = NULL){
+		$account_id = !empty($this->account_id) ? $this->account_id : $account_id;
+		$DvrData = FALSE;
+		$query = new EntityFieldQuery;
+		$query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', 'dvr')
+		->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
+		$result = $query->execute();
+		if(!empty($result['node'])){
+			$results = $result['node'];
+			$DvrData = array();
+			foreach($results as $key => $data){
+				$nodes = node_load($data->nid);
+				$DvrData[$key] = new stdClass();
+				foreach($nodes as $nid => $values){
+					switch($nid){
+					case'title':
+						$DvrData[$key]->dvr_title = !empty($values) ? $values : NULL;
+						break;
+					case'field_cust_dvr_url':
+						$DvrData[$key]->dvr_url = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+						break;
+					case'field_cust_virtual_tours':
+						$DvrDate[$key]->dvr_tours = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+						$this->has_tours = !empty($DvrDate[$key]->dvr_tours) ? TRUE : FALSE;
+						break;
+					case'field_fr_vt_tour_times':
+						$DvrData[$key]->dvr_tour_times = !empty($values['und'][0]) ? $values['und'][0] : NULL;
+						break;
+					case 'field_dvr_address':
+						$DvrData[$key]->field_dvr_address = !empty($values['und'][0]) ? $values['und'][0] : NULL;
+						break;
+					}
+				}
+			}
+		}
+		$this->account_information->dvr_information = $DvrData;
+		return $DvrData;
+	}
+
+}
+
+
+
+
+/**
+ * Account page callback
+ *
+ */
+function fr_groups_account_page($uid = NULL){
+	if($uid){
+		$content = array();
+		//content wrapper
+		$content['wrapper'] = _fr_groups_fieldset('container', array('account-wrapper', 'large-12', 'columns'));
+		global $user;
+		$content['wrapper']['username'] = _fr_groups_markup('<h3 class="user-account-title">Welcome '.$user->name.'</h3>', 'large-12 columns', -101);
+		$groups = new FortifiedGroups($user);
+		if($groups->account_information){
+			$content['wrapper']['menu'] = _fr_groups_fieldset('Settings', array('user-button-wrapper', 'large-12', 'columns'), -100);
+			$content['wrapper']['menu']['items'] = fr_groups_build_dash_menu($user->uid);
+			$account_information = $groups->account_information;
+			if($groups->has_dvr){
+				$dvrs = $groups->queryDvrs();
+				if($dvrs){
+					$content['wrapper']['dvrs'] = _fr_groups_fieldset('container', array(), -97, 'account-dvr-section');
+					$content['wrapper']['dvrs']['items'] = fr_groups_build_dvrs($dvrs, $groups->has_tours);
+				}
+			}
+			if($groups->has_alarm){
+				$content['wrapper']['alarm'] = _fr_groups_fieldset('Alarm System', array('account-alarm-system-wrapper', 'large-12', 'columns'), -98);
+				$content['wrapper']['alarm']['items'] = fr_groups_build_alarm($groups, $user->uid);
+			}
+		}
+		dpm($groups);
+	}
+	return drupal_render($content);
+}
+
+
+
+
+/**
+ * build the Alarm account Section
+ *
+ */
+function fr_groups_build_alarm($account_information, $uid){
+	$alarm = ip_datatel_load_alarm_profile($uid, 'all', '', '', TRUE);
+	return $alarm;
+}
+
+
+
+/**
+ * build the dvr account section
+ *
+ */
+function fr_groups_build_dash_menu($uid){
+	$list = array();
+	$items = array();
+	
+	$key = empty($key) ? 0 : $key;
+	$items['account'] = new stdClass();
+	$items['account']->type = 'account';
+	$items['account']->title = t("Edit My Account");
+	$items['account']->path = 'edit';
+	$items['account']->query = '';
+	$items['account']->Class = array('button radius small');
+	$items['account']->id = '';
+	
+	$items['prefrences'] = new stdClass();
+	$items['prefrences']->type = 'prefrences';
+	$items['prefrences']->title = t("My Prefrences");
+	$items['prefrences']->path = 'prefrences';
+	$items['prefrences']->query = '';
+	$items['prefrences']->Class = array('button radius small');
+	$items['prefrences']->id = 'myPrefrences';
+	
+	foreach($items as $type => $list_item){
+		switch($type){
+			case'prefrences':
+			 	$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="prefrences" data-reveal-id="'.$list_item->id.'" >'.$list_item->title.'</a>';
+			 	$list['prefrences'] = _fr_groups_markup($path, 'button edit', -100);
+			 	break;
+			case'account':
+				$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="account">'.$list_item->title.'</a>';
+			 	$list['account'] = _fr_groups_markup($path, 'button edit', -100);
+			 	break;
+		}
+	}
+	
+	return $list;
+}
+
+
+
+
+/**
+ * build the dvr account section
+ *
+ */
+function fr_groups_build_dvrs($dvr_data, $tours){
+
+	$list = array();
+	foreach($dvr_data as $nid => $data){
+		$items[$nid] = new stdClass();
+		$items[$nid]->type = 'cam';
+		$items[$nid]->title = t($data->dvr_title);
+		$items[$nid]->path = 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'#';
+		$items[$nid]->tours = !empty($data->dvr_tour_times['tour_time_days']) ? 'Yes' : 'No';
+		$items[$nid]->tour_times = !empty($data->dvr_tour_times['tour_time']) ? str_replace(',', ' - ', $data->dvr_tour_times['tour_time']):NULL;
+		$items[$nid]->tour_days = !empty($data->dvr_tour_times['tour_time_days']) ? 'Everyday' : NULL;
+		$items[$nid]->Class = 'button star dvr-modal';
+		$items[$nid]->Attributes = 'data-dvr-nid="'.$nid.'"';
+		$items[$nid]->id = 'myDvrModal';
+	}
+	//cameras wrapper
+	$list['cameras'] = _fr_groups_fieldset('Camera System', array('user-cameras-wrapper', 'large-12', 'columns'), -100);
+	
+	//link options
+	$options = array(
+		'attributes' => array(
+			'class' => array('dvr-reveal-link'),
+		),
+	);
+	//structure dvrs into render arrays
+	foreach($items as $nid => $list_item){
+		$list['cameras']['cam_'.$nid] = _fr_groups_fieldset($list_item->title, array('user-cameras-fieldset', 'large-6', 'columns', 'collapsible', 'collapsed'), NULL, NULL, NULL);
+		$data = '<div class="dvr-data"><label>Remote Login:</label></div><div class="'.$list_item->Class.'" '.$list_item->Attributes.'>'.l($list_item->title, $list_item->path, $options).'</div>';
+		$data .= !empty($list_item->tours) ? '<div class="dvr-data"><label>Virtual Tours:</label><div>'.$list_item->tours.'</div></div>' : '';
+		$data .= !empty($list_item->tour_times) ? '<div class="dvr-data"><label>Tour Times:</label><div>'.$list_item->tour_times.'</div></div>' : '';
+		$data .= !empty($list_item->tour_days) ? '<div class="dvr-data"><label>Tour Days:</label><div>'.$list_item->tour_days.'</div></div>' : '';
+		$list['cameras']['cam_'.$nid]['camera'.$nid] = _fr_groups_markup($data, 'camera large-12 columns');
+	}
+	//dvr view reports
+	if($tours){
+		$list['reports_wrapper'] = _fr_groups_fieldset('Fortified Reports', array('account-reports-wrapper', 'collapsible', 'large-12 columns'));
+		$list['reports_wrapper']['reports'] = _fr_groups_views_dvr_reports();
+	}
+	return $list;
+}
+
+
+/**
+ * get the views related to dvr system
+ *
+ */
+function _fr_groups_views_dvr_reports(){
+	$views = array();
+	$reports = array(
+		'Virtual Tours' => 'view_virtual_tours',
+		'Event Reports' => 'view_event_reports',
+		'Incidents Reports' => 'view_inc_reports',
+		'Saved Reports' => 'saved_virtual_tours',
+	);
+	foreach($reports as $type => $delta){
+		$data = '<div class="account-label">'.$type.'</div>';
+		$data .= '<div class="account-inner-content">'.views_embed_view($delta, $display_id = 'block').'</div>';
+		$views[$type] = _fr_groups_markup($data, 'account-dvr-view large-12 columns');
+	}
+	return $views;
+}
+
+
+
+
+/**
+ * misc markup function
+ *
+ */
+function _fr_groups_markup($markup, $class, $weight = 100){
+	return array(
+		'#type' => 'markup',
+		'#markup' => $markup,
+		'#prefix' => '<div class="'.$class.'">',
+		'#suffix' => '</div>',
+		'#weight' => $weight,
+	);
+}
+
+
+/**
+ * misc container / fieldset function
+ *
+ */
+function _fr_groups_fieldset($title, $class, $weight = 100, $id = NULL){
+	drupal_add_js('misc/collapse.js');
+	if($title == 'container'){
+		return array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => $class,
+				'id' => $id,
+			),
+			'#weight' => $weight,
+		);
+	}else{
+		return array(
+			'#type' => 'fieldset',
+			'#title' => t($title),
+			'#weight' => $weight,
+			'#attributes' => array(
+				'class' => $class,
+				'id' => $id,
+			),
+			'#attached' => array(
+        'js' => array(
+          'misc/form.js',
+          'misc/collapse.js',
+        ),
+      ),
+		);
+	}
+}
+
+
+
+/**
+ * Implements hook_views_api().
+ */
+function fr_groups_views_api() {
+	return array(
+		'api' => 3,
+		'path' => drupal_get_path('module', 'fr_groups'),
+		'template path' => drupal_get_path('module', 'fr_groups'),
+	);
+}
+
+
+function fr_groups_views_pre_render(&$view){
+	switch($view->name){
+	case'tours_today':
+		$dupes = array();
+		$times = array();
+		if(!empty($view->result)){
+			foreach($view->result as $key => $value){
+				$pid = $value->pid;
+				$dupes[$pid] = $value;
+			}
+		}
+		break;
+	}
+}

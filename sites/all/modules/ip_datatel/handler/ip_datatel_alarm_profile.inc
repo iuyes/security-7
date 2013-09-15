@@ -72,6 +72,12 @@ class IpdatatelAlarmProfile {
             unset($account_data['attatched_users']);
             $account_data['attatched_users'] = $users;
           }
+       
+          /*if(!empty($alarm_settings['recent_events']) && $alarm_settings['recent_events'] == TRUE){
+						$recent_alarm_notifications = $this->recentAlarmEvents($account_data, $this->uid);
+						$account_wrapper['accounts_wrapper'][$account_name]['recent_events_wrapper'] = $this->alarmDataWrapper('Recent Notifications');
+						$account_wrapper['accounts_wrapper'][$account_name]['recent_events_wrapper']['recent_events'] = $recent_alarm_notifications;
+					}*/
           $account_wrapper['accounts_wrapper'][$account_name] = $this->alarmDataWrapper($username);
           $account_wrapper['accounts_wrapper'][$account_name]['table'] = $this->listAlarmUsers($account_data);
 					$account_wrapper['accounts_wrapper'][$account_name]['menu'] = $this->toolListTools();

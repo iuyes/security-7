@@ -150,7 +150,6 @@ function fr_user_dash_block_view($delta = ''){
 				'#type' => 'markup',
 				'#markup' => $customer_dash,
 			);
-
 			$data = $content;
 		}else{
 			$data = 'Your account had been created but no customer information has been added.
@@ -511,7 +510,7 @@ class dashboard{
    *
    * Constructor functions for admins
    *
-   */
+   ****/
 
 	public function constructDash($args){
 		foreach($args as $key => $argument){
@@ -1166,6 +1165,8 @@ class dashPage extends dashboard{
 					}
 				}
 			}
+		}elseif($get[0] == 'dashboard'){
+			//drupal_goto('user/'.$uid.'/dashboard');
 		}
 	}
 
@@ -1181,11 +1182,11 @@ function fr_user_dash_page_alter(&$page){
 	global $user;
 	$arg = arg();
 	//redirect users to there dashboard
-	if($arg[0] == 'user'){
+	if($arg[0] == 'user' || $arg[0] == 'dashboard'){
 		dashPage::redirectToDashboard($arg, $user->uid);
 	}
 	if(!empty($arg[1]) && $arg[1] == $user->uid && !empty($arg[2]) && $arg[2] == 'dashboard'){
-		$dash = new dashPage;
+		$dash = new dashPage();
 		$dash->loadPage($page);
 		$user_pro = $dash->user_pro;
 		if($user_pro){
@@ -1225,7 +1226,6 @@ function fr_user_dash_page_alter(&$page){
 		$dash->finishAllModals();
 		$page = $dash->page;
 	}
-	return $page;
 }
 
 

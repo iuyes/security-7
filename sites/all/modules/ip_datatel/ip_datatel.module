@@ -206,6 +206,7 @@ function ip_datatel_ajax_alarm_notifications(){
  *
  */
  function ip_datatel_process_alarm_notifications($uid = NULL, $user_args = NULL){
+ 	dpm($uid);
  	 $return_data = NULL;
 	 if(empty($uid)){
 		 global $user;
@@ -249,7 +250,7 @@ function ip_datatel_load_alarm_profile($uid, $utility, $arg, $nid){
 	$arg = !empty($arg) ? $arg : NULL;
 	$nid = !empty($nid) ? $nid : NULL;
 	$run_utility = '';
-	if(array_key_exists(3, $user->roles) || array_key_exists(8, $user->roles) || array_key_exists(4, $user->roles) || array_key_exists(9, $user->roles)){
+	if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles) || in_array('Customer', $user->roles)){
 		$data = 'You need to update this users IpDatel username and password <a href="../../user/'.$uid.'/edit">here</a>. Then you can change this users settings.';
 		$api = new ipDatatel();
 		$has_data = $api->loadAccountInformation($uid);
@@ -301,22 +302,6 @@ function ip_datatel_load_alarm_notifications($uid = NULL, $args = NULL, $account
 	return $event_list;
 }
 
-
-function ip_datatel_process_alarms(){
-	global $user;
-	$process_form = drupal_get_form('ip_datatel_alarm_process_form');
-
-}
-
-
-function ip_datatel_alarm_process_form($node, &$form_state){
-	
-}
-
-
-function _ip_datatel_alarm_process_submit($form, &$form_state){
-	
-}
 
 
 
@@ -691,7 +676,7 @@ function build_modals($value){
 
 function ip_datatel_page_alter(&$page){
 	$arg = arg();
-	if(!empty($arg[0]) && $arg[0] == 'alarm-settings' || $arg[0] == 'user' && !empty($arg[2]) && $arg[2] == 'dashboard'){
+	if(!empty($arg[0]) && $arg[0] == 'alarm-settings' || $arg[0] == 'user' && !empty($arg[2]) && $arg[2] == 'dashboard' || !empty($arg[2]) && $arg[2] == 'dashboard'){
 		$tools = array('add_user', 'modify_user', 'remove_user');
 		foreach($tools as $key => $value){
 			$page['modal'][$value] = build_modals($value);

@@ -9,7 +9,6 @@ function fr_tweaks_form_profile2_form_alter(&$form, &$form_state) {
 			),
 		);
 		
-		$form['profile_customer']['field_cust_folders']['#type'] = 'hidden';
 		$form['profile_customer']['field_cust_alarm_url']['#type'] = 'hidden';
 		$form['profile_customer']['field_cust_tour_urls']['#type'] = 'hidden';
 		
@@ -201,6 +200,16 @@ function fr_tweaks_views_pre_render(&$view){
 function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 			global $user;
 	switch($form_id){
+	
+	case'customer_group_node_form':
+		$form['field_cust_alarm_url']['#type'] = 'hidden';
+		$form['field_cust_alarm_settings']['#states'] = array(
+			'visible' => array(
+				':input[name="field_cust_service_type[und][alarm]"]' => array('checked' => TRUE),
+			),
+		);
+		break;
+		
 	case 'webform_client_form_5':
 
 		$form['#submit'][] = 'fr_tweaks_form_submit';

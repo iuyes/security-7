@@ -15,6 +15,7 @@ class ipdatatelUtility {
 
 
   public function requestedUtility($utility, $arg){
+  	$data = '';
     switch($utility){
     case'cust_info':
       //$get_parent_id = $this->getParentId();
