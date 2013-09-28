@@ -1,46 +1,401 @@
 <?php
 
-function fr_tweaks_form_profile2_form_alter(&$form, &$form_state) {
-	if(!empty($form['profile_customer'])){
 
-		$form['profile_customer']['field_cust_alarm_settings']['#states'] = array(
+function fr_tweaks_menu(){
+	$items['_fr_tweaks_alter_autocomplete'] = array(
+		'page callback' => '_fr_tweaks_alter_autocomplete',
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+
+function _fr_tweaks_alter_autocomplete($string){
+	$query = new EntityFieldQuery();
+	$query->entityCondition('entity_type', 'profile2')
+	->fieldCondition('field_central_station_identifier', 'value', '%'.$string.'%', 'like');
+	$result = $query->execute();
+	$options = array();
+	if (!empty($result['profile2'])) {
+		$profiles2 = array_keys($result['profile2']);
+		foreach($profiles2 as $delta => $pid){
+			$profile = profile2_load($pid);
+			$label = $profile->field_central_station_identifier['und'][0]['value'];
+			$profile_id = $pid;
+			$string = array('"'.$label.' ('.$profile_id.')"' => $label);
+			$key = "$label ($profile_id)";
+			// Labels containing commas or quotes must be wrapped in quotes.
+			if (strpos($key, ',') !== FALSE || strpos($key, '"') !== FALSE) {
+				$key = '"' . str_replace('"', '""', $key) . '"';
+			}
+			$options[$key] = $label;
+		}
+	}else{
+		$options[0] = 'No '. $string . ' created';
+	}
+	drupal_json_output($options);
+	exit();
+}
+
+
+
+
+function fr_tweaks_form_profile2_form_alter(&$form, &$form_state) {
+	if(!empty($form['profile_account_manager'])){
+		$form['profile_account_manager']['field_cust_central_station']['und']['#autocomplete_path'] = '_fr_tweaks_alter_autocomplete';
+	}
+	//dpm($form);
+	if(!empty($form['profile_customer'])){
+		$default_values = array();
+		$user_profile = _build_profile_form_permissions($uid);
+		if(!empty($form_state['profiles']['customer']->field_customer_alarm_permissions['und'][0]['value'])){
+			$default_values['alarm'] = unserialize($form_state['profiles']['customer']->field_customer_alarm_permissions['und'][0]['value']);
+		}
+		if(!empty($form_state['profiles']['customer']->field_customer_dvr_permissions['und'][0]['value'])){
+			$default_values['dvr'] = unserialize($form_state['profiles']['customer']->field_customer_dvr_permissions['und'][0]['value']);
+		}
+		$form['profile_customer']['field_customer_dvr_username']['#states'] = array(
 			'visible' => array(
-				':input[name="profile_customer[field_cust_service_type][und][alarm]"]' => array('checked' => TRUE),
+				':input[name="profile_customer[field_customer_service_type][und][dvr]"]' => array('checked' => TRUE),
 			),
 		);
-		
-		$form['profile_customer']['field_cust_alarm_url']['#type'] = 'hidden';
-		$form['profile_customer']['field_cust_tour_urls']['#type'] = 'hidden';
-		
-
-		/*$form['notifications'] = array(
-			'#type' => 'container',
-			'#attributes' => array(
-				'class' => array('notifications wrapper');
-			);
+		$form['profile_customer']['field_customer_dvr_password']['#states'] = array(
+			'visible' => array(
+				':input[name="profile_customer[field_customer_service_type][und][dvr]"]' => array('checked' => TRUE),
+			),
 		);
-		$form['notifications']['profile_name'] = array();*/
+		$test = _build_profile_form_permissions($form, $default_values);
+	}
+}
+
+
+function _build_profile_form_permissions(&$form, $default_values = NULL){
+	global $user;
+	$form['profile_customer']['custom_permissions'] = array(
+		'#type' => 'fieldset',
+		'#title' => 'Custom Permissions',
+		'#collapsed' => FALSE,
+		'#collapsible' => FALSE,
+		'#weight' => 101,
+	);
+
+	$auth = array(3 => 'administrator', 8 => 'supervisor', 9 => 'account_manager');
+	$account_type = array_intersect(array_keys($auth), array_keys($user->roles));
+	if($account_type){
+		$uid = $user->uid;
+		$user_profile = fr_tweaks_load_user_profile2_account_id($user, $account_type);
+		$account_user = ip_datatel_user_type($user, $account_type);
+		if(!empty($user_profile['account_node']) && !empty($user_profile['account_node_id'])){
+			$account_node = $user_profile['account_node'];
+			$account_node_id = $user_profile['account_node_id'];
+			$form['profile_customer']['field_cust_alarm_group_owner']['und'][0]['target_id']['#default_value'] = $account_node->title.' ('.$account_node_id.')';
+			$form['profile_customer']['field_cust_alarm_group_owner']['und'][0]['target_id']['#description'] = $account_node_id;
+			$form['profile_customer']['field_cust_alarm_group_owner']['und'][0]['#disabled'] = TRUE;
+			$account_service_types = _fr_tweaks_node_build_permissions($account_node, $account_node_id);
+			if(!empty($account_service_types) && is_array($account_service_types)){
+				foreach($account_service_types as $type => $bool){
+					switch($type){
+					case'has_alarm':
+						$alarms = ip_datatel_return_alarm_account_information($account_user);
+						if(!empty($alarms) && is_array($alarms)){
+							$alarms = current($alarms);
+							$permissions = array();
+							$permissions['view_alarm'] = 'Display alarm';
+							$form['profile_customer']['custom_permissions']['alarm'] = array(
+								'#type' => 'fieldset',
+								'#title' => 'Alarm System Permissions',
+								'#collapsed' => TRUE,
+								'#collapsible' => TRUE,
+								'#tree' => TRUE,
+							);
+							foreach($alarms as $account_name => $alarm_data){
+								$account_name = $alarm_data['username'];
+								$form['profile_customer']['custom_permissions']['alarm']['custom_permissions_'.$account_name.''] = array(
+									'#type' => 'fieldset',
+									'#title' => $account_name."'s Permissions",
+									'#collapsed' => FALSE,
+									'#collapsible' => TRUE,
+									'#tree' => TRUE,
+								);
+								if(!empty($alarm_data['permissions'])){
+									foreach($alarm_data['permissions'] as $name => $val){
+										switch($name){
+										case'edit_users':
+											if($val){
+												$permissions['edit_users'] = 'Can edit alarm users';
+											}
+											break;
+										case'events':
+											if($val){
+												$permissions['events'] = 'Can view alarm events';
+											}
+											break;
+										case'add_users':
+											if($val){
+												$permissions['add_users'] = 'Can add alarm users';
+											}
+											break;
+										case'delete_users':
+											if($val){
+												$permissions['delete_users'] = 'Delete alarm users';
+											}
+											break;
+										case'recent_events':
+											if($val){
+												$permissions['recent_events'] = 'Can view recent events';
+											}
+											break;
+										case'process_alarms':
+											if($val){
+												$permissions['process_alarm'] = 'Can process alarms';
+											}
+											break;
+										}
+									}
+								}
+								$form['profile_customer']['custom_permissions']['alarm']['custom_permissions_'.$account_name.''][$account_name] = array(
+									'#type' => 'checkboxes',
+									'#options' => $permissions,
+								);
+								if(!empty($default_values['alarm'])){
+									$form['profile_customer']['custom_permissions']['alarm']['custom_permissions_'.$account_name.''][$account_name]['#default_value'] = _fr_tweaks_default_values($default_values['alarm'], $account_name);
+								}else{
+									$form['profile_customer']['custom_permissions']['alarm']['custom_permissions_'.$account_name.''][$account_name]['#default_value'] = _fr_tweaks_default_values($permissions, 'alarm');
+								}
+							}
+						}
+						break;
+					case'has_dvr':
+						if(!empty($account_service_types['dvr_data'])){
+							$permissions = array();
+							$form['profile_customer']['custom_permissions']['dvr'] = array(
+								'#type' => 'fieldset',
+								'#title' => 'Camera System Permissions',
+								'#collapsed' => TRUE,
+								'#collapsible' => TRUE,
+								'#tree' => TRUE,
+							);
+							foreach($account_service_types['dvr_data'] as $nid => $values){
+
+								$permissions['view_dvrs'] = "Able to view ".$values->dvr_title."'s DVR";
+								$form['profile_customer']['custom_permissions']['dvr']['custom_permissions_'.$nid] = array(
+									'#type' => 'fieldset',
+									'#title' => $values->dvr_title."'s Permissions",
+									'#collapsed' => FALSE,
+									'#collapsible' => TRUE,
+									'#tree' => TRUE,
+								);
+								if(!empty($values->dvr_tour_times)){
+									$permissions['view_tours'] = 'Can view Virtual Tours';
+									$permissions['view_events'] = 'Can view Events';
+									$permissions['view_reports'] = 'Can view Incident Reports';
+								}
+								$form['profile_customer']['custom_permissions']['dvr']['custom_permissions_'.$nid][$values->dvr_title] = array(
+									'#type' => 'checkboxes',
+									'#options' => $permissions,
+								);
+								if(!empty($default_values['dvr'])){
+									$form['profile_customer']['custom_permissions']['dvr']['custom_permissions_'.$nid.''][$values->dvr_title]['#default_value'] = _fr_tweaks_default_values($default_values['dvr'], $values->dvr_title);
+								}else{
+									$form['profile_customer']['custom_permissions']['dvr']['custom_permissions_'.$nid.''][$values->dvr_title]['#default_value'] = _fr_tweaks_default_values($permissions);
+
+								}
+							}
+						}
+						break;
+					}
+				}
+			}
+			$form['profile_customer']['#group_children']['custom_permissions'] = 'group_cust_infor';
+			$form['profile_customer']['field_customer_alarm_permissions']['#prefix'] = '<div id="alarm-system-permissions">';
+			$form['profile_customer']['field_customer_alarm_permissions']['#suffix'] = '</div>';
+			$form['profile_customer']['field_customer_dvr_permissions']['#prefix'] = '<div id="dvr-system-permissions">';
+			$form['profile_customer']['field_customer_dvr_permissions']['#suffix'] = '</div>';
+		}
 		$form['#submit'][] = 'customer_profile_submit';
 		$form['#validate'][] = 'fr_val_cust';
-		//dpm($form);
-		return $form;
 	}
+	$form['profile_customer']['field_customer_alarm_permissions']['#type'] = 'hidden';
+	$form['profile_customer']['field_customer_dvr_permissions']['#type'] = 'hidden';
+
+}
+
+
+function _fr_tweaks_default_values($default_values, $arg = NULL){
+	$defaults = array();
+	if(!empty($default_values[$arg])){
+		foreach($default_values[$arg] as $permission => $permission_value){
+			$defaults[$permission] = $permission_value;
+		}
+	}else{
+		foreach($default_values as $name => $value){
+			$defaults[$name] = $name;
+		}
+	}
+	return $defaults;
+}
+
+
+function customer_profile_submit($form, &$form_state){
+	if(!empty($form_state['values']['profile_customer']['custom_permissions'])){
+		$custom_permsissions = $form_state['values']['profile_customer']['custom_permissions'];
+		foreach($custom_permsissions as $type => $data){
+			switch($type){
+			case 'dvr':
+				$dvr_data = array();
+				foreach($data as $dvr_wrapper => $dvr_account){
+					foreach($dvr_account as $dvr_keys => $dvr_permission_data){
+						foreach($dvr_permission_data as $dvr_permissions => $dvr_values){
+							if(!empty($dvr_values) && isset($dvr_values)){
+								$dvr_data[$dvr_keys][$dvr_permissions] = $dvr_values;
+							}
+						}
+					}
+				}
+				if(!empty($dvr_data) && isset($dvr_data)){
+					$dvr_data = serialize($dvr_data);
+				}
+				$form_state['values']['profile_customer']['field_customer_dvr_permissions']['und'][0]['value'] = !empty($dvr_data) ? $dvr_data : '';
+				break;
+			case 'alarm':
+				$alarm_data = array();
+				foreach($data as $wrapper => $account){
+					foreach($account as $keys => $permission_data){
+						foreach($permission_data as $permission => $value){
+							if(!empty($value) && isset($value)){
+								$alarm_data[$keys][$permission] = $value;
+							}
+						}
+					}
+				}
+				if(!empty($alarm_data) && isset($alarm_data)){
+					$alarm_data = serialize($alarm_data);
+				}
+				$form_state['values']['profile_customer']['field_customer_alarm_permissions']['und'][0]['value'] = !empty($alarm_data) ? $alarm_data : '';
+				break;
+			}
+		}
+	}
+}
+
+
+function _fr_tweaks_ajax_callback($form, $form_state){
+	return $form['profile_customer']['#group_children']['custom_permissions'];
+}
+
+function _fr_tweaks_node_build_permissions($account_node, $account_id){
+	$data = array();
+	if($account_node){
+		foreach($account_node as $fields => $fvalues){
+			switch($fields){
+			case'field_cust_service_type':
+				if(!empty($fvalues['und'])){
+					foreach($fvalues['und'] as $delta => $value){
+						switch($value['value']){
+						case'cam':
+							$data['has_dvr'] = TRUE;
+							$data['dvr_data'] = fr_tweaks_query_dvrs($account_id);
+							break;
+						case'alarm':
+							$data['has_alarm'] = TRUE;
+							break;
+						}
+					}
+				}
+				break;
+			}
+		}
+	}
+	return $data;
+}
+
+
+
+
+function fr_tweaks_query_dvrs($account_id){
+	$DvrData = FALSE;
+	$query = new EntityFieldQuery;
+	$query->entityCondition('entity_type', 'node')
+	->entityCondition('bundle', 'dvr')
+	->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
+	$result = $query->execute();
+	if(!empty($result['node'])){
+		$results = $result['node'];
+		$DvrData = array();
+		foreach($results as $key => $data){
+			$nodes = node_load($data->nid);
+			$DvrData[$key] = new stdClass();
+			foreach($nodes as $nid => $values){
+				switch($nid){
+				case'title':
+					$DvrData[$key]->dvr_title = !empty($values) ? $values : NULL;
+					break;
+				case'field_cust_dvr_url':
+					$DvrData[$key]->dvr_url = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					break;
+				case'field_cust_virtual_tours':
+					$DvrDate[$key]->dvr_tours = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					break;
+				case'field_fr_vt_tour_times':
+					$DvrData[$key]->dvr_tour_times = !empty($values['und'][0]) ? $values['und'][0] : NULL;
+					break;
+				case 'field_dvr_address':
+					$DvrData[$key]->field_dvr_address = !empty($values['und'][0]) ? $values['und'][0] : NULL;
+					break;
+				case 'field_dvr_master_password':
+					$DvrData[$key]->field_dvr_master_password = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					break;
+				case 'field_dvr_master_username':
+					$DvrData[$key]->field_dvr_master_username = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					break;
+				}
+			}
+		}
+	}
+	return $DvrData;
+}
+
+
+
+function ip_datatel_user_type($account_user, $account_type){
+	if(array_key_exists(1, $account_type)){
+		$arg = arg();
+		if(!empty($arg[1])){
+			$account_user = user_load($arg[1]);
+		}
+	}
+	return $account_user;
+}
+
+function fr_tweaks_load_user_profile2_account_id($user, $account_type){
+	$administer_roles = $user->roles;
+	$account_user = ip_datatel_user_type($user, $account_type);
+	$account_node = NULL;
+	$account_owner_id = NULL;
+	$profile = profile2_load_by_user($account_user->uid, $type_name = NULL);
+	if($profile && array_key_exists(9, $administer_roles)){
+		if(!empty($profile['account_manager']->field_cust_alarm_group_owner['und'][0]['target_id'])){
+			$account_owner_id = $profile['account_manager']->field_cust_alarm_group_owner['und'][0]['target_id'];
+			$account_node = node_load($account_owner_id);
+		}
+	}elseif(array_key_exists(2, $administer_roles)){
+		if(!empty($profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'])){
+			$account_owner_id = $profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'];
+			$account_node = node_load($account_owner_id);
+		}
+	}
+	return array('account_node' => $account_node, 'account_node_id' => $account_owner_id);
 }
 
 
 function fr_val_cust($form, &$form_state){
-	$user_uid = $form_state['profiles']['customer']->uid;
-	$this_user = user_load($user_uid);
-	$profile_name = $form_state['values']['profile_customer']['field_cust_name']['und'][0]['value'];
-	$user_name = $this_user->name;
-	if($user_name != $profile_name){
-		form_set_error('profile_customer][field_cust_name', 'This Customers "Company Name/First Name" must match thier "Account Name". This Customers Account Name is: '.$user_name.'');
-	}
+
 }
 
 
 function fr_val_user_form($form, &$form_state){
-	$is_cust = !empty($form_state['values']['roles'][4]) ? $form_state['values']['roles'][4] : FALSE;
+	/*$is_cust = !empty($form_state['values']['roles'][4]) ? $form_state['values']['roles'][4] : FALSE;
 	if($is_cust != FALSE){
 		$account_name = $form_state['values']['name'];
 		if(!empty($form_state['build_info']['args'][0]->uid)){
@@ -59,17 +414,18 @@ function fr_val_user_form($form, &$form_state){
 				}
 			}
 		}
-	}
-	return $form_state;
+	}*/
 }
 
 function fr_user_reg_form_submit($form, &$form_state){
-	$redirect = FALSE;
-	$redirect = !empty($form_state['values']['roles'][4]) ? 'customer' : FALSE;
-	$redirect = !empty($form_state['values']['roles'][9]) ? 'customer_sub_user' : FALSE;
-	if($redirect){
+	if($form_state['values']['roles'][4]){
+		$redirect = 'customer';
+	}elseif(!empty($form_state['values']['roles'][9]) && $form_state['values']['roles'][9] == TRUE){
+		$redirect = 'account_manager';
+	}
+	if(!empty($redirect)){
 		if(!empty($form_state['values']['uid'])){
-			$uid = $form_state['values']['uid'];		
+			$uid = $form_state['values']['uid'];
 			$form_state['redirect'] = array('user/'.$uid.'/edit/'.$redirect.'');
 		}
 	}
@@ -77,45 +433,11 @@ function fr_user_reg_form_submit($form, &$form_state){
 }
 
 
-function customer_profile_submit($form, &$form_state){
-	$service_type = $form_state['values']['profile_customer']['field_cust_service_type']['und'];
-	$alarms = FALSE;
-	$dvr = FALSE;
-	foreach($service_type as $delta => $value){
-		if($value['value'] == 'cam'){
-			$dvr = TRUE;
-		}
-		if($value['value'] == 'alarm'){
-			$alarms = TRUE;
-		}
-
-	}
-	if($alarms == TRUE){
-		$form_state['values']['profile_customer']['field_cust_alarm_url']['und'][0]['value'] = 'https://ldecholsenterprises.alarmdealer.com/index.php?mod=auth&action=login';
-	}
-}
-
 
 function fr_tweaks_dvr_form_submit($form, &$form_state){
 	$has_tours = !empty($form_state['values']['field_cust_virtual_tours']['und'][0]['value']) ? $form_state['values']['field_cust_virtual_tours']['und'][0]['value'] : NULL;
 	$this_user = !empty($form_state['values']['field_alarm_customer']['und'][0]['target_id']) ? $form_state['values']['field_alarm_customer']['und'][0]['target_id'] : NULL;
 	$dvr_name = strtolower($form_state['values']['title']);
-	/*if($has_tours == 'yes'){
-		$actions = array('fortified-events' => 'Event', 'fortified-virtual-tours' => 'Virtual Tour', 'fortified-incident-reports' => 'Incident Report');
-		$i=0;
-		foreach($actions as $name => $action){
-			$options = array(
-				'attributes' => array(
-					'class' => array('button', 'radius', 'small'),
-				),
-				'query' => array('cust' => $this_user),
-			);
-			$path = '../../node/add/'.$name.'';
-			$form_state['values']['profile_customer']['field_cust_tour_urls']['und'][$i]['value'] = l($action, $path, $options);
-			$form_state['values']['profile_customer']['field_cust_tour_urls']['und'][$i]['_weight'] = $i;
-			$i++;
-		}
-	}*/
 	$has_folders = file_exists('./sites/default/files/fortified/'.$dvr_name.'/');
 	if(!$has_folders){
 		if($has_tours == 'yes'){
@@ -128,48 +450,48 @@ function fr_tweaks_dvr_form_submit($form, &$form_state){
 
 
 function _create_folders($account_name){
-    $created = FALSE;
-    $path = './sites/default/files/fortified/';
-    $folders = array('images', 'videos');
-    $old_umask = umask(0);
-    if(!file_exists($path.'/'.$account_name)){
-      try{
-		    $account_folder = mkdir($path.'/'.$account_name.'/', 0777);
-		  }
-		  catch (Exception $e){
-  		  throw new Exception('The folder cannot be created do to a permission error!');
-		  }
-		  if($account_folder){
-  		  try{
-    		  chmod($path.'/'.$account_name, 0777);
-  		  }
-  		  catch (Exception $e){
-    		  throw new Exception('The folder was created but its permissions could not be set! ');
-  		  }
-        foreach($folders as $key => $value){
-          try{
-    		    $sub_folders = mkdir($path.'/'.$account_name.'/'.$value.'/', 0777);
-    		  }
-    		  catch (Exception $e){
-    		    throw new Exception('The sub folder '.$value.' could not be created do to a permissions error! ');
-    		  }
-    		  if($sub_folders){
-    		    try{
-    		      chmod($path.'/'.$account_name.'/'.$value, 0777);
-    		    }
-    		    catch (Exception $e){
-    		      throw new Exception('The sub folder '.$value.' permissions could not be changed do to a permissions error!');
-    		    }
-    		  }
-    		}
-  		}
-  		if($account_folder){
-    		$created = TRUE;
-  		}
-  }elseif(is_writable($path.'/'.$account_name)){
-  	$created = TRUE;
-  }
-  return $created;
+	$created = FALSE;
+	$path = './sites/default/files/fortified/';
+	$folders = array('images', 'videos');
+	$old_umask = umask(0);
+	if(!file_exists($path.'/'.$account_name)){
+		try{
+			$account_folder = mkdir($path.'/'.$account_name.'/', 0777);
+		}
+		catch (Exception $e){
+			throw new Exception('The folder cannot be created do to a permission error!');
+		}
+		if($account_folder){
+			try{
+				chmod($path.'/'.$account_name, 0777);
+			}
+			catch (Exception $e){
+				throw new Exception('The folder was created but its permissions could not be set! ');
+			}
+			foreach($folders as $key => $value){
+				try{
+					$sub_folders = mkdir($path.'/'.$account_name.'/'.$value.'/', 0777);
+				}
+				catch (Exception $e){
+					throw new Exception('The sub folder '.$value.' could not be created do to a permissions error! ');
+				}
+				if($sub_folders){
+					try{
+						chmod($path.'/'.$account_name.'/'.$value, 0777);
+					}
+					catch (Exception $e){
+						throw new Exception('The sub folder '.$value.' permissions could not be changed do to a permissions error!');
+					}
+				}
+			}
+		}
+		if($account_folder){
+			$created = TRUE;
+		}
+	}elseif(is_writable($path.'/'.$account_name)){
+		$created = TRUE;
+	}
+	return $created;
 }
 
 
@@ -197,10 +519,16 @@ function fr_tweaks_views_pre_render(&$view){
 }
 
 
+function fr_tweaks_access_denied(){
+	drupal_access_denied();
+	drupal_exit();
+}
+
+
 function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
-			global $user;
+	global $user;
 	switch($form_id){
-	
+
 	case'customer_group_node_form':
 		$form['field_cust_alarm_url']['#type'] = 'hidden';
 		$form['field_cust_alarm_settings']['#states'] = array(
@@ -209,47 +537,46 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 			),
 		);
 		break;
-		
-	case 'webform_client_form_5':
 
+	case 'webform_client_form_5':
 		$form['#submit'][] = 'fr_tweaks_form_submit';
 
 		break;
 	case'user_profile_form':
-	
-			if(!empty($form['#user']->roles)){
-				$arg = arg();
-				$roles = array_values($user->roles);
-				$auth = array('administrator', 'editor');
-				$auth1 = array('administrator', 'supervisor', 'editor');
-				if(!in_array('editor', $roles)){
-				if(array_intersect($auth, $form['#user']->roles) && !in_array('editor', $roles)){
-					drupal_not_found();
-					drupal_exit();
+		if(!empty($form['#user']->uid)){
+			if($form['#user']->uid != $user->uid && !array_key_exists(3, $user->roles) && empty($form['profile_customer'])){
+				fr_tweaks_access_denied();
+			}elseif(!empty($form['profile_customer']) && $form['#user']->uid != $user->uid && !array_key_exists(3, $user->roles) && array_key_exists(9, $user->roles)){
+				$account = fr_tweaks_load_user_profile2_account_id($user, $user->roles);
+				if(!empty($account['account_node_id'])){
+					if(!empty($form['profile_customer']['field_cust_alarm_group_owner']['und'][0]['target_id']['#description'])){
+						if($form['profile_customer']['field_cust_alarm_group_owner']['und'][0]['target_id']['#description'] != $account['account_node_id']){
+							fr_tweaks_access_denied();
+						}	
+					}else{
+						fr_tweaks_access_denied();
+					}
+				}else{
+					fr_tweaks_access_denied();
 				}
 			}
 		}
-			if(!in_array('administrator', $roles)){
-				unset($form['account']['roles']['#options'][3]);
-				unset($form['account']['roles']['#options'][5]);
-				unset($form['account']['roles']['#options'][6]);
-			}
+		if(array_key_exists(9, $user->roles)){
+			$form['account']['roles_change']['#default_value'] = array(4);
+			$form['account']['roles_change']['#disabled'] = TRUE;
+		}
 		$form['#validate'][] = 'fr_val_user_form';
 		break;
-	
+
 	case'user_register_form':
-		if($form['administer_users']['#value'] == TRUE){
-		$roles = $user->roles;
-			//dpm($user);
-			if(!in_array('administrator', $roles)){
-				unset($form['account']['roles']['#options'][3]);
-				unset($form['account']['roles']['#options'][5]);
-				unset($form['account']['roles']['#options'][6]);
-			}
+		if(array_key_exists(9, $user->roles)){
+			$form['account']['roles_change']['#default_value'] = array(4);
+			$form['account']['roles_change']['#disabled'] = TRUE;
 		}
 		$form['#submit'][] = 'fr_user_reg_form_submit';
-	break;
-	
+		
+		break;
+
 	case'user_login':
 		$form['name']['#prefix'] = '<div class="login-field large-6 small-12 columns">';
 		$form['name']['#suffix'] = '</div>';
@@ -257,36 +584,34 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 		$form['pass']['#suffix'] = '</div>';
 		$form['actions']['submit']['#prefix'] = '<div class="login-field-submit large-6 columns small-4">';
 		$form['actions']['submit']['#suffix'] = '</div>';
-		//dpm($form);
-	break;
+		break;
 
 	case'views_exposed_form';
 
 
-	switch($form['#id']){
+		switch($form['#id']){
 		case'views-exposed-form-admin-users-dash-block':
 
-		$form['actions_wrapper'] = array(
-			'#type' => 'container',
-			'#attributes' => array(
-				'class' => array('twelve', 'columns'),
-			),
-		);
-		$form['actions_wrapper']['reset'] = array(
-			'#type' => 'markup',
-			'#markup' => '<input type="button" href="#" value="Reset" Onclick="location.reload();"/>',
-			'#prefix' => '<div class="form-reset">',
-			'#suffix' => '</div>',
-		);
-		$submit = $form['submit'];
-		$form['actions_wrapper']['submit'] = $submit;
-		unset($form['submit']);
-		break;
+			$form['actions_wrapper'] = array(
+				'#type' => 'container',
+				'#attributes' => array(
+					'class' => array('twelve', 'columns'),
+				),
+			);
+			$form['actions_wrapper']['reset'] = array(
+				'#type' => 'markup',
+				'#markup' => '<input type="button" href="#" value="Reset" Onclick="location.reload();"/>',
+				'#prefix' => '<div class="form-reset">',
+				'#suffix' => '</div>',
+			);
+			$submit = $form['submit'];
+			$form['actions_wrapper']['submit'] = $submit;
+			unset($form['submit']);
+			break;
 
 		case'views-exposed-form-saved-virtual-tours-block':
-		//dpm($form);
-		$form['#prefix'] = '<div class="sort-saved-files large-3 columns">';
-		$form['#suffix'] = '</div>';
+			$form['#prefix'] = '<div class="sort-saved-files large-3 columns">';
+			$form['#suffix'] = '</div>';
 			$keep = array('fortified_events', 'fortified_incident_reports', 'fortified_virtual_tours');
 			foreach($form['type_1']['#options'] as $key => $value){
 				if(!in_array($key, $keep)){
@@ -294,71 +619,122 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 					unset($form['type_1']['#options'][$key][$value]);
 				}
 			}
-		
-		break;
-	}
-		break;
-		
-		case'front_page_menu_node_form':
-			$form['body']['#states'] = array(
-				'visible' => array(
-					':input[name="field_front_page_link_custum[und][no]"]' => array('checked' => TRUE),
-					),
-			);	
-			$form['field_main_page_to_link']['und'][0]['target_id']['#states'] = array(
-				'visible' => array(
-					':input[name="field_front_page_link_custum[und][yes]"]' => array('checked' => TRUE),
-					),
-			);
+
+			break;
+		}
 		break;
 
-		
-		case'user_multiple_cancel_confirm':
-			if(in_array(1, array_keys($form['accounts']))){
-				drupal_not_found();
-					drupal_exit();
+	case'front_page_menu_node_form':
+		$form['body']['#states'] = array(
+			'visible' => array(
+				':input[name="field_front_page_link_custum[und][no]"]' => array('checked' => TRUE),
+			),
+		);
+		$form['field_main_page_to_link']['und'][0]['target_id']['#states'] = array(
+			'visible' => array(
+				':input[name="field_front_page_link_custum[und][yes]"]' => array('checked' => TRUE),
+			),
+		);
+		break;
+
+
+	case'user_multiple_cancel_confirm':
+		if(in_array(1, array_keys($form['accounts']))){
+			drupal_not_found();
+			drupal_exit();
+		}
+		break;
+
+	case'search_block_form':
+
+		$form['container'] = array(
+			'#type' => 'container',
+			'#attributes' => array(
+				'class' => array('search-block-wrapper'),
+			),
+		);
+		unset($form['search_block_form']);
+		unset($form['actions']['submit']);
+		$form['container']['search_block_form'] = array(
+			'#type' => 'textfield',
+			'#size' => 20,
+			'#weight' => 100,
+			'#attributes' => array(
+				'placeholder' => array('Search...'),
+				'class' => array('search-block-input', 'form-item'),
+			),
+		);
+		$form['container']['submit'] = array(
+			'#type' => 'submit',
+			'#title' => 'search',
+			'#weight' => -100,
+			'#attributes' => array(
+				'style' => array('background: white url(../../sites/default/files/search-icon.png) top no-repeat;'),
+				'id' => 'search-form-submit',
+			),
+		);
+		$form['#attributes'] = array(
+			'id' => 'search-block',
+		);
+
+		break;
+	case 'dvr_node_form':
+
+		unset($form['profile_customer']['field_cust_virtual_tours']['und']['#options']['_none']);
+		drupal_add_js(drupal_get_path('module', 'fr_tweaks') .'/js/fr_tweaks.js', array('type' => 'file', 'scope' => 'footer'));
+		$form['#submit'][] = 'fr_tweaks_dvr_form_submit';
+
+		break;
+	case 'alarm_node_form':
+
+		drupal_add_js(drupal_get_path('module', 'fr_tweaks') .'/js/fr_tweaks_dvr_zones.js', array('type' => 'file', 'scope' => 'footer'));
+		$dvrs = array();
+		$dvrs['none'] = 'none';
+		if(!empty($form_state['build_info']['args'][0]->field_cust_alarm_group_owner['und'][0]['target_id'])){
+			$target_account = $form_state['build_info']['args'][0]->field_cust_alarm_group_owner['und'][0]['target_id'];
+			$account_dvrs = fr_tweaks_query_dvrs($target_account);
+			if($account_dvrs){
+				foreach($account_dvrs as $nid => $data){
+					if(!empty($data->dvr_title)){
+						$dvrs[$data->dvr_title.':'.$nid] = $data->dvr_title;
+					}
+				}
 			}
+		}
+
+		//for javascript focus
+		if(!empty($form['field_alarm_zone_alias']['und'])){
+			foreach($form['field_alarm_zone_alias']['und'] as $delta => $field){
+				if(is_array($field) && is_numeric($delta)){
+					$form['field_alarm_zone_alias']['und'][$delta]['#prefix'] = '<div class="alarm-zone-alias">';
+					$form['field_alarm_zone_alias']['und'][$delta]['#suffix'] = '</div>';
+				}
+			}
+		}
+
+		$form['select_dvr_wrapper'] = array(
+			'#type' => 'fieldset',
+			'#title' => 'DVR ALARM ZONES',
+			'#collapsed' => FALSE,
+			'#collapsible' => TRUE,
+			'#tree' => TRUE,
+			'#weight' => 101,
+		);
+		$form['select_dvr_wrapper']['dvr_zones'] = array(
+			'#type' => 'select',
+			'#options' => $dvrs,
+			'#title' => t('DVR Options'),
+			'#description' => t('To map a DVR to an alarm zone, Select an alarm zone field and then click on one of the DVRs Below.'),
+		);
+
+		dpm($form);
+		//dpm($form_state);
+		$groups = &$form['#group_children'];
+		$groups += array('select_dvr_wrapper' => 'group_alarm_settings');
+
 		break;
-		
-		case'search_block_form':
-		
-			$form['container'] = array(
-				'#type' => 'container',
-				'#attributes' => array(
-					'class' => array('search-block-wrapper'),
-				),
-			);
-			unset($form['search_block_form']);
-			unset($form['actions']['submit']);
-			$form['container']['search_block_form'] = array(
-				'#type' => 'textfield',
-				'#size' => 20,
-				'#weight' => 100,
-				'#attributes' => array(
-					'placeholder' => array('Search...'),
-					'class' => array('search-block-input', 'form-item'),
-				),
-				);
-			$form['container']['submit'] = array(
-				'#type' => 'submit',
-				'#title' => 'search',
-				'#weight' => -100,
-				'#attributes' => array(
-					'style' => array('background: white url(../../sites/default/files/search-icon.png) top no-repeat;'),
-					'id' => 'search-form-submit',
-				),
-			);
-			$form['#attributes'] = array(
-				'id' => 'search-block',
-			);
-		
-		break;
-		case 'dvr_node_form':
-			unset($form['profile_customer']['field_cust_virtual_tours']['und']['#options']['_none']);
-			drupal_add_js(drupal_get_path('module', 'fr_tweaks') .'/fr_tweaks.js', array('type' => 'file', 'scope' => 'footer'));
-			$form['#submit'][] = 'fr_tweaks_dvr_form_submit';
-			break;
 	}
+	return $form;
 }
 
 
@@ -377,7 +753,6 @@ function fr_tweaks_form_submit(&$form, $form_state){
 				</p>
 			</body>
 		</html>';
-	//dpm($customer);
 	define('GUSER', 'no-reply@fortifiedsecurityservices.com'); // GMail username
 	define('GPWD', 'FortifieD!'); // GMail password
 	global $error;
@@ -428,10 +803,10 @@ function fr_tweaks_block_info(){
  */
 function fr_tweaks_block_view($delta = ''){
 	switch($delta){
-		case'front_page_markup':
-			
-			$block['content'] = _fr_load_content();
-			
+	case'front_page_markup':
+
+		$block['content'] = _fr_load_content();
+
 		break;
 	}
 	return $block;
@@ -445,15 +820,15 @@ function fr_tweaks_block_view($delta = ''){
  */
 function _fr_load_content(){
 	$content = array();
-	
+
 	$query = new EntityFieldQuery;
 	$query->entityCondition('entity_type', 'node')
 	->entityCondition('bundle', 'front_page_text')
 	->propertyCondition('status', 1);
 	$results = $query->execute();
-	
+
 	if(!empty($results['node'])){
-		
+
 		$content['wrapper'] = array(
 			'#type' => 'container',
 			'#attributes' => array(

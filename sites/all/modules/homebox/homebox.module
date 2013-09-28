@@ -388,10 +388,8 @@ function homebox_build($page) {
     /*
     	added by Colton Echols @8-20-13. Added Custom permissions for certian blocks.
     */
-    $custom_block_settings_per_role = fr_user_dash_usable_homebox_blocks();
     foreach ($allowed_blocks as $module => $blocks) {
       foreach ($blocks as $delta => $info) {
-      	if(in_array($delta, array_keys($custom_block_settings_per_role))){
 	        $options = array();
 	        if (isset($info['used'])) {
 	          $options['attributes'] = array('class' => 'used');
@@ -400,7 +398,6 @@ function homebox_build($page) {
 	        	'data' => homebox_add_link($info['info'], $page, $module, $delta, $options),
 	        	'class' => array('button', 'add'),
 	        );
-	      }
       }
     }
     $add_links['restore'] = l(t('Restore to defaults'), 'homebox/' . $page->name . '/restore', array('attributes' => array('class' => 'restore')));

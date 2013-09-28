@@ -1,6 +1,7 @@
 <?php
 
-class DashboardTools{
+
+class AdminTools{
 
 	private function generateMenuList ($list_items) {
 		$menu_list = array();
@@ -81,5 +82,5 @@ class DashboardTools{
 		$build = $this->buildListItems($tools);
 		return $build;
 	}
-	
+
 }

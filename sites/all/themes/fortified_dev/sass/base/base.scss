@@ -134,7 +134,7 @@
 }
 .ui-accordion-content.ui-helper-reset.ui-widget-content.ui-corner-bottom.ui-accordion-content-active{
 	/* overflow: visible !important; */
-	overflow: scroll !important;
+	overflow: visible !important;
 }
 
 // end custom f-tooltip
@@ -880,14 +880,6 @@ a.leaf:hover{
 	text-align:center;
 }
 
-legend {
-	//background:none!important;
-}
-
-fieldset {
-	//padding-left:5px!important;
-}
-
 .fieldset-title {
 	//color:#000!important;
 	//font-family:"Times New Roman" !important,Times,serif;
@@ -1422,11 +1414,206 @@ area.active {
 
 }
 
-.portlet-title{
-  font: bold 1em/1.5em Arial, Helvetica;
+/*********** Custom Fieldsets AND ACCOUNT PAGE ************/
+
+
+.user-account-title{
+	text-align: center;
+	font-family: Impact, Charcoal, sans-serif;
+	font-weight: 300;
 }
 
-/*   end   */
+.account-wrapper{
+	
+}
+
+.account-static-section{
+	margin:1em 0em 1em 0em;
+	.fs-accordion-fieldset-title.static{
+		background: #e4f0f8; /* matches garland */
+		color: #494949;
+		border:none;
+		box-shadow: 0 0 5px 3px #999;
+		font-family: Impact, Charcoal, sans-serif;
+		font-size:19px;
+		font-weight: 100;
+	}
+}
+
+
+
+.fs-accordion-fieldset{
+	position: relative;
+	width:100%;
+	float:left;
+	overflow: visible;
+	
+	.fs-accordion-fieldset-title{
+		text-align: left;
+		cursor:pointer;
+		-moz-transition: all 0.3s ease-in-out 0s;
+		-webkit-transition: all 0.3s ease-in-out 0s;
+		-o-transition: all 0.3s ease-in-out 0s;
+		transition: all 0.3s ease-in-out 0s;
+		margin:-1px 0 0 !important;
+		border:1px solid #B8B6B6;
+		padding:0.4em 0em 0.4em 1em;
+		background: #555 url("../images/plus.png") no-repeat center right;
+		color:white;
+		text-transform: uppercase;
+		font-weight: bold;
+		margin:0.1em 0em 0.1em 0em !important;
+	}
+	.fs-accordion-fieldset-title.active{
+		/* box-shadow: 10px 10px 5px #777; */
+		box-shadow: 0 0 5px 3px #999;
+		background: #888 url("../images/delete.png") no-repeat center right;
+	}
+	.fs-accordion-fieldset-title.closed:hover{
+		background: #888 url("../images/delete.png") no-repeat center right;
+	}
+	.fs-accordion-fieldset-title.active:hover{
+		background: #888 url("../images/plus.png") no-repeat center right;
+	}
+	.fs-accordion-fieldset-inner.closed{
+		display:none;
+	}
+	.fs-accordion-fieldset-inner.open{
+		/* overflow: visible !important; */
+		margin:0em 0em 0.5em 0em;
+		overflow: hidden;
+		display: block;
+		float:left;
+		width:100%;
+		padding:10px;
+		background: #eaeaea;
+		box-shadow: 0 0 5px 2px #999;
+		border-bottom-left-radius: 4px;
+		border-bottom-right-radius: 4px;
+		.user-dash-cms{
+			text-align:center;
+			.cms-description{
+				font-size:13px;
+				color:#999;
+				font-weight:bold;
+			}
+		}
+	}
+}
+
+
+/*********** END Custom Fieldsets ************/
+
+/*********** CMS MODAL ******************/
+
+	.close-cms-modal{
+		font-size:18px;
+		cursor: pointer;
+	}
+
+.dvr-cms-wrapper{
+	padding-left:5px !important;
+	padding-right:5px !important;
+	padding-top:5px !important;;
+	
+	.dvr-cms-title{
+		text-align:center;
+		h3{
+			font-family: Impact, Charcoal, sans-serif;
+			font-weight: 200;
+			font-size:19px;
+			margin-top:0px !important;
+			
+		}
+	}
+	.dvr-cms-list{
+		list-style-type: none;
+		margin-top:0.1em;
+		width:21.5% !important;
+		li{
+			font: bold 1em/1.5em Arial, Helvetica;
+			display: inline-block;
+			width:100%;
+			text-align: center;
+			padding-top:5px;
+			padding-bottom:5px;
+			border-width: 1px;
+			border-style: solid;
+			border-color: #fff #ccc #999 #eee;
+			background: #c1c1c1;
+			background: -moz-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#c1c1c1));
+			background: -webkit-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -o-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -ms-linear-gradient(#f5f5f5, #c1c1c1);
+			background: linear-gradient(#f5f5f5, #c1c1c1);
+			.dvr-object,
+			.close-dvr-object{
+				padding-left:10px;
+				cursor: pointer;
+				text-decoration: none;
+				color: #555;
+				text-shadow: 0 1px 0 rgba(255,255,255,.5);
+				font: bold 1.1em/1 'trebuchet MS', Arial, Helvetica;
+				letter-spacing: 1px;
+				text-transform: uppercase;
+			}
+			.close-dvr-object{
+				display: table-cell;
+			}
+		}
+		li.first{
+			
+		}
+		li.active{
+			//box-shadow: 0 0 5px 5px #D4E8FE;
+		}
+		li.active:before{
+			content:"";
+			width: 0;
+			position: absolute;
+			left:5px;
+			height: 0; 
+			border-top: 10px solid transparent;
+			border-bottom: 10px solid transparent; 
+			border-left:10px solid #999;
+		}
+	}
+	.dvr-cms-container{
+		width:76.33333% !important;
+		float:right;
+	}
+}
+
+.close-dvr-object{
+	display: none;
+}
+.close-dvr-object.open{
+	padding-left:10px;
+	padding-right: 10px;
+	cursor: pointer;
+	text-decoration: none;
+	color: #555;
+	text-shadow: 0 1px 0 rgba(255,255,255,.5);
+	font: bold 1.1em/1 'trebuchet MS', Arial, Helvetica;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	display: table-cell !important;
+	background: silver !important;
+}
+
+.dvr-object.alarm{
+	background: red !important;
+}
+	
+			
+
+
+
+/*********** END CMS MODAL ******************/
+
+
+
 /*   Webform   */
 .group-contact-wrapper{
 	.webform-client-form {
@@ -1684,11 +1871,11 @@ area.active {
 /* Camer Fieldset css*/
 .user-button-wrapper{
 }
-.user-cameras-wrapper{
+.user-dvr-wrapper{
   margin-bottom:10px;
   margin-top:5px;
-  .user-cameras-fieldset{
-    width:49.5% !important;
+  .user-dvr-fieldset{
+    width:100% !important;
     .camera{
       .dvr-data{
         label{
@@ -1697,7 +1884,7 @@ area.active {
           font-size:16px;
         }
         div{
-          background:#eaeaea;
+          background:#d0d0d0;
           padding:5px;
           width:100%;
         }
@@ -2106,7 +2293,6 @@ area.active {
 		}
 	}
 	
-	////////////
 	
 	.breadcrumbs{
 		margin-bottom: 0px !important;
@@ -2409,9 +2595,130 @@ area.active {
 
 
 
+/***************** END Bug Block *****************/
+
+/****************************************************/
+
+
+
 /***************** Alarm Processing *****************/
 
 /****************************************************/
+
+#processingModal{
+	padding:5px !important;
+	.dvr-processing-list{
+		list-style-type: none;
+		text-align: center;
+		li{
+			font: bold 1em/1.5em Arial, Helvetica;
+			display: inline-block;
+			text-align: center;
+			padding-top:5px;
+			padding-bottom:5px;
+			border-width: 1px;
+			border-style: solid;
+			border-color: #fff #ccc #999 #eee;
+			background: #c1c1c1;
+			background: -moz-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#c1c1c1));
+			background: -webkit-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -o-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -ms-linear-gradient(#f5f5f5, #c1c1c1);
+			background: linear-gradient(#f5f5f5, #c1c1c1);
+			margin:0px !important;
+			.dvr-object{
+				padding-left:10px;
+				cursor: pointer;
+				text-decoration: none;
+				color: #555;
+				text-shadow: 0 1px 0 rgba(255,255,255,.5);
+				font: bold 1.1em/1 'trebuchet MS', Arial, Helvetica;
+				letter-spacing: 1px;
+				text-transform: uppercase;
+				width:100%;
+			}
+		}
+	}
+	.dvr-processing-container{
+		width:100%;
+	}
+}
+	
+	
+	
+	
+	
+	
+	
+	/*
+.close-cms-modal{
+		font-size:18px;
+		cursor: pointer;
+	}
+
+.dvr-cms-wrapper{
+	padding-left:5px !important;
+	padding-right:5px !important;
+	padding-top:5px !important;;
+	
+	.dvr-cms-title{
+		text-align:center;
+		h3{
+			font-family: Impact, Charcoal, sans-serif;
+			font-weight: 200;
+			font-size:19px;
+			margin-top:0px !important;
+			
+		}
+	}
+	.dvr-cms-list{
+		list-style-type: none;
+		margin-top:0.1em;
+		width:21.5% !important;
+		li{
+			font: bold 1em/1.5em Arial, Helvetica;
+			display: inline-block;
+			width:100%;
+			text-align: center;
+			padding-top:5px;
+			padding-bottom:5px;
+			border-width: 1px;
+			border-style: solid;
+			border-color: #fff #ccc #999 #eee;
+			background: #c1c1c1;
+			background: -moz-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#c1c1c1));
+			background: -webkit-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -o-linear-gradient(#f5f5f5, #c1c1c1);
+			background: -ms-linear-gradient(#f5f5f5, #c1c1c1);
+			background: linear-gradient(#f5f5f5, #c1c1c1);
+			.dvr-object{
+				padding-left:10px;
+				cursor: pointer;
+				text-decoration: none;
+				color: #555;
+				text-shadow: 0 1px 0 rgba(255,255,255,.5);
+				font: bold 1.1em/1 'trebuchet MS', Arial, Helvetica;
+				letter-spacing: 1px;
+				text-transform: uppercase;
+			}
+		}
+		li.first{
+			
+		}
+		li.active{
+			//box-shadow: 0 0 5px 5px #D4E8FE;
+		}
+*/
+	
+	
+	
+	
+	
+	
+
+	
 
 .alarm-event-wrapper{
 	cursor: pointer;
@@ -2443,3 +2750,4 @@ area.active {
 	top:5px;
 	right:10px;
 }
+/*********** END PROCESSING MODAL ******************/

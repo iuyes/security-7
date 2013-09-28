@@ -5,3 +5,4 @@ core = 7.x
 
 files[] = fr_groups.module
 files[] = fr_groups.views.inc
+files[] = fr_groups_admin_tools.inc

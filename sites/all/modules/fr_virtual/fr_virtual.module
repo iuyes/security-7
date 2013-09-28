@@ -36,7 +36,7 @@ function _find_customer_dvrs($uid){
   $query = new EntityFieldQuery;
     $query->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', 'dvr')
-    ->fieldCondition('field_alarm_customer', 'target_id', $uid, '=');
+    ->fieldCondition('field_cust_alarm_group_owner', 'target_id', $uid, '=');
     $result = $query->execute();
     if(!empty($result['node'])){
       foreach($result['node'] as $key => $value){
@@ -298,7 +298,7 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 			}*/
 			$time = date('Y-m-d h:i:s');
 			$form['title']['#default_value'] = $name;
-			$form['field_vt_customer']['und'][0]['target_id']['#default_value'] = $name.' ('.$user->uid.')';
+			$form['field_cust_alarm_group_owner']['und'][0]['target_id']['#default_value'] = $name.' ('.$user->uid.')';
 			$form['field_vt_folder_title']['und'][0]['value']['#default_value'] = $name;
 			//$form['title'] = ''.$name.' - '.$time.'';
 			//dpm($form);
@@ -308,7 +308,7 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 	 drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual_select_dvr.js', array('type' => 'file', 'scope' => 'footer'));
 		$form['field_vt_dvr']['und']['#states'] = array(
 		  'visible' => array(
-				':input[name="field_vt_customer[und][0][target_id]"]' => array('empty' => FALSE),
+				':input[name="field_cust_alarm_group_owner[und][0][target_id]"]' => array('empty' => FALSE),
 			),
 		);
 		
@@ -317,14 +317,14 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 		$form['field_vt_dvr']['und']['#prefix'] = '<div id="select-dvr" >';
 		$form['field_vt_dvr']['und']['#suffix'] = '</div>';
 		$form['field_vt_dvr']['und']['#after_build'][] = 'test_validate';
-		$form['field_vt_customer']['und'][0]['target_id']['#ajax'] = array(
+		$form['field_cust_alarm_group_owner']['und'][0]['target_id']['#ajax'] = array(
       'callback' => 'fr_vitual_select_dvr',
       'wrapper' => 'select-dvr',
       'method' => 'replace',
       'effect' => 'fade',
     );
     
-    $has_cust_value_edit = isset($form['#node']->field_vt_customer['und'][0]['target_id']) ? $form['#node']->field_vt_customer['und'][0]['target_id'] : '';
+    $has_cust_value_edit = isset($form['#node']->field_cust_alarm_group_owner['und'][0]['target_id']) ? $form['#node']->field_cust_alarm_group_owner['und'][0]['target_id'] : '';
     $has_cust_value = !empty($cust) ? $cust : $has_cust_value_edit;
     
     if(!empty($has_cust_value) && empty($form_state['values'])){
@@ -336,8 +336,8 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
       $form['field_vt_dvr']['und']['#default_value'] = $default;
     }
     
-     if(!empty($form_state['values']['field_vt_customer'])){
-       $uid = $form_state['values']['field_vt_customer']['und'][0]['target_id'];
+     if(!empty($form_state['values']['field_cust_alarm_group_owner'])){
+       $uid = $form_state['values']['field_cust_alarm_group_owner']['und'][0]['target_id'];
        $get_dvrs = _find_customer_dvrs($uid);
        $options = !empty($get_dvrs) ? $get_dvrs : array(1 => 'There are not any DVRS for this customer!');
         $info = field_info_field('field_vt_dvr');
@@ -413,7 +413,7 @@ function _fr_virtual_process(&$item, $delta = 0, $field, $entity) {
 
 function _fr_virtual_flatten_values ($item, $entity) {
 	//dpm($entity);
-	$customer = $entity->field_vt_customer['und'][0]['target_id'];
+	$customer = $entity->field_cust_alarm_group_owner['und'][0]['target_id'];
 	$tour_files = new fortified($item);
 	$tour_files->field_types();
 	$tour_files->save_user_files($customer, $entity);
@@ -677,7 +677,7 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 		drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.js', array('type' => 'file', 'scope' => 'footer'));
 
 		$objects = array();
-		$customer_uid = $entity->field_vt_customer['und'][0]['target_id'];
+		$customer_uid = $entity->field_cust_alarm_group_owner['und'][0]['target_id'];
 		global $user;
 		$auth = array('administrator', 'supervisor', 'guard');
 		if($user->uid != $customer_uid && !array_intersect($auth, $user->roles)){
@@ -936,7 +936,7 @@ function fr_virtual_node_submit($node, $form, &$form_state){
 		case'fortified_incident_reports':
 		case'fortified_events':
 			if(!empty($node->field_vt_notifications['und'][0]['value']) && $node->field_vt_notifications['und'][0]['value'] == 'email'){
-				$to = $node->field_vt_customer['und'][0]['target_id'];
+				$to = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
 				$nid = $node->nid;
 				$type = _get_type($node->type);
 				$send_email = fortified::sendEmail($to, $type, $nid);
@@ -986,12 +986,12 @@ function fr_virtual_node_insert($node){
 		case'fortified_events':
 			$pages = ($node->field_vt_tour_files[$node->language]) ? $node->field_vt_tour_files[$node->language] : NULL ;
 			if($pages){
-				$customer = $node->field_vt_customer['und'][0]['target_id'];
+				$customer = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
 				$test = fortified::save_user_files_insert($customer, $pages, $node);
 				if(!empty($node->field_vt_notifications['und'][0]['value']) && $node->field_vt_notifications['und'][0]['value'] == 'email'){
 					$nid = $node->nid;
 					$type = _get_type($node->type);
-					$to = $node->field_vt_customer['und'][0]['target_id'];
+					$to = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
 					$send_email = fortified::sendEmail($to, $type, $nid);
 					dpm($send_email);
 				}

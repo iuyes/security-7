@@ -9,6 +9,8 @@ class IpdatatelProcessEvents {
 	public $new_events_overflow = array();
 	public $test;
 	public $new_events = array();
+	public $alarms = array();
+	public $unprocessed_alarms = array();
 
 	public function processConstruct($processing_accounts, $account_variables, $uid, $ajax = FALSE, $session = FALSE, $session_start = NULL, $ajax_new_events = array(), $ran = 0){
 		$this->account_variables = $account_variables;
@@ -22,7 +24,7 @@ class IpdatatelProcessEvents {
 		$events = $this->routEventTriggers($processing_accounts);
 		$return = $this->renderAllEvents();
 		$this->runAfterProcesses();
-		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran, 'test' => $this->test);
+		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran, 'alarms' => $this->alarms, 'test' => $this->test);
 	}
 
 
@@ -131,6 +133,8 @@ class IpdatatelProcessEvents {
 		$events = is_array($get_events) ? $get_events : '';
 		$data = new stdClass();
 		$data->events = $events;
+		$data->alarm_zone_aliases = !empty($account_data['zone_aliases']) ? $account_data['zone_aliases'] : array();
+		$data->user_zone_aliases = !empty($account_data['user_aliases']) ? $account_data['user_aliases'] : array();
 		$data->custom_trigger = !empty($trigger) ? $trigger : NULL;
 		return $data;
 	}
@@ -145,6 +149,8 @@ class IpdatatelProcessEvents {
 				foreach($account_data as $delta => $values){
 					if(!empty($values->events) && isset($values->events)){
 						$custom_trigger = $values->custom_trigger;
+						$alarm_zone_aliases = $values->alarm_zone_aliases;
+						$user_zone_aliases = $values->user_zone_aliases;
 						$top_3 = array_slice($values->events, 0, 5, TRUE);
 						foreach($top_3 as $key => $object){
 							$matches = 0;
@@ -156,7 +162,7 @@ class IpdatatelProcessEvents {
 									}
 									break;
 								case'signal':
-
+									
 									if(!empty($custom_trigger->signal)){
 										if($custom_trigger->signal != 'all'){
 											$explode_signal = explode(':', $custom_trigger->signal);
@@ -164,7 +170,6 @@ class IpdatatelProcessEvents {
 												foreach($explode_signal as $keys => $signal){
 													if(strtolower($signal) == strtolower($event_value)){
 														$matches++;
-
 													}
 												}
 											}
@@ -173,6 +178,25 @@ class IpdatatelProcessEvents {
 											$matches++;
 										}
 									}
+									
+									if($event_value == 'Bypass'){
+										$event_value = array($object->zone);
+										$matched_zone = array_intersect(array_keys($alarm_zone_aliases), array_values($event_value));
+										if(!empty($matched_zone[0])){
+											$zone = $alarm_zone_aliases[$matched_zone[0]];
+											$event_date = new DateTime($object->datetime);
+											$formated_event_date = strtotime($event_date->format('Y-m-d G:i:s'));
+											$this->unprocessed_alarms[$formated_event_date] = $zone;
+										}
+									}
+									
+									break;
+								case 'signal_code':
+								
+								
+									//@todo this is were we will do the alarm events
+									
+									
 									break;
 								case'extra':
 									if($custom_trigger->extra == 'all' || strtolower($custom_trigger->extra) == strtolower($event_value)){
@@ -183,6 +207,29 @@ class IpdatatelProcessEvents {
 									if($custom_trigger->zone == 'all' || $event_value == $custom_trigger->zone){
 										$matches++;
 									}
+									
+									
+									//matching the event zone with our zone aliase
+									$event_value = array($event_value);
+									$matched_zone = array_intersect(array_keys($alarm_zone_aliases), array_values($event_value));
+									if(!empty($matched_zone)){
+										$found_zone = array_values($matched_zone);
+										if(!empty($alarm_zone_aliases[$found_zone[0]])){
+											$zone = $alarm_zone_aliases[$found_zone[0]];
+											$object->zone = !empty($zone['zone_name']) ? $zone['zone_name'] : NULL;
+										}
+									}
+									if(empty($matched_zone)){
+									  $matched_zone = array_intersect(array_keys($user_zone_aliases), array_values($event_value));
+									  if(!empty($matched_zone)){
+									  	$found_zone = array_values($matched_zone);
+										  if(!empty($user_zone_aliases[$found_zone[0]])){
+										  	$zone = $user_zone_aliases[$found_zone[0]];
+										  	$object->zone = !empty($zone['user_aliase']) ? $zone['user_aliase'] : NULL;
+										  }
+										}
+									}
+									$this->test[] = $matched_zone;
 									break;
 								}
 							}
@@ -210,10 +257,15 @@ class IpdatatelProcessEvents {
 		if(!empty($new_events) && !empty($this->sessionStartTime)){
 			$test = array();
 			foreach($new_events as $new_event_date => $new_event){
-				$this->test[$new_event_date] = array('event_date' => date('Y-m-d h:i:s', $new_event_date), 'start_date' => date('Y-m-d h:i:s', $this->sessionStartTime), 'diff' => $new_event_date - $this->sessionStartTime, 'now' => date('Y-m-d h:i:s'));
-				krsort($this->test, SORT_NUMERIC);
 				if($new_event_date >= $this->sessionStartTime && !array_key_exists($new_event_date, $this->new_events)){
 					$this->new_events[$new_event_date] = $new_event;
+					if(!empty($this->unprocessed_alarms)){
+						foreach($this->unprocessed_alarms as $alarm_date => $alarm_data){
+							if($alarm_date >= $this->sessionStartTime && array_key_exists($alarm_date, $this->new_events)){
+								$this->alarms[] = $alarm_data;
+							}
+						}
+					}
 				}else{
 					//$this->new_events->$new_event_date = $new_event;
 				}
@@ -221,6 +273,17 @@ class IpdatatelProcessEvents {
 			krsort($this->new_events, SORT_NUMERIC);
 		}
 	}
+	
+	
+	
+	/*
+private function getDvrZoneInfo($nid){
+		$node = node_laod($nid);
+		if($node){
+			$this->test = $node;
+		}
+	}
+*/
 
 
 
@@ -279,7 +342,7 @@ class IpdatatelProcessEvents {
 	
 	
 	public static function buildEventTable($new_events, $session, $ajax = TRUE){
-		//drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_processing_events.js', array('type' => 'file', 'scope' => 'header'));
+			//drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_processing_events.js', array('type' => 'file', 'scope' => 'header'));
 			$rows = array();
 			$event = $ajax == FALSE ? '' : 'click' ;
 			$colors = new IpdatatelSignalCodes();

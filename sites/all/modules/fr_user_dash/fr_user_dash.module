@@ -1,1402 +1,138 @@
 <?php
 
-/*
-*
-*hook_block_info
-*
-*/
-function fr_user_dash_block_info(){
-	// This example comes from node.module.
-	$blocks['my_menu'] = array(
-		'info' => t('DASHBOARD'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['my_alarm'] = array(
-		'info' => t('MY ALARM'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['my_dvr'] = array(
-		'info' => t('MY CAMERAS'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['my_reports'] = array(
-		'info' => t('INCIDENT REPORTS NEW AND UNSAVED'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['my_tours'] = array(
-		'info' => t('VIRTUAL TOURS NEW AND UNSAVED'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['my_events'] = array(
-		'info' => t('EVENTS NEW AND UNSAVED'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['saved'] = array(
-		'info' => t('MY SAVED FILES'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['admin_tools'] = array(
-		'info' => t('ADMIN TOOLS'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['admin'] = array(
-		'info' => t('ADMIN DASHBOARD'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['tours_today'] = array(
-		'info' => t('TOURS TODAY'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['admin_alarm_notifications'] = array(
-		'info' => t('Alarm Notifications'),
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['alarm_processing'] = array(
-		'info' => 'Alarm Processing Beta',
-		'cache' => DRUPAL_NO_CACHE,
-	);
-	$blocks['bugs'] = array(
-		'info' => 'Bugs',
-		'cache' => DRUPAL_NO_CACHE,
-	);
 
-	return $blocks;
+/**
+ * @ Redirect user on login
+ */
+function fr_user_dash_user_login(&$edit, $account){
+	if (!isset($_POST['form_id']) || $_POST['form_id'] != 'user_pass_reset') {
+		_fr_groups_user_redirect($edit, $account);
+	}
 }
 
 
 
+function _fr_groups_user_redirect(&$edit, $user){
+	$authenticate = FortifiedAdminAccounts::authenticateAccount($user);
+	if(!empty($authenticate['path'])){
+		$edit['redirect'] = $authenticate['path'];
+	}
+}
 
 
-function fr_user_dash_usable_homebox_blocks(){
+
+/**
+ * @ Mian redirect function after the user has logged in
+ *
+ */
+function fr_user_dash_account_redirect(){
 	global $user;
-	$uid = $user->uid;
-	$bloks = array();
-	if(!in_array('administrator', $user->roles) || !in_array('supervisor', $user->roles)){
-		$blocks['my_menu'] = TRUE;
-		$auth = new FortifiedAuthenticate($user->uid);
-		$check_alarm = $auth->serviceType('alarm');
-		$data = '';
-		$check_access = $auth->alarmSettings('display_alarm_block');
-		if($check_access && $check_alarm){
-			$blocks['my_alarm'] = TRUE;
-		}
-		
-		$dvrs = new FortifiedDvrs();
-		$dvrs->queryDvrs($user->uid);
-		if($dvrs->has_dvr == TRUE && $dvrs->has_tours == TRUE){
-			$blocks['my_tours'] = TRUE;
-			$blocks['my_events'] = TRUE;
-			$blocks['saved'] = TRUE;
-			$blocks['my_reports'] = TRUE;
-			$blocks['my_dvr'] = TRUE;
-			$blocks['alarm_processing'] = TRUE;
-			
-		}
+	$authenticate = FortifiedAdminAccounts::authenticateAccount($user);
+	if(!empty($authenticate['path'])){
+		drupal_goto($authenticate['path']);
 	}else{
-		$blocks['admin_alarm_notifications'] = TRUE;
-		$blocks['tours_today'] = TRUE;
-		$blocks['admin'] = TRUE;
-		$blocks['admin_tools'] = TRUE;
-		$blocks['alarm_processing'] = TRUE;
-		$blocks['bugs'] = TRUE;
+		drupal_goto('user');
 	}
-	return $blocks;
-}
-
-
-/*
-*
-* hook_blck_view
-*
-*/
-function fr_user_dash_block_view($delta = ''){
-	global $user;
-	$arg = arg();
-	
-	$content = array();
-	$content['wrapper'] = array(
-		'#type' => 'container',
-		'#attributes'=> array(
-			'class' => array('dash-block-wrapper'),
-		),
-	);
-	$content['wrapper']['extra'] = array(
-		'#type' => 'container',
-		'#attributes'=> array(
-			'class' => array('joy-wrapper'),
-		),
-	);
-
-	$args = array(
-		'uid' => $user->uid,
-		'name' => $user->name,
-		'roles' => $user->roles,
-	);
-
-
-	switch($delta){
-	case'my_menu':
-		$customer_dash = drupal_render(fr_user_dash_build_dash('menu'));
-		$data = '';
-		if(!empty($customer_dash)){
-			$content['wrapper']['extra']['joyride'] = joyWrapper('user_menu', 'first_stop');
-			$content['wrapper']['extra']['save'] = array(
-				'#type' => 'markup',
-				'#markup' => 'Save File',
-				'#prefix' => '<div class="save-files four columns">',
-				'#suffix' =>'</div>',
-			);
-			$content['wrapper']['extra']['content'] = array(
-				'#type' => 'markup',
-				'#markup' => $customer_dash,
-			);
-			$data = $content;
-		}else{
-			$data = 'Your account had been created but no customer information has been added.
-				 Please email <a href="mailto:info@fortifiedsecurityservices.com">Fortified Security Services</a>To Finish Your Account.</div>';
-		}
-		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
-			$data = '';
-		}
-		$block['content'] = $data;
-		break;
-
-		// for alarm block
-	case'my_alarm':
-		$auth = new FortifiedAuthenticate($user->uid);
-		$check_alarm = $auth->serviceType('alarm');
-		$data = '';
-		$check_access = $auth->alarmSettings('display_alarm_block');
-		if($check_access && $check_alarm){
-			$uid = $user->uid;
-			//$test = ip_datatel_load_alarm_notifications($uid, 'user');
-			$content['wrapper']['extra']['joyride'] = joyWrapper('my_alarm', 'sec_stop');
-			$alarm_profile = ip_datatel_load_alarm_profile($uid, 'all', '', '', TRUE);
-			$content['wrapper']['extra']['alarm'] = $alarm_profile;
-			$data = drupal_render($content);
-		}
-		$block['content'] = $data;
-		break;
-		// end alarm block
-
-		// for alarm processing
-	case'alarm_processing':
-		$user_arg = in_array('administrator', $user->roles) || in_array('supervisor', $user->roles) ? 'admin' : 'user';
-		$processing = fr_user_dash_query_customer_variables($user->uid);
-		$data = NULL;
-		if(isset($processing['processing'])){
-			$alarm_processing = ip_datatel_process_alarm_notifications($user->uid, $user_arg);
-			if(!empty($alarm_processing['content'])){
-				$data = $alarm_processing['content']['tools'];
-				$data .= $alarm_processing['content']['table'];
-			}
-		}
-			$content['wrapper']['extra']['joyride'] = joyWrapper('my_alarm', 'tenth_stop');
-			$content['wrapper']['extra']['alarm_processing'] = $data;
-		$block['content'] = $data;
-		break;
-		// end alarm processing
-		
-		case'my_dvr':
-		$data = '';
-		if(!in_array('administrator', $user->roles) || !in_array('supervisor', $user->roles)){
-			$dvrs = new FortifiedDvrs();
-			$dvrs->queryDvrs($user->uid);
-			if($dvrs->has_dvr == TRUE){
-				$content['wrapper']['extra']['joyride'] = joyWrapper('my_dvrs', 'twelveth_stop');
-				$content['wrapper']['extra']['content'] = array(
-					'#type' => 'markup',
-					'#markup' => drupal_render(fr_user_dash_build_dash('dvr')),
-				);
-				$data = $content;
-			}
-		}
-
-		$block['content'] = $data;
-		break;
-
-	case'my_reports':
-		$data = '';
-		if(!in_array('administrator', $user->roles) || !in_array('supervisor', $user->roles)){
-			$dvrs = new FortifiedDvrs();
-			$dvrs->queryDvrs($user->uid);
-			if($dvrs->has_dvr == TRUE && $dvrs->has_tours == TRUE){
-				$content['wrapper']['extra']['joyride'] = joyWrapper('user_reports', 'second_stop');
-				$content['wrapper']['extra']['content'] = array(
-					'#type' => 'markup',
-					'#markup' => views_embed_view('view_inc_reports', $display_id = 'block'),
-				);
-				$data = $content;
-			}
-		}
-
-		$block['content'] = $data;
-		break;
-
-	case'my_tours':
-		$data = '';
-		if(!in_array('administrator', $user->roles) || !in_array('supervisor', $user->roles)){
-			$dvrs = new FortifiedDvrs();
-			$dvrs->queryDvrs($user->uid);
-			if($dvrs->has_dvr == TRUE && $dvrs->has_tours == TRUE){
-				$content = array();
-
-				$content['wrapper']['extra']['joyride'] = joyWrapper('user_tours', 'third_stop');
-				$content['wrapper']['extra']['content'] = array(
-					'#type' => 'markup',
-					'#markup' => views_embed_view('view_virtual_tours', $display_id = 'block'),
-				);
-				$data = render($content);
-			}
-		}
-
-		$block['content'] = $data;
-
-		break;
-
-	case'my_events':
-		$data = '';
-		if(!in_array('administrator', $user->roles) || !in_array('supervisor', $user->roles)){
-			$dvrs = new FortifiedDvrs();
-			$dvrs->queryDvrs($user->uid);
-			if($dvrs->has_dvr == TRUE && $dvrs->has_tours == TRUE){
-				$content['wrapper']['extra']['joyride'] = joyWrapper('user_events', 'fourth_stop');
-				$content['wrapper']['extra']['content'] = array(
-					'#type' => 'markup',
-					'#markup' => views_embed_view('view_event_reports', $display_id = 'block'),
-				);
-				$data = $content;
-			}
-		}
-		$block['content'] = $data;
-
-		break;
-
-	case'saved';
-		$data = '';
-		if(!in_array('administrator', $user->roles) || !in_array('supervisor', $user->roles)){
-			$dvrs = new FortifiedDvrs();
-			$dvrs->queryDvrs($user->uid);
-			if($dvrs->has_dvr == TRUE && $dvrs->has_tours == TRUE){
-				//$content = $dash->loadBlockSingle($user->uid, 'fortified_virtual_tours', 'My Virtual Tours');
-				$content['wrapper']['extra'] = array(
-					'#type' => 'container',
-					'#attributes'=> array(
-						'class' => array('joy-wrapper'),
-					),
-				);
-				$content['wrapper']['extra']['joyride'] = joyWrapper('user_saved', 'fifth_stop');
-				$content['wrapper']['extra']['saved_files'] = array(
-					'#type' => 'markup',
-					'#markup' => views_embed_view('saved_virtual_tours', $display_id = 'block'),
-				);
-				$data = $content;
-			}
-		}
-
-		$block['content'] = $data;
-
-		break;
-
-	case 'admin_tools':
-		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
-			$tools = new tools();
-
-			$content['wrapper']['extra']['joyride'] = joyWrapper('admin_tools', 'sixth_stop');
-
-			$content['wrapper']['extra']['admin_tools'] = array(
-				'#type' => 'markup',
-				'#markup' => drupal_render($tools->basicTools()),
-			);
-			$block['content'] = $content;
-		}else{
-			$block['content'] = '';
-		}
-
-		break;
-
-
-	case'admin':
-		//This is thr admin dashbored we only display to admins
-		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
-			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
-			$view = views_embed_view('admin_users_dash', $display_id = 'block');
-
-			$help_title = variable_get('tours', '');
-
-			$content['wrapper']['extra']['admin_view'] = array(
-				'#type' => 'markup',
-				'#markup' => $view,
-			);
-
-
-			$content['wrapper']['extra']['joyride'] = joyWrapper('admins', 'seventh_stop');
-
-			$block['content'] = $content;
-		}else{
-			$block['content'] = '';
-		}
-
-		break;
-
-	case'admin_alarm_notifications':
-		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
-			$rencent_alarm_activity = ip_datatel_load_alarm_notifications($user->uid);
-			$block['content'] = $rencent_alarm_activity;
-		}else{
-			$block['content'] = '';
-		}
-
-		break;
-
-
-	case'tours_today':
-
-		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
-
-			$content['wrapper']['extra']['joyride'] = joyWrapper('admin_tours_today', 'eighth_stop');
-
-			//function in fr_times module
-			$view = fr_times_load_customers();
-			$content['wrapper'] = array(
-				'#type' => 'container',
-				'#attributes'=> array(
-					'class' => array('dash-block-wrapper'),
-				),
-			);
-			$block['content'] = $view;
-
-		}else{
-			$block['content'] = '';
-		}
-
-		break;
-		
-		//bugs submitted by customers
-	case 'bugs':
-		if(in_array('administrator', $user->roles) || in_array('supervisor', $user->roles)){
-			$bugs = new FortifiedBugs();
-			$bugs->queryBugs();
-			$bug_html = $bugs->renderBugs();
-			$block['content'] = $bug_html;
-		}else{
-			$block['content'] = '';
-		}
-		break;
-
-
-	}
-	return $block;
-
+	return ;
 }
 
 
 
-function joyWrapper($type, $stop){
-	$content = array(
-		'#type' => 'markup',
-		'#markup' => buildJoyride($type, $stop),
-		'#prefix' => '<div>',
-		'#suffix' => '</div>',
-		'#weight' => -100,
-	);
-	return $content;
-}
+class FortifiedAdminAccounts extends FortifiedDashboardMarkup{
 
-
-function buildJoyRide($block, $stop){
-	$content = '<div id="'.$stop.'"></div>';
-	return $content;
-}
-
-
-
-
-class tools{
-
-	private function generateMenuList ($list_items) {
-		$menu_list = array();
-		foreach($list_items as $key => $item){
-
-			switch($item['type']){
-			case'refresh':
-				$js = 'window.reload();';
-				break;
-			default:
-				$js = '';
-				break;
-			}
-			$options = array();
-			$arg = !empty($item['data-reveal-id']) ? 'data-reveal-id' : 'id';
-
-			$path = l($item['title'], $item['path'], $options);
-			$list[] = array(
-				'data' => $path,
-				'class' => $item['class'],
-				$arg => $item['data-reveal-id'],
-				'onClick' => array($js),
-			);
-		}
-		$menu = array(
-			'#theme' => 'item_list',
-			'#items' => $list,
-			'#type' => 'ul',
-			'#attributes' => array('id' => 'basic-tools'),
-			'#container_id' => '',
-			//'#prefix' => '<section>',
-			//'#suffix' => '</section></nav>',
-		);
-		return $menu;
-	}
-
-	private function buildListItems($array){
-		foreach($array as $key => $values){
-			$type = $values['type'];
-			$title = $values['title'];
-			$query = $values['query'];
-			$path = $values['path'];
-			$class = $values['class'];
-			$data_reveal = !empty($values['data-reveal-id']) ? $values['data-reveal-id'] : '';
-			$list[] = array(
-				'type' => $type,
-				'title' => t($title),
-				'path' => $path,
-				'query' => $query,
-				'class' => array('button', $class),
-				'data-reveal-id' => $data_reveal,
-			);
-		}
-		$buttons = $this->generateMenuList($list);
-		return $buttons;
-	}
-
-	public function basicTools(){
-		$tools = array();
-		$type = array('user', 'users', 'refresh', 'add an alarm', 'prefrences');
-		$title = array('Add User', 'Manage Users', 'Refresh Page', 'Add A Bat', 'Prefrences');
-		$path = array('admin/people/create', 'admin/people', '../../user', '../../node/add/alarm', '#');
-		$query = array('', '', 'window.refresh();', '', '');
-		$class = array('add', 'edit', 'next', 'add', 'next');
-		$id = array('', '', '', '', 'myPrefrences');
-		$loop = count($type) - 1;
-		for($i = 0; $i<=$loop; $i++){
-			$data_reveal = empty($id[$i]) ? 'none' : 'data-reveal-id';
-			$tools[$i] = array(
-				'type' => $type[$i],
-				'title' => $title[$i],
-				'path' => $path[$i],
-				'query' => $query[$i],
-				'class' => $class[$i],
-				$data_reveal => $id[$i],
-			);
-		}
-		$build = $this->buildListItems($tools);
-		return $build;
-	}
-
-}
-
-
-/**
- *
- *Class for building the user and admin dashboards
- *
- */
-
-class dashboard{
-
-
-	/**
-   *
-   * Constructor functions for admins
-   *
-   ****/
-
-	public function constructDash($args){
-		foreach($args as $key => $argument){
-			switch($key){
-			case'roles':
-				$this->user_roles = $argument;
-				break;
-			default:
-				$this->$key = $argument;
-				break;
-			}
-		}
-		$user_roles = $this->user_roles;
-		if(in_array('administrator', $user_roles)){
-			$this->auth = 'admin';
-			//unset($this->roles);
-		}else{
-			$this->auth = 'user';
-		}
-		$this->has_dvr = FALSE;
-		$this->has_alarm = FALSE;
-		$this->has_tours = FALSE;
-		return $this->user_roles;
-	}
-
-
-	/**
-	* @ Load the customers profile
-	*
-	*/
-	public function profileLoad($uid){
-		$this->user_pro = profile2_load_by_user($uid, $type_name = NULL);
-		return $this->user_pro;
-	}
-
-
-	/**
-  *
-  *Loads the profile data for users
-  *
-  */
-	public function loadProfile($uid = NULL){
-		$uid = $uid = NULL ? $this->uid : $uid;
-		$auth = FALSE;
-		$profile_load = $this->profileLoad($uid);
-		if($profile_load){
-			$profile = $profile_load;
-			if(!empty($profile['customer'])){
-			foreach($profile_load as $key => $value){
-				$service = !empty($value->field_cust_service_type['und']) ? $value->field_cust_service_type['und'] : FALSE;
-				if($service){
-					foreach($service as $delta => $service){
-						switch($service['value']){
-						case'cam':
-							$this->has_dvr = TRUE;
-							break;
-						case'alarm':
-							$this->has_alarm = TRUE;
-							break;
-						}
-					}
-				}
-			}
-			$auth = TRUE;
-		}
-	}
-		return $auth;
-	}
-
-}// end class
-
-
-
-
-class FortifiedAuthenticate extends dashboard{
-
-	public function __construct($uid){
-		$this->profileLoad($uid);
-	}
-
-	public function serviceType($arg){
-		$value = FALSE;
-		if(!empty($this->user_pro['customer']->field_cust_service_type)){
-			$service = $this->user_pro['customer']->field_cust_service_type['und'];
-			foreach($service as $key => $values){
-				if($values['value'] == $arg){
-					$value = TRUE;
-				}
-			}
-		}
-		return $value;
-	}
-
-	public function alarmSettings($arg){
-		$profile = $this->user_pro;
-		$access = FALSE;
-		$get_alarm_settings = !empty($profile['customer']->field_cust_alarm_settings) ? $profile['customer']->field_cust_alarm_settings : NULL;
-		if(!empty($get_alarm_settings['und'])){
-			foreach($get_alarm_settings['und'] as $key => $value){
-				if($value['value'] == $arg){
-					$access = TRUE;
-				}
-			}
-		}
-		return $access;
-	}
-
-
-}
-
-
-
-
-
-class FortifiedDvrs{
-
-	public $has_dvr = FALSE;
-	public $has_tours = FALSE;
-	public $each_dvr = array();
-	public function queryDvrs($uid){
-		$DvrData = FALSE;
-		$this->query = new EntityFieldQuery;
-		$this->query->entityCondition('entity_type', 'node')
-		->entityCondition('bundle', 'dvr')
-		->fieldCondition('field_alarm_customer', 'target_id', $uid, '=');
-		$result = $this->query->execute();
-		if(!empty($result['node'])){
-			$results = $result['node'];
-			$DvrData = array();
-			foreach($results as $key => $data){
-				$nodes = node_load($data->nid);
-				$DvrData[$key] = new stdClass();
-				foreach($nodes as $nid => $values){
-					switch($nid){
-					case'title':
-						$DvrData[$key]->dvr_title = !empty($values) ? $values : NULL;
-						break;
-					case'field_cust_dvr_url':
-						$DvrData[$key]->dvr_url = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
-						$this->has_dvr = !empty($DvrData[$key]->dvr_url) ? TRUE : FALSE;
-						break;
-					case'field_cust_virtual_tours':
-						$DvrDate[$key]->dvr_tours = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
-						$this->has_tours = !empty($DvrDate[$key]->dvr_tours) ? TRUE : FALSE;
-						break;
-					case'field_fr_vt_tour_times':
-						$DvrData[$key]->dvr_tour_times = !empty($values['und'][0]) ? $values['und'][0] : NULL;
-						break;
-					case 'field_dvr_address':
-						$DvrData[$key]->field_dvr_address = !empty($values['und'][0]) ? $values['und'][0] : NULL;
-						break;
-					}
-				}
-			}
-		}
-		$this->dvr_data = $DvrData;
-		return $DvrData;
-	}
-	
-	public function hasTours($uid = NULL){
-		$has_tours = FALSE;
-		if(empty($this->dvr_data) && !empty($uid)){
-			$this->dvr_data = $this->queryDvrs($uid);
-		}elseif(!empty($this->dvr_data)){
-			$dvr_data = $this->dvr_data;
-		}else{
-			return 'No user id';
-		}
-		if($dvr_data){
-			foreach($dvr_data as $nid => $data){
-				if(!empty($data->dvr_tour_times)){
-					$has_tours = TRUE;
-				}
-				$this->each_dvr[$nid] = !empty($data->dvr_url) ? $data->dvr_url : NULL;
-			}
-		}
-		return $has_tours;
-	}
-	
-}// end class
-
-
-
-
-
-/**
- *
- * @ Hook_page_alter
- *
- */
-class dashPage extends dashboard{
-
-	public $admin = FALSE;
-	public $alarm_processing = FALSE;
-	public $custDataModal = FALSE;
-	public $hasHelpModals = FALSE;
-	public $modal = array();
-	public $has_tours = FALSE;
-	public $joyRide = FALSE;
-	public $requestedAlarm = FALSE;
-	public $alarmModal = FALSE;
-
-	function __construct(){
+	public function __construct($uid = NULL){
 		global $user;
-		$user->name = !empty($user->name) ? $user->name : '';
+		$this->uid = $user->uid;
 		$this->user = $user;
-		$args = array(
-			'uid' => $user->uid,
-			'name' => $user->name,
-			'roles' => $user->roles,
-		);
-		$this->admins = array('administrator', 'supervisor', 'guard', 'editor');
-		if(array_intersect($this->admins, $user->roles)){
-			$this->admin = TRUE;
-		}
-		$this->constructDash($args);
-		$this->loadProfile($user->uid);
-		$args = arg();
-		if(!empty($args)){
-			foreach($args as $key => $arg){
-				$this->arg[] = arg($key);
-			}
-		}
-		$this->has_account = !empty($this->user_pro) ? TRUE : FALSE;
+		$this->user_role = $this->Authenticate();
 	}
 
-
-
-	/**
-	 *
-	 * @ Load the page into an object
-	 *
-	 */
-	public function loadPage($page){
-		$this->page = $page;
-	}
-
-
-
-	public function customerDvrs($uid = NULL){
-		$dvrs = new FortifiedDvrs();
-		$get_dvrs = $dvrs->queryDvrs($uid);
-		$this->dvr_data = $get_dvrs;
-		return array('dvr_data' => $get_dvrs, 'dvr_obj' => $dvrs);
-	}
-
-
-	/**
-	 *
-	 * @ Load current users profil info
-	 *
-	 */
-	public function profileInfo($modals){
-		$user_pro = $this->user_pro;
-		if(!empty($user_pro['customer']->field_cust_service_type)){
-			for($i = 0; $i<=count($user_pro['customer']->field_cust_service_type['und']) - 1; $i++){
-				$this->service_type[] = $user_pro['customer']->field_cust_service_type['und'][$i]['value'];
-			}
-			foreach($this->service_type as $key => $type){
-				switch($type){
-				case'cam':
-					$dvr_data = $this->customerDvrs($this->uid);
-					if($modals && !empty($dvr_data['dvr_data'])){
-						$this->dvrModal = TRUE;
-						$this->has_dvr = TRUE;
-						$dvr_obj = $dvr_data['dvr_obj'];
-						if($dvr_obj){
-							$has_tours = $dvr_obj->hasTours($this->uid);
-							if($has_tours){
-								$this->has_tours == TRUE;
-							}
-							if(!empty($dvr_obj->each_dvr)){
-							  foreach($dvr_obj->each_dvr as $nid => $dvr_url){
-							  	$this->buildDvrModal($nid, $dvr_url);
-							  }
-							}
-						}
-					}
-					break;
-				case'alarm':
-					$this->has_alarm = TRUE;
-					if($this->has_alarm == TRUE){
-						$processing = fr_user_dash_query_customer_variables($this->uid);
-						if(!empty($processing['processing'])){
-							$this->alarm_processing = TRUE;
-							$this->buildProcessingModal();
-						}
-					}
-					if($modals == TRUE){
-						$this->buildAlarmModal();
-					}
-					break;
-				}
-			}
-		}
-		if($modals){
-			$this->buildHelpModal(); // not active ( not current using this )
-			$this->buildPrefrences(); // prefrences modal
-		}
-
-	}
-	
-	
-	private function buildProcessingModal(){
-		$content = array();
-		$content['markup'] = array(
-			'#type' => 'markup',
-			'#markup' => '<div class="close-reveal-modal close-modal close-processing-modal">&#215;</div><div class="processing-modal"></div>',
-			'#prefix' => '<div id="processingModal" class="reveal-modal xlarge">',
-			'#suffix' => '</div>',
-		);
-		$this->page['modal']['processing'] = $content;
-	}
-
-
-	private function buildPrefrences(){
-		$content = array();
-		$content['markup'] = array(
-			'#type' => 'markup',
-			'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><br/><div>'.drupal_render(drupal_get_form('fr_user_dash_form')).'</div>',
-			'#prefix' => '<div id="myPrefrences" class="reveal-modal xlarge">',
-			'#suffix' => '</div>',
-		);
-
-		$this->page['modal']['prefrences'] = $content;
-		//}
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Build the help Modal
-	 *
-	 */
-	private function buildHelpModal(){
-
-		if($this->has_dvr == TRUE && $this->has_tours == TRUE){
-			$this->hasHelpModals = TRUE;
-			$type = 'tours';
-			$help_text = variable_get('tours_text', '');
-			$this->helpModals($type, $help_text['value']);
-		}
-
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Build the help Modal
-	 *
-	 */
-	private function helpModals($type, $text){
-		$content = array();
-
-		$content['wrapper'] = array(
-			'#type' => 'container',
-			'#attributes'=> array(
-				'class' => array('dash-block-wrapper'),
-			),
-		);
-
-		/*$content['wrapper']['help_text'] = array(
-					'#type' => 'markup',
-					'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><div class="help-modal-text">'.$text.'</div>',
-					'#prefix' => '<div id="adminHelpModal" class="help-modals">',
-					'#suffix' => '</div>',
-				);*/
-
-		$this->page['modal'][$type] = $content;
-	}
-
-
-
-
-
-	/*
-	 *
-	 * @ Build the dvr Modal
-	 *
-	 */
-	private function buildDvrModal($nid, $url){
-		if($this->has_dvr){
-			$dvrModal = array(
-			  '#type' => 'markup',
-			  '#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><div class="myDvrModal'.$nid.' cust-dvr-modal"></div>',
-			  '#prefix' => '<div id="myDvrModal'.$nid.'" class="reveal-modal xlarge" data-dvr-id="'.$nid.'" data-dvr-url="'.$url.'">',
-			  '#suffix' => '</div>',
-			);
-			$this->page['modal']['dvr'][$nid] = $dvrModal;
-		}
-	}
-
-
-
-
-
-	/*
-	 *
-	 * @ Build the alarm modal
-	 *
-	 */
-	public function buildAlarmModal(){
-		$alarmModal = array(
-			'#type' => 'markup',
-			'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><div class="alarm-modal">
-				Having issues logging in or navigating?<a href="https://fortifiedss.alarmdealer.com/index.php?mod=auth&action=login"> Click here.</a></div>',
-			'#prefix' => '<div id="myAlarmModal" class="reveal-modal xlarge">',
-			'#suffix' => '</div>',
-		);
-		//$this->alarmModal = $alarmModal;
-		$this->page['modal']['alarm'] = $alarmModal;
-		return $alarmModal;
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Build the camaer modal for admins to manage customers
-	 *
-	 */
-	public function requestCustCameras(){
-		$auth = array('administrator', 'supervisor', 'editor');
-		$roles = $this->user_roles;
-		$cust_dvr = NULL;
-		if(array_intersect($auth, $roles)){
-			$cust_dvr = array(
-				'#type' => 'markup',
-				'#markup' => '<div class="close-reveal-modal close-modal close-dvr-modal">&#215;</div><div class="customerDvrModal"></div>',
-				'#prefix' => '<div id="customerDvrModal" class="reveal-modal xlarge">',
-				'#suffix' => '</div>',
-			);
-			$this->page['modal']['customer_dvr'] = $cust_dvr;
-			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal_cust.js', array('type' => 'file', 'scope' => 'footer'));
-		}
-	}
-
-
-
-	/*
-	 *
-	 * @ Add all needed js files for each function
-	 *
-	 */
-	public function finishAllModals(){
-		$this->addModalToPage();
-		$this->attatchJsToPage();
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Add all needed js files for each function
-	 *
-	 */
-	private function attatchJsToPage(){
-		if(!empty($this->has_dvr) && $this->has_dvr == TRUE){
-			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal.js', array('type' => 'file', 'scope' => 'header'));
-		}
-		if(!empty($this->requestTour) && $this->requestTour == TRUE){
-			drupal_add_js(drupal_get_path('module', 'fr_user_dash') . '/js/fr_user_dash_files.js', array('weight' => 1));
-		}
-		if(!empty($this->viewNodeAcess) && $this->viewNodeAcess == TRUE){
-			drupal_add_js(drupal_get_path('module', 'fr_upload') .'/fr_upload.js', array('type' => 'file', 'scope' => 'footer'));
-		}
-		if($this->alarm_processing == TRUE){
-			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_processing_modal.js', array('type' => 'file', 'scope' => 'footer'));
-		}
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Add all the modals to the page
-	 *
-	 */
-	private function addModalToPage(){
-		if(!empty($this->viewNodeAcess) && $this->viewNodeAcess == TRUE){
-			$this->page['modal']['vt'] = $this->node_output;
-		}
-		if(!empty($this->help_modal)){
-			$this->page['modal']['help_modal'] = $this->help_modal;
-		}
-		if($this->custDataModal == TRUE){
-			$this->page['modal']['cust_data'] = array(
-				'#type' => 'markup',
-				'#markup' => '<div class="close-reveal-modal close-modal">&#215;</div><div class="custData">replace  ME !</div>',
-				'#prefix' => '<div id="custDataModal" class="reveal-modal xlarge">',
-				'#suffix' => '</div>',
-			);
-		}
-		if(array_intersect($this->admins, $this->user->roles)){
-			$this->alarm_processing = TRUE;
-			$this->buildProcessingModal();
-			$this->requestCustCameras();
-		}
-
-	}
-
-
-
-
-
-	/*
-	 *
-	 * @ Add all the global js files to the page
-	 *
-	 */
-	public function globalJsFiles(){
-		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash.js', array('type' => 'file', 'scope' => 'footer'));
-		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_download.js', array('type' => 'file', 'scope' => 'footer'));
-		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_background.js', array('type' => 'file', 'scope' => 'footer'));
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Add all the global js files to the admin pages
-	 *
-	 */
-
-	public function addDashFiles(){
-		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_view_actions.js', array('type' => 'file', 'scope' => 'header', 'weight' => -100));
-		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_dragndrop.js', array('type' => 'file', 'scope' => 'footer'));
-		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_popup.js', array('type' => 'file', 'scope' => 'footer'));
-		if($this->joyRide == TRUE){
-			drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_joyride.js', array('type' => 'file', 'scope' => 'footer'));
-			$this->addJoyRide();
-		}
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Add Joy Ride Html
-	 *
-	 */
-
-	public function addJoyRide(){
-		$content = array();
-		$admins = array(
-			'sixth_stop',
-			'seventh_stop',
-			'eighth_stop',
-		);
-		$customers = array(
-			"first_stop",
-			'prefrences',
-			'cameras',
-			'alarm',
-			'sec_stop',
-			"second_stop",
-			'third_stop',
-			'fourth_stop',
-			'fifth_stop',
-		);
-		if(in_array('Customer', array_values($this->user->roles))){
-			$vars = $customers;
-		}else{
-			$vars = $admins;
-		}
-		foreach($vars as $key => $var){
-			$variable = variable_get($var, '');
-			if(!empty($variable['value'])){
-				$items[$key] = array(
-					'data' => $variable['value'],
-					'data-id' => $var,
-					'data-text' => 'Next',
-				);
-			}
-		}
-
-		$content['joy_wrapper'] = array(
-			'#theme' => 'item_list',
-			'#items' => $items,
-			'#attributes' => array(
-				'class' => array('joyride-list'),
-				'data-joyride' => '',
-			),
-		);
-		$this->page['modal']['joyride'] = $content;
-
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Add all the requested js files to the page
-	 *
-	 */
-	public function loadFileJs($info){
-		$nid = $info['nid'];
-		$this->requestTour = TRUE;
-		//load the users tours
-		$this->loadNode($nid);
-		$get_render = $this->node_output;
-		if($get_render == FALSE) {
-			$this->viewNodeAccess = FALSE;
-		}else{
-			$this->viewNodeAccess = TRUE;
-		}
-	}
-
-
-
-
-	/*
-	 *
-	 * @ Load the requested node
-	 *
-	 */
-	private function loadNode($nid){
+	public function Authenticate(){
 		$user = $this->user;
-		$node = node_load($nid);
-		$cust_uid = $node->field_vt_customer['und'][0]['target_id'];
-
-		if($user->uid == 1 || $cust_uid == $user->uid){
-			$view_vt = node_view($node, $view_mode = 'full', $langcode = NULL);
-			$this->node_output = array(
-				'#type' => 'markup',
-				'#markup' => '<div id="myVtModal" class="reveal-modal xlarge">
-	  	<div class="close-reveal-modal close-modal">&#215;</div>
-	  	<div class="manage-vt-buttons"><a class="lead button radius small" href="../../node/'.$nid.'/edit">Edit</a>
-	  	<a class="lead button radius small" href="../../node/'.$nid.'/delete">Delete</a></div>
-	  	<div class="vt-tour-revealed">'.drupal_render($view_vt).'</div></div>');
-		}
+		$authenticate = self::authenticateAccount($user);
+		return $authenticate;
 	}
 
-
-	public static function redirectToDashboard($get, $uid){
-		if(!empty($get[1]) && $get[1] != 'password'){
-			if(empty($get[2])){
-				if(!empty($get[0]) && $get[0] == 'user'){
-					if(!empty($get[1]) && $get[1] == $uid){
-						$path = 'user/'.$uid.'/dashboard';
-						drupal_goto($path);
-					}
+	public static function authenticateAccount($user){
+		$uid = $user->uid;
+		$redirect = array();
+		$roles = array(3 => 'administrator', 4 => 'Customer', 9 => 'Account Manager', 11 => 'central station');
+		$authenticate = array_intersect_assoc($roles, $user->roles);
+		if(!empty($authenticate) && is_array($authenticate)){
+			foreach($authenticate as $role_num => $role_name){
+				switch($role_num){
+				case 3:
+					$path = '../../account/admin/'.$uid.'';
+					$redirect['path'] = $path;
+					$redirect['role'] = $role_num;
+					return $redirect;
+					break;
+				case 4:
+				case 9:
+					$path = '../../account/dashboard/'.$uid.'';
+					$redirect['path'] = $path;
+					$redirect['role'] = $role_num;
+					return $redirect;
+					break;
+				case 11:
+					$path = '../../account/central-station/'.$uid.'';
+					$redirect['path'] = $path;
+					$redirect['role'] = $role_num;
+					return $redirect;
+					break;
 				}
 			}
-		}elseif($get[0] == 'dashboard'){
-			//drupal_goto('user/'.$uid.'/dashboard');
+		}else{
+			$path = 'user';
+			$redirect['path'] = $path;
+			$redirect['role'] = 0;
+			return $redirect;
 		}
 	}
 
 
-
-}// end class
-
-
-
-
-function fr_user_dash_page_alter(&$page){
-
-	global $user;
-	$arg = arg();
-	//redirect users to there dashboard
-	if($arg[0] == 'user' || $arg[0] == 'dashboard'){
-		dashPage::redirectToDashboard($arg, $user->uid);
+	public function dashboardFieldset($title, $class = NULL, $collapsible = TRUE, $status = FALSE, $inner_status = FALSE, $iclass = NULL, $subclass = NULL, $weight = 100){
+		$subclass = $subclass ? 'account-static-section' : '';
+		$collapsible =  $collapsible == TRUE ? 'collapsible' : '';
+		$status = $status == FALSE ? 'closed' : 'static';
+		$inner_status = $inner_status == FALSE ? 'closed' : 'open';
+		return array(
+			'class' => $class,
+			'subclass' => $subclass,
+			'title' => $title,
+			'actions' => $collapsible,
+			'status' => $status,
+			'weight' => $weight,
+			'inner' => array(
+				'class' => $iclass,
+				'markup' => '',
+				'status' => $inner_status,
+			),
+		);
 	}
-	if(!empty($arg[1]) && $arg[1] == $user->uid && !empty($arg[2]) && $arg[2] == 'dashboard'){
-		$dash = new dashPage();
-		$dash->loadPage($page);
-		$user_pro = $dash->user_pro;
-		if($user_pro){
-			$dash->globalJsFiles();
-			$modals = TRUE;
-			$dash->profileInfo($modals);
-		}
-		if(!empty($dash->arg[0]) && !empty($dash->arg[2]) && $dash->arg[2] == 'dashboard' && $dash->arg[0] == 'user'){
-			$dash->addDashFiles();
-			$dash->hasHelpModals = TRUE;
-			$customer_variables = fr_user_dash_query_customer_variables($user->uid);
-			$joyride = isset($customer_variables['help']) ? $customer_variables['help'] : 0;
-			if($dash->user->access != 0){
-				if($joyride == 1){
-					$dash->joyRide = TRUE;
-				}
-				$dash->addDashFiles();
-			}
-		}
-		$access = array('administrator', 'editor', 'supervisor');
 
-		if(array_intersect($access, $dash->user_roles)){
-			$dash->custDataModal = TRUE;
-		}
-		if(isset($_GET['alarm'])){
-			$dash->requestedAlarm = TRUE;
-		}
-		if(isset($_GET['nid'])){
-			$dash->loadFileJs($_GET);
-		}
 
-		if(isset($_GET['download'])){
-			$nid = $_GET['nid'];
-			$dash->requestDownload($nid);
-		}
-		//add all the modals and js files to the page last
-		$dash->finishAllModals();
-		$page = $dash->page;
+	public function insertFieldsetMarkup($fieldset, $markup, $render = TRUE){
+		$markup = $render ? drupal_render($markup) : $markup;
+		$fieldset['inner']['markup'] = $markup;
+		$complete_fieldset = fr_groups_accordion_fieldset($fieldset);
+		return $complete_fieldset;
 	}
+
 }
 
 
 
 
+class FortifiedDashboardMarkup{
 
-
-
-class getRequest{
-
-	public function loadUser(){
-		global $user;
-		$this->user = $user->uid;
-	}
-
-	public function requestDownload($nid){
-
-		if(!empty($nid)){
-			$node = node_load($nid);
-			if(!empty($node)){
-
-				$this->customer = $node->field_vt_customer['und'][0]['target_id'];
-				if($this->customer == $this->user){
-					$get_files = explode(',', $node->field_vt_tour_files['und'][0]['upload_type']);
-					if(in_array('video', $get_files)){
-						$videos = $node->field_vt_tour_files['und'][0]['video_files'];
-						$get_videos = explode(',', $videos);
-						foreach($get_videos as $key => $video){
-							$link = $this->downloadVideo($video);
-							$this->status[] = $link;
-						}
-						return $link;
-					}
-				}
-			}
-		}
-	}
-
-	private function downloadVideo($video_fid){
-		$load_file = file_load($video_fid);
-		$file_name = $load_file->filename;
-		$stream = file_create_url($load_file->uri);
-		$options = array();
-		return $stream;
-	}
-
-	public function getView($uid, $type){
-		$results = $this->queryData($uid, $type);
-		$pageModal['html'] = drupal_render($results);
-		return $pageModal;
-	}
-
-
-	private function queryData($uid, $type){
-		$query = new EntityFieldQuery;
-		$query->entityCondition('entity_type', 'node')
-		->entityCondition('bundle', $type)
-		->fieldCondition('field_vt_customer', 'target_id', $uid, '=')
-		->propertyCondition('status', 1)
-		->propertyOrderBy('created', 'DESC')
-		->range(0, 10);
-		$result = $query->execute();
-		$data = array();
-		$headers = array(
-			'Title',
-			'ID',
-			'Date',
-			'Edit',
-			'Manage Files',
-			'Preview',
-		);
-		if(!empty($result['node'])){
-			$rows = array();
-			foreach($result['node'] as $key => $values){
-				$value = node_load($values->nid);
-				$rows[] = array(
-					'data' => array(
-						array(
-							'data' => '<a href="../../node/'.$value->nid.'">'.$value->title.'</a>',
-							'style' => array(''),
-							'class' => array(''),
-						),
-						array(
-							'data' => $value->nid,
-							'style' => array(''),
-							'class' => array(''),
-						),
-						array(
-							'data' => date('Y-m-d g:i a', $value->created),
-							'style' => array(''),
-							'class' => array(''),
-						),
-						array(
-							'data' => '<a href="../../node/'.$value->nid.'/edit">Edit</a>',
-							'style' => array(''),
-							'class' => array(''),
-						),
-						array(
-							'data' => '<a href="../../file-browse/file/'.$value->nid.'">Manage Files</a>',
-							'style' => array(''),
-							'class' => array(''),
-						),
-						array(
-							'data' => '<input type="button" class="preview-cust-data button radius small" value="Preview" cust-nid="'.$value->nid.'"/>',
-							'style' => array(''),
-							'class' => array(''),
-						),
-					),
-				);
-
-			}
-		}
-
-
-		$data['virtual_tours'] = array(
+	public function dashboardWrapper(){
+		return array(
 			'#type' => 'container',
 			'#attributes' => array(
-				'class' => array('cust-data-wrapper'),
+				'id' => 'account-admin-dash-wrapper',
 			),
 		);
-
-		$data['virtual_tours']['table'] = array(
-			'#theme' => 'table',
-			'#header' => $headers,
-			'#rows' => $rows,
-			'#empty' => t('Sorry No Data For This Customer'),
-			'#group' => 'wrapper',
-			'#attributes' => array(
-				'class' => array('cust-data-table', 'large-6', 'collumns'),
-			),
-		);
-		$data['virtual_tours']['preview'] = array(
-			'#type' => 'markup',
-			'#markup' => '',
-			'#prefix' => '<div id="preview-cust-data" class="large-12 columns">',
-			'#suffix' => '</div>',
-		);
-		return $data;
-
-	}
-
-
-
-
-	public function saveFiles($nid){
-		$load = node_load($nid);
-		$save = $load->field_vt_tour_saved_status;
-		if(empty($load->field_vt_tour_saved_status['und'][0]['value'])){
-			$load->field_vt_tour_saved_status['und'][0]['value'] = TRUE;
-		}else{
-			$load->field_vt_tour_saved_status['und'][0]['value'] = TRUE;
-		}
-		$done = node_save($load);
-		if($done){
-			$status = array('status' => 0);
-		}else{
-			$status = array('status' => 1);
-		}
-		return $status;
-	}
-	
-	public function loadCustProfile($uid){
-		$this->cust_profile = profile2_load_by_user($uid, $type_name = NULL);
-	}
-	
-	
-	public function loadCustDvrs($uid){
-		$dvrs = new FortifiedDvrs();
-		$get_dvrs = $dvrs->queryDvrs($uid);
-		$this->dvr_data = $get_dvrs;
-		return $get_dvrs;
 	}
 
 }
@@ -1405,8 +141,106 @@ class getRequest{
 
 
 
+
+
+/**
+ * @ Central Station dashboard menu callback function
+ *
+ */
+function fr_user_dash_admin($uid){
+	if(empty($uid)){
+		drupal_access_denied();
+		drupal_exit();
+	}
+	$content = array();
+	$authenticated = FALSE;
+	$dashboard = new FortifiedAdminAccounts($uid);
+	//authenticate the user
+	if(!empty($dashboard->user_role['role'])){
+		$authenticated = TRUE;
+	}
+	//if has access
+	if($authenticated){
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_modal_all_dvrs.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal_cust.js', array('type' => 'file', 'scope' => 'footer'));
+		$tools = new DashboardTools();
+		$content['wrapper'] = $dashboard->dashboardWrapper();
+		/*** SHORTCUST ***/
+		$tools_fieldset = $dashboard->dashboardFieldset('Shortcuts', NULL, FALSE, TRUE, TRUE, NULL, TRUE -100);
+		$tools_markup = $tools->basicTools();
+		$content['wrapper']['tools'] = $dashboard->insertFieldsetMarkup($tools_fieldset, $tools_markup);
+		/*** ACOUNT MANAGER VIEW ***/
+		$account_manager_fieldset = $dashboard->dashboardFieldset('Account Manager', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -99);
+		$account_manager_markup = views_embed_view('admin_users_dash', $display_id = 'block');
+		$content['wrapper']['account_manager'] = $dashboard->insertFieldsetMarkup($account_manager_fieldset, $account_manager_markup, FALSE);
+		/*** RECENT NOTIFICATIONS ***/
+		$recent_notifications_fieldset = $dashboard->dashboardFieldset('Recent Alarm Notifications', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -98);
+		$recent_notifications_markup = ip_datatel_load_alarm_notifications($dashboard->uid);
+		/*** TOURS TODAY ***/
+		$content['wrapper']['alarm_notifications'] = $dashboard->insertFieldsetMarkup($recent_notifications_fieldset, $recent_notifications_markup);
+		$tours_today_fieldset = $dashboard->dashboardFieldset('Tours Today', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -98);
+		$tours_today_markup = fr_times_load_customers();
+		$content['wrapper']['tours_today'] = $dashboard->insertFieldsetMarkup($tours_today_fieldset, $tours_today_markup);
+		/*** BUGS  ***/
+		$bugs_fieldset = $dashboard->dashboardFieldset('Pending Bugs', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -97);
+		$bugs_class = new FortifiedBugs();
+		$bugs_class->queryBugs();
+		$bugs_markup = $bugs_class->renderBugs();
+		$content['wrapper']['bugs'] = $dashboard->insertFieldsetMarkup($bugs_fieldset, $bugs_markup, FALSE);
+	}else{
+		drupal_access_denied();
+		drupal_exit();
+	}
+	return $content;
+
+}
+
+
+
+/**
+ * @ Admin dashboard menu callback function
+ *
+ */
+function fr_user_dash_central_station($uid){
+	if(empty($uid)){
+		drupal_access_denied();
+		drupal_exit();
+	}else{
+		$dashboard = new FortifiedAdminAccounts($uid);
+	}
+	return '';
+}
+
+
+
+
+
+/**
+ * @ Implemenets hook_menu()
+ *
+ */
 function fr_user_dash_menu() {
-	// Ajax Callback. Returns telephone number for current region.
+	// Central station dashboard
+	$items['account/central-station/%'] = array(
+		'page callback' => 'fr_user_dash_central_station',
+		'page arguments' => array(1),
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	//Admin Dashboards
+	$items['account/admin/%'] = array(
+		'page callback' => 'fr_user_dash_admin',
+		'page arguments' => array(1),
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	$items['account'] = array(
+		'page callback' => 'fr_user_dash_account_redirect',
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	// ajax callbacks
 	$items['fr_user_delete'] = array(
 		'access callback' => TRUE,
 		'page callback' => 'fr_user_dash_delete_callback',
@@ -1426,11 +260,6 @@ function fr_user_dash_menu() {
 		'access callback' => TRUE,
 		'page callback' => 'fr_user_dash_save_callback',
 		'type' => MENU_CALLBACK
-	);
-	$items['fr_user_dash_form'] = array(
-		'title' => '',
-		'page callback' => 'fr_user_dash_form_submit',
-		'page arguments' => array('fr_user_dash_form'),
 	);
 	$items['fr_preview_cust_data'] = array(
 		'access callback' => TRUE,
@@ -1461,26 +290,31 @@ function fr_user_dash_menu() {
 }
 
 
+
+
+/**
+ * @ Menu Callback for Bugs
+ *
+ */
 function fr_user_dash_delete_bug(){
 	$bug_id = !empty($_POST['data']) ? $_POST['data']: NULL;
 	if($bug_id){
 		$delete = db_delete('bugs')
-	  ->condition('bug_id', $bug_id, '=');
-	  $result = $delete->execute();
+		->condition('bug_id', $bug_id, '=');
+		$result = $delete->execute();
 	}
 	drupal_json_output(array('status' => 1));
 	drupal_exit();
 }
 
 
-function fr_user_dash_customer_dvrs(){
-	$uid = $_POST['uid'];
-	if(!empty($uid)){
-		
-	}
-}
 
 
+
+/**
+ * @ Menu Callback for Processing Previous Sessions
+ *
+ */
 function fr_processing_prev_sessions(){
 	$uid = $_POST['arguments']['data'];
 	$event_data = array();
@@ -1514,7 +348,7 @@ function fr_processing_prev_sessions(){
 			foreach($event_data as $event_date => $event_data){
 				$date = date('Y-m-d H:i:s', $event_date);
 				$obj = current($event_data);
-			  $table = array(
+				$table = array(
 					'#theme' => 'table',
 					'#header' => $headers,
 					'#rows' => $table_rows[$event_date] = IpdatatelProcessEvents::buildEventTable($event_data, NULL, FALSE),
@@ -1523,7 +357,7 @@ function fr_processing_prev_sessions(){
 						'class' => array('large-12', 'columns'),
 					),
 				);
-			  $rows[] = '<div class="session-wrapper"><div class="trigger-expand-session">'.$date.'</div><div class="expand-event-sessions">'.drupal_render($table).'</div></div>';
+				$rows[] = '<div class="session-wrapper"><div class="trigger-expand-session">'.$date.'</div><div class="expand-event-sessions">'.drupal_render($table).'</div></div>';
 			}
 			if(!empty($rows)){
 				if(count($rows > 10)){
@@ -1549,14 +383,20 @@ function fr_processing_prev_sessions(){
 
 
 
+
+/**
+ * @ Menu Callback for the admin tooltip dvr popup
+ *
+ */
 function fr_user_dash_tooltip_dvr(){
 	global $user;
+	$path = FortifiedAdminAccounts::authenticateAccount($user);
+	$path = !empty($path['path']) ? $path['path'] : '';
 	$admin_uid = $user->uid;
-	$uid = !empty($_POST['arguments']['data']) ? $_POST['arguments']['data'] : false;
-	if($uid){
-		$content = fr_user_dash_markup('Sorry, no Information was found for this customer', '');
-		$dvrs = new getRequest();
-		$cust_dvrs = $dvrs->loadCustDvrs($uid);
+	$account_id = !empty($_POST['arguments']['data']) ? $_POST['arguments']['data'] : false;
+	$content = fr_user_dash_markup('Sorry, no Information was found for this customer', '');
+	if($account_id){
+		$cust_dvrs = fr_tweaks_query_dvrs($account_id);
 		if(!empty($cust_dvrs)){
 			$content = array();
 			foreach($cust_dvrs as $nid => $data){
@@ -1567,35 +407,41 @@ function fr_user_dash_tooltip_dvr(){
 						'style' => array('border:1px solid #d0d0d0; padding:5px;'),
 					),
 				);
+				$options = array(
+					'attributes' => array(
+						'class' => array('reveal-cust-dvr'),
+					),
+				);
 				foreach($data as $field_name => $field_data){
 					switch($field_name){
-						case 'field_dvr_address':
-							if(!empty($field_data)){
-								$address = '<div class="admin-dash">Address:</div>';
-								$address .= $field_data['thoroughfare'].'<br/>';
-								$address .= $field_data['locality'].', '.$field_data['administrative_area'].' '.$field_data['postal_code'].'<br/>';
-								$content[$nid]['wrapper']['adress'] = fr_user_dash_markup($address, 'large-6 columns', 100);
-							}
-							break;
-						case 'dvr_title':
-							
-							break;
-						case 'dvr_tour_times':
-						
-							break;
-						case 'dvr_url':
-							$options = array(
-								'attributes' => array(
-									'class' => array('reveal-cust-dvr'),
-									'data-cust-uid' => $uid,
-									'data-cust-url' => !empty($field_data) ? $field_data : FALSE,
-								),
-							);
-							$link = l($data->dvr_title, 'http://'.$_SERVER['HTTP_HOST'].'/user/'.$admin_uid.'/dashboard#', $options);
-							$content[$nid]['wrapper']['dvr_url'] = fr_user_dash_markup($link, 'button next large-4 columns', -100);
-							break;
+					case 'field_dvr_address':
+						if(!empty($field_data)){
+							$address = '<div class="admin-dash">Address:</div>';
+							$address .= $field_data['thoroughfare'].'<br/>';
+							$address .= $field_data['locality'].', '.$field_data['administrative_area'].' '.$field_data['postal_code'].'<br/>';
+							$content[$nid]['wrapper']['adress'] = fr_user_dash_markup($address, 'large-6 columns', 100);
+						}
+						break;
+					case 'dvr_title':
+						$title = $field_data;
+						break;
+					case 'dvr_tour_times':
+
+						break;
+					case 'dvr_url':
+						$options['attributes']['data-dvr-url'] = 'http://'.$field_data;
+						break;
+					case 'field_dvr_master_username';
+						$options['attributes']['data-dvr-user'] = $field_data;
+						break;
+					case 'field_dvr_master_password';
+						$options['attributes']['data-dvr-pass'] = $field_data;
+						break;
 					}
 				}
+				$options['attributes']['data-dvr-function'] = 'OnLogin';
+				$link = l($title, 'http://'.$_SERVER['HTTP_HOST'].'/'.$path.'#', $options);
+				$content[$nid]['wrapper']['dvr_url'] = fr_user_dash_markup($link, 'button next large-4 columns', -100);
 			}
 		}
 	}
@@ -1605,6 +451,11 @@ function fr_user_dash_tooltip_dvr(){
 }
 
 
+
+/**
+ * @ Menu Callback for previwing a report in modal
+ *
+ */
 function fr_preview_cust_data(){
 	$nid = $_POST['cust_nid'];
 	$node = node_load($nid);
@@ -1617,6 +468,11 @@ function fr_preview_cust_data(){
 
 
 
+
+/**
+ * @ Menu Callback saving customers reports
+ *
+ */
 function fr_user_dash_save_callback(){
 	$nid = $_POST['files'];
 	$getRequest = new getRequest();
@@ -1628,6 +484,10 @@ function fr_user_dash_save_callback(){
 
 
 
+/**
+ * @ Menu Callback admin for previewing reports that belong to a customer
+ *
+ */
 function fr_user_dash_data_callback(){
 	$uid = $_POST['uids'];
 	$type = $_POST['types'];
@@ -1641,7 +501,10 @@ function fr_user_dash_data_callback(){
 
 
 
-
+/**
+ * @ Menu Callback for customers to download there reports
+ *
+ */
 function fr_user_dash_download_callback(){
 	$nid = $_POST['nids'];
 	$getRequest = new getRequest();
@@ -1657,8 +520,10 @@ function fr_user_dash_download_callback(){
 
 
 
-
-
+/**
+ * @ Menu Callback customers to delete a report
+ *
+ */
 function fr_user_dash_delete_callback() {
 	$nids = $_POST;
 	$i = 0;
@@ -1685,97 +550,10 @@ function fr_user_dash_delete_callback() {
 
 
 
-
-
-
-
-/*
-*
-* Genderate the menu
-*
-*/
-function _fr_menu_generate_list ($list_items, $type = FALSE) {
-
-	$list = array();
-	$options = array();
-	$link = !empty($list_item->path) ? $list_item->path : '';
-
-	$options['query'] = !empty($list_item['query']) ? $list_item['query'] : array('');
-	$options['html'] = TRUE;
-	if($type == 'menu'){
-		$list['buttons'] = fr_user_dash_fieldset('Settings', array('user-button-wrapper', 'large-12', 'columns'));
-	}
-	if($type == 'dvr'){
-		$list['cameras'] = fr_user_dash_fieldset('Camera Details', array('user-cameras-wrapper', 'large-12', 'columns'));
-	}
-
-	foreach ($list_items as $delta => $items) {
-		foreach($items as $key => $delt){
-			foreach($delt as $num => $list_item){
-				$type = $list_item->type;
-				switch($list_item->type){
-				case'cam':
-					$options = array(
-						'attributes' => array(
-							'class' => array('dvr-reveal-link'),
-						),
-					);
-					$list['cameras']['cam_'.$num] = fr_user_dash_fieldset($list_item->title, array('user-cameras-fieldset', 'large-6', 'columns', 'collapsible', 'collapsed'));
-					$data = '<div class="dvr-data"><label>Remote Login:</label></div><div class="'.$list_item->Class.'" '.$list_item->Attributes.'>'.l($list_item->title, $list_item->path, $options).'</div>';
-					$data .= !empty($list_item->tours) ? '<div class="dvr-data"><label>Virtual Tours:</label><div>'.$list_item->tours.'</div></div>' : '';
-					$data .= !empty($list_item->tour_times) ? '<div class="dvr-data"><label>Tour Times:</label><div>'.$list_item->tour_times.'</div></div>' : '';
-					$data .= !empty($list_item->tour_days) ? '<div class="dvr-data"><label>Tour Days:</label><div>'.$list_item->tour_days.'</div></div>' : '';
-					$list['cameras']['cam_'.$num]['camera'.$num] = fr_user_dash_markup($data, 'camera large-12 columns');
-					break;
-				case'alarm':
-					//$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="alarm" data-reveal='.$list_item->id.' >'.$list_item->title.'</a>';
-					break;
-				case'help':
-					//$path = '<a href="'.$list_item->path.'" class="user-dash-button" data-reveal-id="'.$list_item->id.'" >'.$list_item->title.'</a>';
-					break;
-				case'prefrences':
-					$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="prefrences" data-reveal-id="'.$list_item->id.'" >'.$list_item->title.'</a>';
-					$list['buttons']['prefrences'] = fr_user_dash_markup($path, 'button edit');
-					break;
-				case'account':
-					$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="account">'.$list_item->title.'</a>';
-					$list['buttons']['account'] = fr_user_dash_markup($path, 'button edit');
-					break;
-				}
-			}
-
-		}
-	}
-	return $list;
-}
-
-
-function fr_user_dash_fieldset($title, $class, $arg = NULL){
-	drupal_add_js('misc/collapse.js');
-	if($arg == 'container' || $title == 'container'){
-		return array(
-			'#type' => 'container',
-			'#attributes' => array(
-				'class' => $class,
-			),
-		);
-	}else{
-		return array(
-			'#type' => 'fieldset',
-			'#title' => t($title),
-			'#attributes' => array(
-				'class' => $class,
-			),
-			'#attached' => array(
-        'js' => array(
-          'misc/form.js',
-          'misc/collapse.js',
-        ),
-      ),
-		);
-	}
-}
-
+/**
+ * @ Generic markup function
+ *
+ */
 function fr_user_dash_markup($markup, $class, $weight = 100){
 	return array(
 		'#type' => 'markup',
@@ -1788,120 +566,10 @@ function fr_user_dash_markup($markup, $class, $weight = 100){
 
 
 
-
-function fr_user_dash_build_dash($type){
-
-	$dash = new dashPage;
-	$user = $dash->user;
-	$user_pro = $dash->user_pro;
-	$items = array();
-	$menu = NULL;
-	if($user_pro){
-		if($type == 'dvr'){
-			// load this users profile info
-			$modals = FALSE;
-			$dash->profileInfo($modals);
-			if(!empty($dash->service_type)){
-				$service_type = $dash->service_type;
-				foreach($service_type as $key => $types){
-					switch($types){
-					case'cam':
-						if(!empty($dash->dvr_data)){
-							foreach($dash->dvr_data as $nid => $data){
-								$items['cam'][$key][$nid] = new stdClass();
-								$items['cam'][$key][$nid]->type = 'cam';
-								$items['cam'][$key][$nid]->title = t($data->dvr_title);
-								$items['cam'][$key][$nid]->path = 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'#';
-								$items['cam'][$key][$nid]->tours = !empty($data->dvr_tour_times['tour_time_days']) ? 'Yes' : 'No';
-								$items['cam'][$key][$nid]->tour_times = !empty($data->dvr_tour_times['tour_time']) ? str_replace(',', ' - ', $data->dvr_tour_times['tour_time']):NULL;
-								$items['cam'][$key][$nid]->tour_days = !empty($data->dvr_tour_times['tour_time_days']) ? 'Everyday' : NULL;
-								$items['cam'][$key][$nid]->Class = 'button star dvr-modal';
-								$items['cam'][$key][$nid]->Attributes = 'data-dvr-nid="'.$nid.'"';
-								$items['cam'][$key][$nid]->id = 'myDvrModal';
-							}
-						}
-						break;
-					case'alarm':
-						/*$items['alarm'][$key][0] = new stdClass();
-		            $items['alarm'][$key][0]->type = 'alarm';
-		            $items['alarm'][$key][0]->title = t("My Virtual Alarm");
-		            $items['alarm'][$key][0]->path = ''.$_SERVER['REQUEST_URI'].'#';
-		            $items['alarm'][$key][0]->query = '';
-		            $items['alarm'][$key][0]->Class = array('button radius small revealMyAlarmModal');
-		            $items['alarm'][$key][0]->id = 'myAlarmModal';*/
-						break;
-					}
-				}
-			}
-		}
-		if($type == 'menu'){
-			$key = empty($key) ? 0 : $key;
-			$uid = $dash->user->uid;
-			$items['account'][$key][0] = new stdClass();
-			$items['account'][$key][0]->type = 'account';
-			$items['account'][$key][0]->title = t("Edit My Account");
-			$items['account'][$key][0]->path = 'edit';
-			$items['account'][$key][0]->query = '';
-			$items['account'][$key][0]->Class = array('button radius small');
-			$items['account'][$key][0]->id = '';
-	
-			$items['prefrences'][$key][0] = new stdClass();
-			$items['prefrences'][$key][0]->type = 'prefrences';
-			$items['prefrences'][$key][0]->title = t("My Prefrences");
-			$items['prefrences'][$key][0]->path = 'prefrences';
-			$items['prefrences'][$key][0]->query = '';
-			$items['prefrences'][$key][0]->Class = array('button radius small');
-			$items['prefrences'][$key][0]->id = 'myPrefrences';
-		}
-
-		if(!empty($items)){
-			$menu_list = _fr_menu_generate_list($items, $type);
-			$menu = array();
-			$menu['wrapper'] = array(
-				'#type' => 'container',
-				'#attributes' => array(
-					'id' => 'navigation',
-					'class' => array(''),
-				),
-			);
-			$menu['wrapper']['user_menu'] = $menu_list;
-		}
-		return $menu;
-	}
-}
-
-
-/*
- * Implements hook_views_api().
+/**
+ * @ Function for loading a customers alarm information
+ *
  */
-function fr_user_dash_views_api() {
-	return array(
-		'api' => 3,
-		'path' => drupal_get_path('module', 'fr_user_dash'),
-		'template path' => drupal_get_path('module', 'fr_user_dash'),
-	);
-}
-
-
-function fr_user_dash_views_pre_render(&$view){
-	switch($view->name){
-	case'tours_today':
-		$dupes = array();
-		$times = array();
-		if(!empty($view->result)){
-			foreach($view->result as $key => $value){
-				$pid = $value->pid;
-				$dupes[$pid] = $value;
-			}
-
-
-		}
-		break;
-	}
-	return $view;
-}
-
-
 function _load_account_information($uid){
 	$ipdatatel = new ipDatatel();
 	$account_info = $ipdatatel->loadAccountInformation($uid);
@@ -1910,251 +578,10 @@ function _load_account_information($uid){
 
 
 
-function fr_user_dash_form($node, &$form_state){
-	$customer = new dashPage();
-	$uid = $customer->user->uid;
-	$modals = FALSE;
-	$customer->profileInfo($modals);
-	$cameras = FALSE;
-	$alarm = FALSE;
-	$has_tours = FALSE;
-	$form_state['custom_vars'] = array();
-	$form_state['custom_vars']['has_tours'] = FALSE;
-	$form_state['custom_vars']['has_alarms'] = FALSE;
-	$form_state['custom_vars']['account_name'] = $customer->name;
-	$service_type = !empty($customer->service_type) ? $customer->service_type : NULL;
-	
-	$role = !in_array('administrator', $customer->user->roles) || !in_array('supervisor', $customer->user->roles) ? 'user' : 'admin';
-
-	$form_state['custom_vars']['role'] = $role;
-	if(!empty($service_type)){
-		foreach($service_type as $key => $value){
-			if($value == 'cam'){
-				$cameras = TRUE;
-				if($customer->has_tours){
-					$has_tours = TRUE;
-					$form_state['custom_vars']['has_tours'] = TRUE;
-				}
-			}
-			if($value == 'alarm'){
-				$alarm = TRUE;
-				$form_state['custom_vars']['has_alarms'] = TRUE;
-			}
-		}
-	}
-
-	$form['wrapper'] = array(
-		'#type' => 'vertical_tabs',
-	);
-	
-	$customer_variables = fr_user_dash_query_customer_variables($uid);
-	$data = isset($customer_variables) && !empty($customer_variables) ? $customer_variables : array();
-	if($role == 'admin'){
-		$default_proc_val = !empty($data['processing'][$customer->name]['status']) ? $data['processing'][$customer->name]['status'] : 0;
-		$form['alarm_wrapper'] = array(
-				'#type' => 'fieldset',
-				'#title' => t('Alarm Processing'),
-				'#collapsible' => FALSE,
-				'#group' => 'wrapper',
-				'#attributes' => array(
-					'class' => array('large-10', 'columns'),
-				),
-			);
-			$form['alarm_wrapper']['processing'] = array(
-					'#type' => 'radios',
-					'#title' => t('Alarm Processing'),
-					'#group' => 'wrapper',
-					'#default_value' => $default_proc_val,
-					'#options' => array(
-						1 => 'Turn Processing on',
-						0 => 'Turn Processing off',
-				),
-			);
-	}
-	
-	if($alarm && $role != 'admin'){
-		$form_state['custom_vars']['processing'] = array();
-		$set_permissions = array(
-			'permissions' => 'process_alarms',
-		);
-		$alarm_processing = ip_datatel_check_processing_permissions($uid, $role, $set_permissions);
-		if($alarm_processing){
-			$form['alarm_wrapper'] = array(
-				'#type' => 'fieldset',
-				'#title' => t('Alarm Processing'),
-				'#collapsible' => FALSE,
-				'#group' => 'wrapper',
-				'#attributes' => array(
-					'class' => array('large-10', 'columns'),
-				),
-			);
-			foreach($alarm_processing as $bat_name => $value){
-				if(!empty($data)){
-				$defaults_processing = isset($data['processing'][$bat_name]['status']) ?  $data['processing'][$bat_name]['status'] : 0;
-				}else{
-					$defaults_processing = 0;
-				}
-				if(!empty($form_state['values'])){
-					$value = $form_state['values'][$bat_name];
-					
-				}
-				$form_state['custom_vars']['processing'][$bat_name] = $bat_name;
-				$form['alarm_wrapper'][$bat_name] = array(
-					'#type' => 'radios',
-					'#title' => t($bat_name),
-					'#group' => 'wrapper',
-					'#default_value' => $defaults_processing,
-					'#options' => array(
-						1 => 'Turn Processing on',
-						0 => 'Turn Processing off',
-				),
-			);
-			}
-		}
-	}
-
-
-	// This is the field fieldset.
-	$form['help_joy'] = array(
-		'#type' => 'fieldset',
-		'#title' => t('Help'),
-		'#collapsible' => FALSE,
-		'#description' => t('Help'),
-		'#group' => 'wrapper',
-		'#attributes' => array(
-			'class' => array('large-10', 'columns'),
-		),
-	);
-
-	$form['uid'] = array(
-		'#type' => 'hidden',
-		'#title' => t('UID'),
-		'#default_value' => $uid,
-		'#group' => 'wrapper',
-	);
-	
-	$form['username'] = array(
-		'#type' => 'hidden',
-		'#title' => t('Username'),
-		'#default_value' => $customer->user->name,
-		'#group' => 'wrapper',
-	);
-
-	$defaults['help'] = isset($data['help']) ? $data['help'] : 1;
-	$form['help_joy']['help_on_off'] = array(
-		'#type' => 'radios',
-		'#title' => t('Helper'),
-		'#group' => 'wrapper',
-		'#default_value' => $defaults['help'],
-		'#options' => array(
-			1 => 'On',
-			0 => 'Off',
-		),
-	);
-
-	$form['email'] = array(
-		'#type' => 'fieldset',
-		'#title' => t('Email Prefrences'),
-		'#collapsible' => FALSE,
-		'#group' => 'wrapper',
-		'#attributes' => array(
-			'class' => array('large-10', 'columns'),
-		),
-	);
-	$form['email']['email_prefrences'] = array(
-		'#type' => 'radios',
-		'#title' => t('Emails'),
-		'#group' => 'wrapper',
-		'#options' => array(
-			'1' => 'Turn All Emails Off',
-		),
-	);
-	if($has_tours == TRUE){
-		$events = isset($data['tours']['events']) ? $data['tours']['events'] : 1;
-		$form['email']['events'] = array(
-			'#type' => 'radios',
-			'#title' => t('Events'),
-			'#group' => 'wrapper',
-			'#default_value' => $events,
-			'#options' => array(
-				'1' => 'Send an email for every Event Report done',
-				'0' => 'Do not send emails for Event Reports',
-			),
-		);
-		$incidents = isset( $data['tours']['incidents']) ?  $data['tours']['incidents'] : 1;
-		$form['email']['incidents'] = array(
-			'#type' => 'radios',
-			'#title' => t('Incident Reports'),
-			'#group' => 'wrapper',
-			'#default_value' => $incidents,
-			'#options' => array(
-				'1' => 'Send an email for every Incident Report done',
-				'0' => 'Do not send emails for Incident Reports',
-			),
-		);
-		$tours = isset( $data['tours']['tours']) ?  $data['tours']['tours'] : 1;
-		$form['email']['tours'] = array(
-			'#type' => 'radios',
-			'#title' => t('Virtual Tours'),
-			'#group' => 'wrapper',
-			'#default_value' => $tours,
-			'#options' => array(
-				'1' => 'Send an email for every Virtual Tour done',
-				'0' => 'Do not send emails for Virtual Tours',
-			),
-		);
-	}
-
-	$form['bug'] = array(
-		'#type' => 'fieldset',
-		'#title' => t('Submit A Bug'),
-		'#collapsible' => FALSE,
-		'#group' => 'wrapper',
-		'#attributes' => array(
-			'class' => array('large-10', 'columns'),
-			'id' => 'form-submit-bug',
-		),
-	);
-	$form['bug']['bug_text'] = array(
-		'#type' => 'textarea',
-		'#title' => t('Submit A Bug'),
-		'#rows' => '20',
-		'#cols' => 5,
-		'#group' => 'wrapper',
-		'#format' => 'plain_text',
-	);
-	
-	$form['bug']['save'][] = array(
-		'#name' => 'send_bug',
-		'#type' => 'submit',
-		'#value' => 'Submit',
-		'#ajax' => array(
-			'callback' => 'fr_user_dash_form_submit_bug',
-			'wrapper' => 'pref-form',// 'form-submit-bug',
-		),
-	);
-
-	$form['submit'][] = array(
-		'#name' => 'save_pref',
-		'#type' => 'submit',
-		'#value' => 'Save',
-		'#ajax' => array(
-			'callback' => 'fr_user_dash_form_submit_pefrences',
-			'wrapper' => 'pref-form',
-			'method' => 'replace',
-      'effect' => 'fade',
-		),
-	);
-	
-	$form['#prefix'] = '<div id="pref-form" class"pref-form">';
-	$form['#suffix'] = '</div>';
-
-
-	return $form;
-}
-
-
-
+/**
+ * @ Function quering processing sessions
+ *
+ */
 function fr_user_dash_query_processing_sessiosn($uid, $delta = 0){
 	$data = array();
 	$query = db_query('SELECT * FROM {customer_variables} WHERE uid = :uid AND delta != :delta', array(':uid' => $uid, ':delta' => $delta));
@@ -2166,107 +593,21 @@ function fr_user_dash_query_processing_sessiosn($uid, $delta = 0){
 
 
 
+
+/**
+ * @ Function for returning customers prefrences
+ *
+ */
 function fr_user_dash_query_customer_variables($uid, $delta = 0, $unserialize = TRUE){
 	$data = '';
 	$customer_variables = db_query('SELECT * FROM {customer_variables} WHERE uid = :uid AND delta = :delta', array(':uid' => $uid, ':delta' => $delta));
-			$record = $customer_variables->fetchObject();
-			if(!empty($record) && !empty($record->data)){
-				if($unserialize){
-					$data = unserialize($record->data);
-				}else{
-					$data = $record;
-				}
-			}
-			return $data;
-}
-
-
-
-
-function fr_user_dash_form_submit_bug($form, &$form_state){
-	$element = array();
-	$element['message']['#markup'] = "Your submission could not be processed at this time. Please contact us at info@fortifiedsecurityservices.com";
-	$username = !empty($form_state['values']['username']) ? $form_state['values']['username'] : NULL;
-	$uid = !empty($form_state['values']['uid']) ? $form_state['values']['uid'] : NULL;
-	$bug_text = !empty($form_state['values']['bug_text']) ? $form_state['values']['bug_text'] : NULL;
-	if(isset($username) && isset($uid)){
-		if(empty($bug_text)){
-			form_set_error('bug_text', 'Please provide a detailed description of the problem.');
-			$form_state['rebuild'] = TRUE;
-			return $form;
+	$record = $customer_variables->fetchObject();
+	if(!empty($record) && !empty($record->data)){
+		if($unserialize){
+			$data = unserialize($record->data);
 		}else{
-			$date = strtotime('now');
-			$rand = rand(2, 50);
-			$insert = db_insert('bugs')
-			->fields(array(
-				'uid' => $uid,
-				'username' => $username,
-				'bug_text' => $bug_text,
-				'date' => $date,
-				'bug_id' => $date.'-'.$rand,
-				))
-			->execute();
-			$element['message']['#markup'] = "Thanks, we will review and fix this bug as soon as possible!";
-			return $element;
-		}
-	}else{
-		return $element;
-	}
-}
-
-
-function fr_user_dash_form_submit_pefrences($form, &$form_state){
-	$element = array();
-	$uid = $form_state['values']['uid'];
-	$customer_variables = fr_user_dash_query_customer_variables($uid);
-	$variables = array();
-	$variables['help'] = $form_state['values']['help_on_off'];
-	$variables['account_name'] = $form_state['custom_vars']['account_name'];
-	if(!empty($form_state['custom_vars'])){
-		if(!empty($form_state['custom_vars']) && $form_state['custom_vars']['has_tours'] == TRUE){
-			$events = $form_state['values']['events'];
-			$tours = $form_state['values']['tours'];
-			$incidents = $form_state['values']['incidents'];
-			$variables['tours'] = array('events' => $events, 'tours' => $tours, 'incidents' => $incidents);
-		}
-		if(!empty($form_state['custom_vars']['processing'])){
-			foreach($form_state['custom_vars']['processing'] as $bat_name => $processing){
-				if(isset($form_state['values'][$bat_name])){
-					$value = $form_state['values'][$bat_name];
-					if($value == 1){
-					  $variables['processing'][$bat_name] = array('status' => $value, 'processing_on_time' => strtotime(date('Y-m-d G:i:s')));
-					}
-				}
-			}
+			$data = $record;
 		}
 	}
-		
-		if(isset($form_state['values']['processing'])){
-			$value = $form_state['values']['processing'];
-			if($value == 1){
-				$variables['processing'][$form_state['custom_vars']['account_name']] = array('status' => $value, 'processing_on_time' => strtotime(date('Y-m-d G:i:s')));	
-			}	
-		}
-	
-	if(!empty($customer_variables)){
-		$update_cust_variables = db_update('customer_variables')
-			->fields(array(
-			'data' => serialize($variables),	
-			))
-  ->condition('uid', $uid, '=')
-  ->condition('delta', 0, '=')
-  ->execute();
-  $element['message']['#markup'] = "Your preferences have been Updated.";
-	}else{
-		$insert = db_insert('customer_variables')
-			->fields(array(
-			'uid' => $uid,
-			'data' => serialize($variables),
-			'sessions' => '',
-			'delta' => 0,
-			))
-			->execute();
-		$element['message']['#markup'] = "Your preferences have been saved.";	
-	}
-	return $element;
+	return $data;
 }

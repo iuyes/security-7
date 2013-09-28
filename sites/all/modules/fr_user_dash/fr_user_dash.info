@@ -3,3 +3,5 @@ description = Admin and Customer Dashboard module.
 package = Fortified
 core = 7.x 
 files[] = handler/fr_user_dash_bugs.inc
+files[] = handler/fr_user_dash_ajax_req.inc
+files[] = handler/fr_user_dash_tools.inc

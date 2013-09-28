@@ -1,0 +1,5 @@
+name = Fortified DVR Systems
+description = This module hold all DVR functionality
+package = Fortified
+core = 7.x 
+files[] = fr_dvrs.module

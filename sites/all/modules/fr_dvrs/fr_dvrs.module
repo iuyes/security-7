@@ -1,0 +1,424 @@
+<?php
+
+
+
+/**
+ * Implements hook_menu()
+ *
+ */
+function fr_dvrs_menu() {
+	$items['ajax/dvr-reveal-modals'] = array(
+		'page callback' => 'fr_groups_dvr_modal_callback',
+		'type' => MENU_CALLBACK,
+		'access callback' => TRUE,
+	);
+	return $items;
+}
+
+
+
+/**
+ * ajax callback function to open all dvrs up in a modal
+ *
+ */
+function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
+	$items = array();
+	$content = array();
+
+	switch($arg){
+	case 'cms':
+		$wrapper_class = array('dvr-cms-wrapper', 'large-12', 'columns', 'reveal-modal', 'xlarge');
+		$close_modal = _fr_groups_markup('<div class="close-cms-modal close-modal">&#215;</div>', 'close-cms-modal large-12 columns', -101);
+		$list_width = '2';
+		$extra_class = 'cms';
+		$li_size = '12';
+		$iframe_size = '10';
+		$title = _fr_groups_markup('<h3>DVR SYSTEMS</h3>', 'dvr-cms-title', -100);
+		break;
+	case 'processing':
+		$wrapper_class = array('dvr-cms-wrapper', 'large-12', 'columns');
+		$close_modal = NULL;
+		$list_width = '12';
+		$extra_class = 'processing';
+		$li_size = '2';
+		$iframe_size = '12';
+		$title = _fr_groups_markup('<h3>ALARM PROCESSING</h3>', 'dvr-cms-title', -100);
+		break;
+	}
+	
+	$content['wrapper'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'class' => $wrapper_class,
+			'id' => 'dvr-'.$arg.'-modal',
+		),
+	);
+	$content['wrapper']['close_modal'] = $close_modal;
+	$content['wrapper']['title'] = $title;
+	if(!empty($dvrs)){
+		foreach($dvrs as $nid => $data){
+			if(!empty($data) && isset($data)){
+				$dvr = '<div ';
+				if(!empty($data->dvr_credentials)){
+					$user_name = !empty($data->dvr_credentials['dvr_username']) ? $data->dvr_credentials['dvr_username'] : NULL;
+					$password = !empty($data->dvr_credentials['dvr_password']) ? $data->dvr_credentials['dvr_password'] : NULL;
+					$dvr .= 'data-dvr-user="'.$user_name.'" data-dvr-password="'.$password.'" data-dvr-id="'.$nid.'" class="dvr-object large-'.$li_size.' columns" ';
+				}
+				if(!empty($data->dvr_url)){
+					$dvr .= 'data-dvr-url="'.$data->dvr_url.'">';
+				}
+				if(!empty($data->dvr_title)){
+					$dvr .= $data->dvr_title;
+				}
+				$dvr .= '</div>';
+				$items[] = $dvr;
+			}
+		}
+		$items[] = '<span class="close-dvr-object">Close DVR</span>';
+	}
+	$content['wrapper']['dvrs_list'] = array(
+		'#theme' => 'item_list',
+		'#items' => $items,
+		'#attributes' => array(
+			'class' => array('dvr-'.$extra_class.'-list', 'large-'.$list_width.'', 'columns'),
+		),
+		'#weight' => -99,
+	);
+	$content['wrapper']['dvr_object'] = fr_groups_markup('<div id="dvr-cms-inner"></div>', 'dvr-'.$extra_class.'-container large-'.$iframe_size.' columns', 'dvr-cms-container');
+	return drupal_render($content);
+}
+
+
+
+
+class FortifiedDvrSystems {
+
+	public $account_information;
+	public $account_profile;
+	public $dvr_permissions = array();
+	public $dvrData;
+
+	public function __construct($profile = NULL, $account_information = NULL){
+		//dpm($account_information);
+		//dpm($profile);
+		$this->account_information = $account_information;
+		$this->account_profile = $profile;
+	}
+
+
+	/**
+	 * Get all the dvrs attatched to Customer Group
+	 *
+	 */
+	public function queryDvrs($account_id = NULL){
+		$this->account_information->dvr_credentials = array();
+		$account_id = !empty($this->account_information->account_id) ? $this->account_information->account_id : $account_id;
+		$DvrData = FALSE;
+		$dvrContent = array();
+		$permissions = array();
+		$query = new EntityFieldQuery();
+		$query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', 'dvr')
+		->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
+		$result = $query->execute();
+		if(!empty($result['node'])){
+			$results = $result['node'];
+			$DvrData = array();
+			//get the dvr permissions for this account
+			$account_type = $this->account_information->account_type;
+			switch($account_type){
+			case 'customer':
+				$this->dvrPermissions();
+				$permissions = $this->dvr_permissions;
+				break;
+			}
+			foreach($results as $key => $data){
+				$this->account_information->dvr_information[$key] = $this->structureDvrData($data, $key, $permissions, $account_type);
+			}
+		}
+
+		return $this->account_information->dvr_information;
+	}
+
+
+
+
+	private function structureDvrData($data, $key, $permission = array(), $account_type){
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_fieldsets.js', array('type' => 'file', 'scope' => 'footer'));
+		$nodes = node_load($data->nid);
+		$auth = FALSE;
+		$DvrData = FALSE;
+		if($nodes && array_key_exists($nodes->title, $permission)){
+			if(in_array('view_dvrs', $permission[$nodes->title])){
+				$auth = TRUE;
+			}
+		}elseif($account_type == 'account_manager'){
+			$auth = TRUE;
+		}
+		if($auth){
+			$DvrData = new stdClass();
+			$DvrData->dvr_credentials = array();
+			foreach($nodes as $nid => $values){
+				//if(array_key_exists($nodes->title)
+				switch($nid){
+				case'title':
+					$DvrData->dvr_title = !empty($values) ? $values : NULL;
+					switch($this->account_information->account_type){
+					case 'account_manager':
+						$DvrData->attatched_users = $this->queryDvrUsers($values);
+						break;
+					}
+					break;
+				case'field_cust_dvr_url':
+					$DvrData->dvr_url = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					break;
+				case'field_cust_virtual_tours':
+					$DvrDate->dvr_tours = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					$this->account_information->has_tours[] = !empty($DvrDate->dvr_tours) ? TRUE : FALSE;
+					break;
+				case'field_fr_vt_tour_times':
+					$DvrData->dvr_tour_times = !empty($values['und'][0]) ? $values['und'][0] : NULL;
+					break;
+				case 'field_dvr_address':
+					$DvrData->field_dvr_address = !empty($values['und'][0]) ? $values['und'][0] : NULL;
+					break;
+				case 'field_dvr_master_password':
+					$DvrData->dvr_credentials['dvr_password'] = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					break;
+				case 'field_dvr_master_username':
+					$DvrData->dvr_credentials['dvr_username'] = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+					break;
+				}
+				switch($account_type){
+				case 'customer':
+					$DvrData->dvr_credentials['dvr_username'] = !empty($this->account_profile['customer']->field_customer_dvr_username['und'][0]['value']) ? $this->account_profile['customer']->field_customer_dvr_username['und'][0]['value'] : NULL;
+					$DvrData->dvr_credentials['dvr_password'] = !empty($this->account_profile['customer']->field_customer_dvr_password['und'][0]['value']) ? $this->account_profile['customer']->field_customer_dvr_password['und'][0]['value'] : NULL;
+					break;
+				}
+			}
+		}
+
+		return $DvrData;
+	}
+
+
+
+	/**
+	 * Get this users dvr permissions
+	 *
+	 */
+	public function dvrPermissions($arg = NULL, $permission = FALSE){
+		$profile = $this->account_profile;
+		$permissions = FALSE;
+		if($profile){
+			$profile = current($profile);
+			foreach($profile as $fields => $values){
+				switch($fields){
+				case 'field_customer_dvr_permissions':
+					if(!empty($values['und'][0]['value'])){
+						$this->dvr_permissions = unserialize($values['und'][0]['value']);
+						$dvr_permissions = unserialize($values['und'][0]['value']);
+						if( !empty($arg) && !empty($permission) && array_key_exists($arg, $dvr_permissions)){
+							if(in_array($permission, $dvr_permissions[$arg])){
+								$permissions = TRUE;
+							}
+						}
+					}
+					break;
+				}
+			}
+		}
+		return $permissions;
+	}
+
+
+	/**
+	 * build the dvr account section
+	 *
+	 */
+	public function queryDvrUsers($dvr_title){
+		$users = array();
+		$user_list = array();
+		if(!empty($this->account_information->account_users)){
+			$account_users = $this->account_information->account_users;
+			foreach($account_users as $pid => $data){
+				foreach($data as $fields => $values){
+					$uid = $data->uid;
+					$first_name = !empty($data->field_cust_name['und'][0]['value']) ? $data->field_cust_name['und'][0]['value'] : '';
+					$last_name = !empty($data->field_cust_last_name['und'][0]['value']) ? $data->field_cust_last_name['und'][0]['value'] : '';
+					switch($fields){
+					case 'field_customer_dvr_permissions':
+						if(!empty($values['und'][0]['value'])){
+							$dvr_permissions = unserialize($values['und'][0]['value']);
+							if(array_key_exists($dvr_title, $dvr_permissions)){
+								if(in_array('view_dvrs', $dvr_permissions[$dvr_title])){
+									$users[] = l($first_name.' '.$last_name, '../../user/'.$uid.'/edit/customer', array());
+								}
+							}
+						}
+
+						break;
+					}
+				}
+			}
+		}
+		return $users;
+	}
+
+
+
+
+	/**
+	 * build the dvr account section
+	 *
+	 */
+	public function buildDvrInformation($dvr_data, $tours){
+		$items = array();
+		$list = array();
+		if(!empty($dvr_data)){
+			foreach($dvr_data as $nid => $data){
+				if(!empty($data) && isset($data)){
+					$items[$nid] = new stdClass();
+					$items[$nid]->type = 'cam';
+					$items[$nid]->title = t($data->dvr_title);
+					$items[$nid]->path = 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'#';
+					$items[$nid]->tours = !empty($data->dvr_tour_times['tour_time_days']) ? 'Yes' : 'No';
+					$items[$nid]->tour_times = !empty($data->dvr_tour_times['tour_time']) ? str_replace(',', ' - ', $data->dvr_tour_times['tour_time']):NULL;
+					$items[$nid]->tour_days = !empty($data->dvr_tour_times['tour_time_days']) ? 'Everyday' : NULL;
+					$items[$nid]->Class = 'button star dvr-modal';
+					$items[$nid]->Attributes = 'data-dvr-nid="'.$nid.'"';
+					$items[$nid]->id = 'myDvrModal';
+					$items[$nid]->users = !empty($data->attatched_users) ? $data->attatched_users : NULL;
+				}
+			}
+			//cameras wrapper
+			$camera_fieldset = array(
+				'class' => 'user-dvr-wrapper',
+				'subclass' => 'account-static-section',
+				'title' => 'Camera System',
+				'actions' => '',
+				'status' => 'static',
+				'weight' => -98,
+				'inner' => array(
+					'class' => '',
+					'markup' => '',
+					'status' => 'open',
+				),
+			);
+
+			//cms section
+			$attributes = 'data-user-id="'.$this->account_information->uid.'"';
+			$cms_button = '<span class="cms-description">Access all of your DVRs inside one area with our</span><div '.$attributes.' class="dvr-cms-reveal button star">CMS MODAL</div>';
+			$class = 'user-dash-cms large-12 large-centered columns';
+			$camera_fieldset['inner']['markup'] = drupal_render(fr_groups_markup($cms_button, $class, NULL, $attributes));
+
+			//link options
+			$options = array(
+				'attributes' => array(
+					'class' => array('dvr-reveal-link'),
+				),
+			);
+
+			if(!empty($items)){
+				//structure dvrs into render arrays
+				foreach($items as $nid => $list_item){
+					$inner_cameras_markup = array(
+						'class' => 'user-dvr-fieldset',
+						'title' => $list_item->title,
+						'status' => 'closed',
+						'actions' => 'collapsible',
+						'weight' => -100,
+						'inner' => array(
+							'class' => 'fs-depth-2',
+							'markup' => '',
+							'status' => 'closed'
+						),
+					);
+					$data = '<div class="dvr-data"><label>Remote Login:</label></div><div class="'.$list_item->Class.'" '.$list_item->Attributes.'>'.l($list_item->title, $list_item->path, $options).'</div>';
+					$data .= !empty($list_item->tours) ? '<div class="dvr-data"><label>Virtual Tours:</label><div>'.$list_item->tours.'</div></div>' : '';
+					$data .= !empty($list_item->tour_times) ? '<div class="dvr-data"><label>Tour Times:</label><div>'.$list_item->tour_times.'</div></div>' : '';
+					$data .= !empty($list_item->tour_days) ? '<div class="dvr-data"><label>Tour Days:</label><div>'.$list_item->tour_days.'</div></div>' : '';
+					$inner_cameras_markup['inner']['markup'] = drupal_render(_fr_groups_markup($data, 'camera large-12 columns'));
+
+					if(!empty($list_item->users)){
+						$inner_cameras_users = array(
+							'class' => 'user-camera-users',
+							'title' => 'Attached users',
+							'status' => 'closed',
+							'actions' => 'collapsible',
+							'weight' => -100,
+							'inner' => array(
+								'class' => 'fs-depth-2',
+								'markup' => drupal_render(fr_dvrs_markup_item_list($list_item->users, array('large-12', 'columns', 'dvr-attatched-users'))),
+								'status' => 'closed',
+							),
+						);
+						$inner_cameras_markup['inner']['markup'] .= drupal_render(fr_groups_accordion_fieldset($inner_cameras_users));
+					}
+					$camera_fieldset['inner']['markup'] .= drupal_render(fr_groups_accordion_fieldset($inner_cameras_markup));
+				}
+			}
+			if($tours){
+				//dvr view reports
+				if(in_array(TRUE, $tours)){
+					$reports = array(
+						'class' => 'account-reports-wrapper',
+						'subclass' => 'account-static-section',
+						'title' => 'Fortified Reports',
+						'status' => 'static',
+						'actions' => '',
+						'weight' => -96,
+						'inner' => array(
+							'class' => '',
+							'markup' => drupal_render(_fr_groups_views_dvr_reports()),
+							'status' => 'open',
+						),
+					);
+					$list['reports'] = fr_groups_accordion_fieldset($reports);
+				}
+			}
+		}
+		$list['cameras'] = fr_groups_accordion_fieldset($camera_fieldset);
+		return $list;
+	}
+
+
+
+	public function buildDvrModal(){
+		$modals = array();
+		$account_information = $this->account_information;
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_modal_all_dvrs.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_reveal_cust_dvr.js', array('type' => 'file', 'scope' => 'footer'));
+		$dvr_auto_login = !empty($this->account_information->account_prefrences['dvr_auto_login']) ? $this->account_information->account_prefrences['dvr_auto_login'] : NULL;
+		foreach($this->account_information->dvr_information as $nid => $data){
+			if(!empty($data) && isset($data)){
+				//@TODO Create auto login prefrences and check for that here
+				$modal = '<div class="close-dvr-modal close-modal">&#215;</div><div class="myDvrModal_'.$nid.' cust-dvr-modal"></div>';
+				$dvr_user = !empty($dvr_auto_login) ? $data->dvr_credentials['dvr_username'] : '';
+				$dvr_pass = !empty($dvr_auto_login) ? $data->dvr_credentials['dvr_password'] : '';
+				$alt_data = 'data-dvr-url="'.$data->dvr_url.'" data-dvr-user="'.$dvr_user.'" data-dvr-pass="'.$dvr_pass.'" data-dvr-function="OnLogin"';
+				$class= 'reveal-modal xlarge';
+				$id = 'myDvrModal_'.$nid.'';
+				$modals[$nid] = fr_groups_markup($modal, $class, $id, $alt_data);
+			}
+		}
+		return $modals;
+	}
+
+}
+
+function fr_dvrs_markup_item_list($items, $class = NULL, $id = NULL){
+	return array(
+		'#theme' => 'item_list',
+		'#items' => $items,
+		'#attributes' => array(
+			'class' => $class,
+			'id' => $id,
+		),
+	);
+}
+
+function fr_dvrs_init_dvrs($profile, $account_information){
+	$dvrs = new FortifiedDvrSystems($profile, $account_information);
+	return $dvrs;
+}

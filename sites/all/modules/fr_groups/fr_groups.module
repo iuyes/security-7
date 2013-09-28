@@ -6,7 +6,7 @@
  *
  */
 function fr_groups_menu() {
-	$items['cust/%/dashboard'] = array(
+	$items['account/dashboard/%'] = array(
 		'page callback' => 'fr_groups_account_page',
 		'page arguments' => array(1),
 		'access callback' => TRUE,
@@ -14,6 +14,32 @@ function fr_groups_menu() {
 	);
 	return $items;
 }
+
+
+
+
+
+/**
+ * Provides a way to open all the customers dvrs in a modal
+ *
+ */
+function fr_groups_dvr_modal_callback(){
+	$uid = $_POST['uid'];
+	global $user;
+	if($user->uid == $uid){
+		$arg = $_POST['argument'];
+		$groups = new FortifiedGroups();
+		$dvrs = $groups->AccountDvrs->queryDvrs();
+		$return_data = array('html' => fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg));
+	}
+	drupal_json_output($return_data);
+	drupal_exit();
+}
+
+
+
+
+
 
 /**
  * Main class for all account and account page
@@ -27,98 +53,295 @@ class FortifiedGroups{
 	public $account_group;
 	public $account_id;
 	public $account_information;
-	public $has_dvr = FALSE;
-	public $has_tours = FALSE;
-	public $has_alarm = FALSE;
+	public $account_type = 'unkown';
+	public $uid;
+	public $AccountDvrs;
+	public $access = FALSE;
+	public $account_prefrences;
 
-	public function __construct($user){
+	public function __construct($user = NULL, $run = TRUE){
+		if(empty($user)){
+			global $user;
+		}
+		
 		$this->user = $user;
+		$this->uid = $user->uid;
 		$this->user_profile = profile2_load_by_user($user->uid, $type_name = NULL);
-		if(!empty($this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'])){
-			$this->account_id = $this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'];
-			$this->account_group = node_load($this->user_profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id']);
-			if($this->account_group){
-				$this->account_information = new stdClass();
-				foreach($this->account_group as $fields => $values){
-					switch($fields){
-					case'title':
-						$this->account_information->account_title = $values;
-						break;
-					case'field_cust_account_number':
-						$this->account_information->account_name = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
-						break;
-					case'field_cust_last_name':
-						$this->account_information->account_last_name = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
-						break;
-					case'field_cust_service_type':
-						$this->account_information->service_types = !empty($values['und']) ? $values['und'] : NULL;
-						if(!empty($values['und'])){
-							foreach($values['und'] as $delta => $value){
-								switch($value['value']){
-								case'cam':
-									$this->has_dvr = TRUE;
-									break;
-								case'alarm':
-									$this->has_alarm = TRUE;
-									break;
-								}
-							}
-						}
-						break;
-					case'field_cust_alarm_settings':
-						$this->account_information->alarm_settings = !empty($values['und']) ? $values['und'] : NULL;
-						break;
-					}
-				}
+		$this->account_type = $this->roleType($user);
+		if($run){
+			switch($this->account_type){
+			case'customer':
+				$this->loadProfile2Data('customer');
+				break;
+			case'account_manager':
+				$this->loadProfile2Data('account_manager');
+				$this->access = TRUE;
+				break;
+			}
+		}
+	}
+
+
+	public function returnRequestedFunction($functions){
+		foreach($functions as $function => $arguments){
+			switch($function){
+			case 'permissions':
+				return $this->buildCustomerPermissions();
+				break;
+			case '':
+
+				break;
+			case '':
+
+				break;
 			}
 		}
 	}
 
 
 	/**
-	 * Get all the dvrs attatched to Customer Group
+	 * Build the account information based on role / profile type
 	 *
 	 */
-	public function queryDvrs($account_id = NULL){
-		$account_id = !empty($this->account_id) ? $this->account_id : $account_id;
-		$DvrData = FALSE;
-		$query = new EntityFieldQuery;
-		$query->entityCondition('entity_type', 'node')
-		->entityCondition('bundle', 'dvr')
-		->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
-		$result = $query->execute();
-		if(!empty($result['node'])){
-			$results = $result['node'];
-			$DvrData = array();
-			foreach($results as $key => $data){
-				$nodes = node_load($data->nid);
-				$DvrData[$key] = new stdClass();
-				foreach($nodes as $nid => $values){
-					switch($nid){
-					case'title':
-						$DvrData[$key]->dvr_title = !empty($values) ? $values : NULL;
-						break;
-					case'field_cust_dvr_url':
-						$DvrData[$key]->dvr_url = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
-						break;
-					case'field_cust_virtual_tours':
-						$DvrDate[$key]->dvr_tours = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
-						$this->has_tours = !empty($DvrDate[$key]->dvr_tours) ? TRUE : FALSE;
-						break;
-					case'field_fr_vt_tour_times':
-						$DvrData[$key]->dvr_tour_times = !empty($values['und'][0]) ? $values['und'][0] : NULL;
-						break;
-					case 'field_dvr_address':
-						$DvrData[$key]->field_dvr_address = !empty($values['und'][0]) ? $values['und'][0] : NULL;
-						break;
+	private function loadProfile2Data($type){
+		if(!empty($this->user_profile[$type]->field_cust_alarm_group_owner['und'][0]['target_id'])){
+			$this->account_id = $this->user_profile[$type]->field_cust_alarm_group_owner['und'][0]['target_id'];
+			$this->account_group = node_load($this->user_profile[$type]->field_cust_alarm_group_owner['und'][0]['target_id']);
+			if($this->account_group){
+				$this->account_information = new stdClass();
+				//build all the account inforamtion
+				$test = $this->buildAccountInformation();
+				$this->account_information->account_prefrences = fr_user_dash_query_customer_variables($this->uid);
+				$this->account_information->account_id = $this->account_id;
+				$this->account_information->account_type = $this->account_type;
+				$this->account_information->uid = $this->uid;
+			}
+		}
+	}
+
+
+
+
+
+	/**
+	 * Build the account information from the master account node
+	 *
+	 */
+	private function buildAccountInformation(){
+		foreach($this->account_group as $fields => $values){
+			switch($fields){
+			case'title':
+				$this->account_information->account_title = $values;
+				break;
+			case'field_cust_account_number':
+				$this->account_information->account_name = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+				break;
+			case'field_cust_last_name':
+				$this->account_information->account_last_name = !empty($values['und'][0]['value']) ? $values['und'][0]['value'] : NULL;
+				break;
+			case'field_cust_service_type':
+				$this->account_information->service_types = !empty($values['und']) ? $values['und'] : NULL;
+				if(!empty($values['und'])){
+					foreach($values['und'] as $delta => $value){
+						switch($value['value']){
+						case'cam':
+							$this->account_information->has_dvr = TRUE;
+							$this->AccountDvrs = fr_dvrs_init_dvrs($this->user_profile, $this->account_information);
+							break;
+						case'alarm':
+							$set_permissions = array(
+								'permissions' => 'process_alarms',
+							);
+							$this->account_information->alarm_permissions = ip_datatel_check_processing_permissions($this->uid, 'user', $set_permissions);
+							$this->account_information->has_alarm = TRUE;
+							break;
+						}
 					}
+				}
+				break;
+			case'field_cust_alarm_settings':
+				$this->account_information->alarm_settings = !empty($values['und']) ? $values['und'] : NULL;
+				break;
+			}
+		}
+		// only for certain roles
+		switch($this->account_type){
+		case 'account_manager':
+			$this->account_information->account_users = $this->findAccountUsers();
+			break;
+
+		}
+		//default account menu
+		$this->account_information->account_menu = TRUE;
+	}
+
+	/**
+	 * Get all the users attatched to this account
+	 *
+	 */
+	public function findAccountUsers(){
+		$profiles = array();
+		$account_id = $this->account_id;
+		if($account_id){
+			$query = new EntityFieldQuery();
+			$query->entityCondition('entity_type', 'profile2')
+			->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
+			$results = $query->execute();
+			if(!empty($results['profile2'])){
+				$results = $results['profile2'];
+				foreach($results as $pid => $data){
+					$profiles[$pid] = profile2_load($pid);
 				}
 			}
 		}
-		$this->account_information->dvr_information = $DvrData;
-		return $DvrData;
+		return $profiles;
 	}
 
+
+
+	/**
+	 * Get all alarm system information
+	 *
+	 */
+	public function QueryAlarms(){
+		$this->account_information->alarm_information = ip_datatel_return_alarm_account_information($this->uid);
+	}
+
+
+
+	/**
+	 * Get all the dvrs attatched to Customer Group
+	 *
+	 */
+	public function roleType($user){
+		$role = '';
+		foreach($user->roles as $int => $role_name){
+			switch($int){
+			case 4:
+				$role = 'customer';
+				$this->account_permissions = $this->buildCustomerPermissions();
+				break;
+			case 9:
+				$role = 'account_manager';
+				break;
+			}
+		}
+		return $role;
+	}
+
+
+	/**
+	 * Get the customers Permissions
+	 *
+	 */
+	public function buildCustomerPermissions($profile = NULL){
+		$profile = !empty($this->user_profile) ? $this->user_profile : $profile;
+		$permissions = array();
+		if($this->account_type != 'account_manager'){
+			if(!empty($profile['customer']->field_customer_alarm_permissions['und'][0]['value'])){
+				$permissions['alarm'] = unserialize($profile['customer']->field_customer_alarm_permissions['und'][0]['value']);
+			}
+			if(!empty($profile['customer']->field_customer_dvr_permissions['und'][0]['value'])){
+				$permissions['dvr'] = unserialize($profile['customer']->field_customer_dvr_permissions['und'][0]['value']);
+			}
+		}else{
+			return TRUE;
+		}
+		return $permissions;
+	}
+
+}
+
+
+
+/**
+ * Get the users account type based on thier role
+ *
+ */
+function fr_groups_role_type($user){
+	$role = '';
+	foreach($user->roles as $int => $role_name){
+		switch($int){
+		case 4:
+			$role = 'customer';
+			break;
+		case 9:
+			$role = 'account_manager';
+			break;
+		}
+	}
+	return $role;
+}
+
+
+
+function fr_groups_accordion_fieldset($fieldset){
+	//fieldset render arrray
+	$custom_fieldset = array(
+		'#type' => 'markup',
+	);
+
+	//actions and status
+	$inner_status = !empty($fieldset['inner']['status']) ? $fieldset['inner']['status'] : 'open';
+	$title_status = !empty($fieldset['status']) ? $fieldset['status'] : '';
+	$actions = !empty($fieldset['actions']) ? $fieldset['actions'] : '';
+	$sub_class = !empty($fieldset['subclass']) ? $fieldset['subclass'] : '';
+
+	//wrapper prefix
+	$custom_fieldset['#prefix'] = '<div';
+	if(!empty($fieldset) && is_array($fieldset)){
+		foreach($fieldset as $attributes => $values){
+			switch($attributes){
+			case 'class':
+				$custom_fieldset['#prefix'] .= ' class="'.$values.'">';
+				break;
+			case 'title':
+				$custom_fieldset['#markup'] = '<div class="fs-accordion-fieldset '.$actions . $sub_class.'"><div class="fs-accordion-fieldset-title '.$title_status.'">'.$values.'</div>';
+				break;
+			case 'weight':
+				$custom_fieldset['#weight'] = $values;
+				break;
+			case 'inner':
+				if(!empty($values) && is_array($values)){
+					foreach($values as $attr => $val){
+						switch($attr){
+						case 'class':
+							$custom_fieldset['#markup'] .= '<div class="fs-accordion-fieldset-inner '.$inner_status.' '.$val.'">';
+							break;
+						case 'markup':
+							$custom_fieldset['#markup'] .= $val.'</div></div>';
+							break;
+						}
+					}
+				}
+				break;
+			}
+		}
+		$custom_fieldset['#suffix'] = '</div>';
+	}
+	return $custom_fieldset;
+}
+
+
+
+
+/**
+ * Functio for rendering fr groups custom fieldsets
+ *
+ */
+class FrGroupsRenderFieldsets{
+
+	public $fieldset;
+	public $fieldset_markup;
+	public $parent_fieldset;
+	public $childeren_fieldsets = array();
+
+	public function __construct($fieldset){
+		if(!empty($fieldset)){
+			$this->fieldset = $fieldset;
+			$this->formatFieldsetData($fieldset);
+		}
+	}
 }
 
 
@@ -129,32 +352,108 @@ class FortifiedGroups{
  *
  */
 function fr_groups_account_page($uid = NULL){
-	if($uid){
+	global $user;
+	if($user->uid){
 		$content = array();
 		//content wrapper
-		$content['wrapper'] = _fr_groups_fieldset('container', array('account-wrapper', 'large-12', 'columns'));
-		global $user;
-		$content['wrapper']['username'] = _fr_groups_markup('<h3 class="user-account-title">Welcome '.$user->name.'</h3>', 'large-12 columns', -101);
+		$content['wrapper'] = _fr_groups_fieldset('container', array('account-wrapper row'));
+		$content['wrapper']['username'] = _fr_groups_markup('<h3 class="user-account-title">Welcome '.$user->name.'</h3>', '', -101);
 		$groups = new FortifiedGroups($user);
 		if($groups->account_information){
-			$content['wrapper']['menu'] = _fr_groups_fieldset('Settings', array('user-button-wrapper', 'large-12', 'columns'), -100);
-			$content['wrapper']['menu']['items'] = fr_groups_build_dash_menu($user->uid);
 			$account_information = $groups->account_information;
-			if($groups->has_dvr){
-				$dvrs = $groups->queryDvrs();
-				if($dvrs){
-					$content['wrapper']['dvrs'] = _fr_groups_fieldset('container', array(), -97, 'account-dvr-section');
-					$content['wrapper']['dvrs']['items'] = fr_groups_build_dvrs($dvrs, $groups->has_tours);
+			foreach($account_information as $name => $data){
+				switch($name){
+				case 'account_menu':
+					$fieldset = array(
+						'class' => 'user-button-wrapper',
+						'subclass' => 'account-static-section',
+						'title' => 'Settings',
+						'actions' => '',
+						'status' => 'static',
+						'weight' => -100,
+						'inner' => array(
+							'status' => 'open',
+							'class' => 'user-dashboard-settings',
+							'markup' => drupal_render(fr_groups_build_dash_menu($user->uid, $groups->account_type)),
+						),
+					);
+					$content['wrapper']['account_settings'] = fr_groups_accordion_fieldset($fieldset);
+					break;
+				case 'has_dvr':
+					if($data){
+						$dvrs = $groups->AccountDvrs->queryDvrs();
+						if($dvrs){
+							$has_tours = !empty($account_information->has_tours) ? $account_information->has_tours : NULL;
+							$content['wrapper']['dvrs'] = $groups->AccountDvrs->buildDvrInformation($dvrs, $has_tours);
+						}
+					}
+					break;
+				case 'has_alarm':
+					if($data){
+						$processing_fieldset = '';
+						$alarm_markup = fr_groups_build_alarm($groups, $user->uid);
+
+						$fieldset = array(
+							'class' => 'account-alarm-section',
+							'subclass' => 'account-static-section',
+							'title' => 'Alarm System',
+							'actions' => '',
+							'status' => 'static',
+							'weight' => -97,
+							'inner' => array(
+								'status' => 'open',
+								'class' => 'alarm-section-inner',
+								'markup' => '',
+							),
+						);
+
+						if(!empty($account_information->alarm_permissions)){
+							$processing_fieldset = drupal_render(fr_groups_build_alarm_processing_fiedlset($user->uid));
+						}
+						$fieldset['inner']['markup'] = $processing_fieldset . $alarm_markup;
+						$content['wrapper']['alarm'] = fr_groups_accordion_fieldset($fieldset);
+
+					}
+					break;
 				}
 			}
-			if($groups->has_alarm){
-				$content['wrapper']['alarm'] = _fr_groups_fieldset('Alarm System', array('account-alarm-system-wrapper', 'large-12', 'columns'), -98);
-				$content['wrapper']['alarm']['items'] = fr_groups_build_alarm($groups, $user->uid);
-			}
 		}
-		dpm($groups);
+	}else{
+		drupal_access_denied();
+		drupal_exit();
 	}
 	return drupal_render($content);
+}
+
+
+
+
+function fr_groups_build_alarm_processing_fiedlset($uid){
+	$content = '';
+	$alarm_processing = ip_datatel_process_alarm_notifications($uid, 'user');
+	if(!empty($alarm_processing['content'])){
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_user_dash_processing_modal.js', array('type' => 'file', 'scope' => 'footer'));
+		$alarm_data = '<div class="alarm-processing-inner large-12 columns">';
+		$alarm_data .= $alarm_processing['content']['tools'];
+		$alarm_data .= $alarm_processing['content']['table'];
+		$alarm_data .= '</div>';
+		$fieldset = array(
+			'class' => 'account-alarm-processing-wrapper',
+			'subclass' => 'account-static-section',
+			'title' => 'Alarm Processing',
+			'actions' => '',
+			'status' => 'static',
+			'weight' => 100,
+			'inner' => array(
+				'status' => 'open',
+				'class' => 'alarm-processing-inner',
+				'markup' => $alarm_data,
+			),
+		);
+		$content = fr_groups_accordion_fieldset($fieldset);
+	}
+
+	return $content;
 }
 
 
@@ -165,7 +464,7 @@ function fr_groups_account_page($uid = NULL){
  *
  */
 function fr_groups_build_alarm($account_information, $uid){
-	$alarm = ip_datatel_load_alarm_profile($uid, 'all', '', '', TRUE);
+	$alarm = ip_datatel_load_alarm_profile($uid, 'all', NULL, NULL, TRUE);
 	return $alarm;
 }
 
@@ -175,10 +474,10 @@ function fr_groups_build_alarm($account_information, $uid){
  * build the dvr account section
  *
  */
-function fr_groups_build_dash_menu($uid){
+function fr_groups_build_dash_menu($uid, $account_type){
 	$list = array();
 	$items = array();
-	
+
 	$key = empty($key) ? 0 : $key;
 	$items['account'] = new stdClass();
 	$items['account']->type = 'account';
@@ -187,7 +486,7 @@ function fr_groups_build_dash_menu($uid){
 	$items['account']->query = '';
 	$items['account']->Class = array('button radius small');
 	$items['account']->id = '';
-	
+
 	$items['prefrences'] = new stdClass();
 	$items['prefrences']->type = 'prefrences';
 	$items['prefrences']->title = t("My Prefrences");
@@ -195,70 +494,71 @@ function fr_groups_build_dash_menu($uid){
 	$items['prefrences']->query = '';
 	$items['prefrences']->Class = array('button radius small');
 	$items['prefrences']->id = 'myPrefrences';
-	
+
+	switch($account_type){
+	case 'account_manager':
+		$items['account_manager'] = new stdClass();
+		$items['account_manager']->type = 'account_manager';
+		$items['account_manager']->title = t("Account Manager");
+		$items['account_manager']->path = '#';
+		$items['account_manager']->query = '';
+		$items['account_manager']->Class = '';
+		$items['account_manager']->id = 'AccountManager';
+		break;
+	case 'customer':
+
+		break;
+	}
 	foreach($items as $type => $list_item){
 		switch($type){
-			case'prefrences':
-			 	$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="prefrences" data-reveal-id="'.$list_item->id.'" >'.$list_item->title.'</a>';
-			 	$list['prefrences'] = _fr_groups_markup($path, 'button edit', -100);
-			 	break;
-			case'account':
-				$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="account">'.$list_item->title.'</a>';
-			 	$list['account'] = _fr_groups_markup($path, 'button edit', -100);
-			 	break;
+		case'prefrences':
+			$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="prefrences" data-reveal-id="'.$list_item->id.'" >'.$list_item->title.'</a>';
+			$list['prefrences'] = _fr_groups_markup($path, 'button edit', -100);
+			break;
+		case'account':
+			$path = '<a href="'.$list_item->path.'" class="user-dash-button" id="account">'.$list_item->title.'</a>';
+			$list['account'] = _fr_groups_markup($path, 'button edit', -100);
+			break;
+		case'account_manager':
+			//drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_account_manager.js', array('type' => 'file', 'scope' => 'footer'));
+			$path = '<a href="'.$list_item->path.'" class="'.$list_item->Class.'" data-reveal-id="'.$list_item->id.'">'.$list_item->title.'</a>';
+			$list['account_manager'] = _fr_groups_markup($path, 'button edit', -100);
+			break;
 		}
 	}
-	
+
 	return $list;
 }
-
 
 
 
 /**
- * build the dvr account section
+ * build the account manager modal
  *
  */
-function fr_groups_build_dvrs($dvr_data, $tours){
-
-	$list = array();
-	foreach($dvr_data as $nid => $data){
-		$items[$nid] = new stdClass();
-		$items[$nid]->type = 'cam';
-		$items[$nid]->title = t($data->dvr_title);
-		$items[$nid]->path = 'http://'.$_SERVER['HTTP_HOST'].''.$_SERVER['REQUEST_URI'].'#';
-		$items[$nid]->tours = !empty($data->dvr_tour_times['tour_time_days']) ? 'Yes' : 'No';
-		$items[$nid]->tour_times = !empty($data->dvr_tour_times['tour_time']) ? str_replace(',', ' - ', $data->dvr_tour_times['tour_time']):NULL;
-		$items[$nid]->tour_days = !empty($data->dvr_tour_times['tour_time_days']) ? 'Everyday' : NULL;
-		$items[$nid]->Class = 'button star dvr-modal';
-		$items[$nid]->Attributes = 'data-dvr-nid="'.$nid.'"';
-		$items[$nid]->id = 'myDvrModal';
-	}
-	//cameras wrapper
-	$list['cameras'] = _fr_groups_fieldset('Camera System', array('user-cameras-wrapper', 'large-12', 'columns'), -100);
-	
-	//link options
-	$options = array(
-		'attributes' => array(
-			'class' => array('dvr-reveal-link'),
+function fr_groups_account_manager_modal(){
+	$form = array();
+	$form['wrapper'] = array(
+		'#type' => 'vertical_tabs',
+	);
+	$form['add_user_wrapper'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Add User'),
+		'#collapsible' => FALSE,
+		'#group' => 'wrapper',
+		'#attributes' => array(
+			'class' => array('large-12', 'columns'),
 		),
 	);
-	//structure dvrs into render arrays
-	foreach($items as $nid => $list_item){
-		$list['cameras']['cam_'.$nid] = _fr_groups_fieldset($list_item->title, array('user-cameras-fieldset', 'large-6', 'columns', 'collapsible', 'collapsed'), NULL, NULL, NULL);
-		$data = '<div class="dvr-data"><label>Remote Login:</label></div><div class="'.$list_item->Class.'" '.$list_item->Attributes.'>'.l($list_item->title, $list_item->path, $options).'</div>';
-		$data .= !empty($list_item->tours) ? '<div class="dvr-data"><label>Virtual Tours:</label><div>'.$list_item->tours.'</div></div>' : '';
-		$data .= !empty($list_item->tour_times) ? '<div class="dvr-data"><label>Tour Times:</label><div>'.$list_item->tour_times.'</div></div>' : '';
-		$data .= !empty($list_item->tour_days) ? '<div class="dvr-data"><label>Tour Days:</label><div>'.$list_item->tour_days.'</div></div>' : '';
-		$list['cameras']['cam_'.$nid]['camera'.$nid] = _fr_groups_markup($data, 'camera large-12 columns');
-	}
-	//dvr view reports
-	if($tours){
-		$list['reports_wrapper'] = _fr_groups_fieldset('Fortified Reports', array('account-reports-wrapper', 'collapsible', 'large-12 columns'));
-		$list['reports_wrapper']['reports'] = _fr_groups_views_dvr_reports();
-	}
-	return $list;
+	$form['add_user_wrapper']['add_user'] = array(
+		'#type' => 'markup',
+		'#markup' => drupal_render(drupal_get_form('user_register_form')),
+	);
+	return drupal_render($form);
 }
+
+
+
 
 
 /**
@@ -266,7 +566,7 @@ function fr_groups_build_dvrs($dvr_data, $tours){
  *
  */
 function _fr_groups_views_dvr_reports(){
-	$views = array();
+	$fieldset = array();
 	$reports = array(
 		'Virtual Tours' => 'view_virtual_tours',
 		'Event Reports' => 'view_event_reports',
@@ -274,11 +574,21 @@ function _fr_groups_views_dvr_reports(){
 		'Saved Reports' => 'saved_virtual_tours',
 	);
 	foreach($reports as $type => $delta){
-		$data = '<div class="account-label">'.$type.'</div>';
-		$data .= '<div class="account-inner-content">'.views_embed_view($delta, $display_id = 'block').'</div>';
-		$views[$type] = _fr_groups_markup($data, 'account-dvr-view large-12 columns');
+		$set = array(
+			'class' => 'account-reports-wrapper',
+			'title' => $type,
+			'status' => '',
+			'actions' => 'collapsible',
+			'weight' => -100,
+			'inner' => array(
+				'class' => 'fs-depth-2',
+				'markup' => '<div class="account-inner-content">'.views_embed_view($delta, $display_id = 'block').'</div>',
+				'status' => 'closed',
+			),
+		);
+		$fieldset[] = fr_groups_accordion_fieldset($set);
 	}
-	return $views;
+	return $fieldset;
 }
 
 
@@ -324,11 +634,11 @@ function _fr_groups_fieldset($title, $class, $weight = 100, $id = NULL){
 				'id' => $id,
 			),
 			'#attached' => array(
-        'js' => array(
-          'misc/form.js',
-          'misc/collapse.js',
-        ),
-      ),
+				'js' => array(
+					'misc/form.js',
+					'misc/collapse.js',
+				),
+			),
 		);
 	}
 }
@@ -359,5 +669,549 @@ function fr_groups_views_pre_render(&$view){
 			}
 		}
 		break;
+		/*
+	case'admin_users_dash':
+		dpm($view);
+		break;
+*/
+	case'view_virtual_tours':
+	case'view_inc_reports':
+	case'view_event_reports':
+		if(!empty($view->result)){
+			if($view->name == 'view_virtual_tours'){
+				$permission = 'view_tours';
+			}
+			if($view->name == 'view_inc_reports'){
+				$permission = 'view_reports';
+			}
+			if($view->name == 'view_event_reports'){
+				$permission = 'view_events';
+			}
+
+			$arguments = array('permissions' => NULL);
+			$groups = new FortifiedGroups(NULL, FALSE);
+			if($groups->account_type != 'account_manager'){
+				$permissions = $groups->returnRequestedFunction($arguments);
+				$dvrSystem = new FortifiedDvrSystems($groups->user_profile, NULL);
+				foreach($view->result as $delta => $values){
+					$title = $values->node_title;
+					$dvrPermissions = $dvrSystem->dvrPermissions($title, $permission);
+					if(!$dvrPermissions){
+						unset($view->result[$delta]);
+					}
+				}
+			}
+		}
+		break;
 	}
+}
+
+function fr_groups_markup($markup, $class, $id, $alt_data){
+	return array(
+		'#type' => 'markup',
+		'#markup' => $markup,
+		'#prefix' => '<div '.$alt_data.' id="'.$id.'" class="'.$class.'">',
+		'#suffix' => '</div>',
+	);
+}
+
+
+
+function fr_groups_page_alter(&$page){
+	global $user;
+	$uid = $user->uid;
+	$arg = arg();
+
+	//dpm($_SERVER);
+	//main redirect functionality to direct the user to there dashboard.
+	/*
+if(!empty($arg[0]) && $arg[0] != 'account' && $arg[0] == 'user' && !empty($arg[1]) && $arg[1] == $uid){
+		$admins = array(3 => 'administrator', 9 => 'central station');
+		$authenticate = array_intersect_assoc($admins, $user->roles);
+		if(!empty($authenticate) && is_array($authenticate)){
+			foreach($authenticate as $role_num => $role_name){
+				switch($role_num){
+					case 3:
+						$path = 'account/admin/'.$uid.'';
+						drupal_goto($path);
+						break;
+					case 9:
+						$path = 'account/central-station/'.$uid.'';
+						drupal_goto($path);
+						break;
+				}
+			}
+		}else{
+			$path = 'account/dashboard/'.$uid.'';
+			drupal_goto($path);
+		}
+	}
+*/
+
+	if(!empty($arg[0]) && $arg[0] == 'account' && !empty($arg[1]) && $arg[1] == 'dashboard' && !empty($arg[2]) && $arg[2] == $uid){
+		$groups = new FortifiedGroups($user);
+		if($groups->account_type){
+			switch($groups->account_type){
+			case'account_manager':
+				$edit_users_form = drupal_render(drupal_get_form('fr_groups_edit_user_form'));
+				$add_users_form = drupal_render(drupal_get_form('user_register_form'));
+				$forms = array();
+				$forms['add_users_fieldset'] = _fr_groups_fieldset('Add Users', array('account-wrapper', 'large-12', 'columns', 'collapsible'));
+				$forms['edit_users_fieldset'] = _fr_groups_fieldset('Edit Users', array('account-wrapper', 'large-12', 'columns', 'collapsible', 'collapsed'));
+				$forms['add_users_fieldset']['add_users'] = _fr_groups_markup($add_users_form, '', 100);
+				$forms['edit_users_fieldset']['edit_users'] = _fr_groups_markup($edit_users_form, '', 100);
+				$page['modal']['account_manager'] = array(
+					'#type' => 'markup',
+					'#markup' => '<div>'.drupal_render($forms).'<div class="close-reveal-modal close-modal">&#215;</div></div>',
+					'#prefix' => '<div id="AccountManager" class="reveal-modal xlarge">',
+					'#suffix' => '</div>',
+				);
+				break;
+			}
+		}
+		if($groups->account_information->has_dvr){
+			$groups->AccountDvrs->queryDvrs();
+			if(!empty($groups->account_information->dvr_information)){
+				$page['modal']['dvrs'] = $groups->AccountDvrs->buildDvrModal();
+			}
+		}
+		if($groups->account_information){
+			//drupal_render(drupal_get_form('fr_groups_prefrences_form'))
+			$modal = '<div class="close-reveal-modal close-modal">&#215;</div><br/><div>'.drupal_render(drupal_get_form('fr_groups_prefrences_form')).'</div>';
+			$id = 'myPrefrences';
+			$class = 'reveal-modal xlarge';
+			$page['modal']['prefrences'] = fr_groups_markup($modal, $class, $id, NULL);
+		}
+		if(!empty($groups->account_information->alarm_permissions)){
+			$page['modal']['alarm_processing'] = array(
+				'#type' => 'markup',
+				'#markup' => '<div class="close-modal close-processing-modal">&#215;</div><div class="processing-modal"></div>',
+				'#prefix' => '<div id="processingModal" data-processing-id="'.$groups->uid.'" class="reveal-modal xlarge">',
+				'#suffix' => '</div>',
+			);
+		}
+	}
+}
+
+
+
+
+
+function fr_groups_edit_user_form($node, &$form_state){
+	global $user;
+	$account_info = fr_tweaks_load_user_profile2_account_id($user, $user->roles);
+
+	$form['wrapper'] = array(
+		'#type' => 'verticle_tabs',
+	);
+
+	$form['wrapper']['attatched_users'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Attatched Users'),
+		'#collapsible' => TRUE,
+		'#group' => 'wrapper',
+		'#attributes' => array(
+			'class' => array('large-12', 'columns'),
+		),
+	);
+
+	if(!empty($account_info['account_node']) && !empty($account_info['account_node_id'])){
+		$content = array();
+		$query = new EntityFieldQuery();
+		$query->entityCondition('entity_type', 'profile2')
+		->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_info['account_node_id'], '=');
+		$results = $query->execute();
+		if(!empty($results['profile2'])){
+			$results = $results['profile2'];
+			$headers = array(
+				'First Name',
+				'Last Name',
+				'Joined',
+				'Edit'
+			);
+			$rows = array();
+			foreach($results as $pid => $data){
+				$profile = profile2_load($pid);
+				$uid = $profile->uid;
+				$rows[] = array(
+					'data' => array(
+						array(
+							'data' => !empty($profile->field_cust_name['und'][0]['value']) ? $profile->field_cust_name['und'][0]['value'] : '',
+						),
+						array(
+							'data' => !empty($profile->field_cust_last_name['und'][0]['value']) ? $profile->field_cust_last_name['und'][0]['value'] : '',
+						),
+						array(
+							'data' => !empty($profile->created) ? date('Y-m-d h:i:s', $profile->created) : '',
+						),
+						array(
+							'data' => l('Edit User', '../../user/'.$uid.'/edit/customer'),
+						),
+					),
+				);
+			}
+		}
+		$form['wrapper']['attatched_users']['users'] = array(
+			'#theme' => 'table',
+			'#rows' => $rows,
+			'#header' => $headers,
+			'#group' => 'wrapper',
+			'#attributes' => array(
+				'class' => array('large-12', 'columns'),
+			),
+		);
+	}
+
+
+	return $form;
+}
+
+
+
+
+function fr_groups_prefrences_form($node, &$form_state){
+	$customer = new FortifiedGroups();
+	$uid = $customer->user->uid;
+	$modals = FALSE;
+	$cameras = FALSE;
+	$alarm = FALSE;
+	$has_tours = FALSE;
+	$form_state['custom_vars'] = array();
+	$form_state['custom_vars']['has_tours'] = FALSE;
+	$form_state['custom_vars']['has_alarms'] = FALSE;
+	$form_state['custom_vars']['account_name'] = $customer->user->name;
+	$service_type = !empty($customer->account_information) ? $customer->account_information : NULL;
+
+	$role = !in_array('administrator', $customer->user->roles) || !in_array('supervisor', $customer->user->roles) ? 'user' : 'admin';
+
+	$form_state['custom_vars']['role'] = $role;
+	if(!empty($service_type)){
+		foreach($service_type as $key => $value){
+			if($value == 'has_alarm' && $value){
+				$alarm = TRUE;
+				$form_state['custom_vars']['has_alarms'] = TRUE;
+			}
+		}
+	}
+
+	$form['wrapper'] = array(
+		'#type' => 'vertical_tabs',
+	);
+
+	$customer_variables = $customer->account_information->account_prefrences;
+	$data = isset($customer_variables) && !empty($customer_variables) ? $customer_variables : array();
+
+	/**********Processing Section *************/
+
+	if($role == 'admin'){
+		$default_proc_val = !empty($data['processing'][$customer->name]['status']) ? $data['processing'][$customer->name]['status'] : 0;
+		$form['alarm_wrapper'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('Alarm Processing'),
+			'#collapsible' => TRUE,
+			'#group' => 'wrapper',
+			'#attributes' => array(
+				'class' => array('large-10', 'columns'),
+			),
+		);
+		$form['alarm_wrapper']['processing'] = array(
+			'#type' => 'radios',
+			'#title' => t('Alarm Processing'),
+			'#group' => 'wrapper',
+			'#default_value' => $default_proc_val,
+			'#options' => array(
+				1 => 'Processing On',
+				0 => 'Processing off',
+			),
+		);
+	}
+
+
+	if($alarm && $role != 'admin'){
+		$form_state['custom_vars']['processing'] = array();
+		$set_permissions = array(
+			'permissions' => 'process_alarms',
+		);
+		$alarm_processing = !empty($customer->account_information->alarm_permissions) ? $customer->account_information->alarm_permissions : NULL;
+		if($alarm_processing){
+			$form['alarm_wrapper'] = array(
+				'#type' => 'fieldset',
+				'#title' => t('Alarm Processing'),
+				'#collapsible' => FALSE,
+				'#group' => 'wrapper',
+				'#attributes' => array(
+					'class' => array('large-10', 'columns'),
+				),
+			);
+			foreach($alarm_processing as $bat_name => $value){
+				if(!empty($customer->account_permissions['alarm'][$bat_name]) && array_key_exists('process_alarm', $customer->account_permissions['alarm'][$bat_name]) || $customer->access == TRUE){
+					if(!empty($data)){
+						$defaults_processing = isset($data['processing'][$bat_name]['status']) ?  $data['processing'][$bat_name]['status'] : 0;
+					}else{
+						$defaults_processing = 0;
+					}
+					if(!empty($form_state['values'])){
+						$value = $form_state['values'][$bat_name];
+					}
+					$form_state['custom_vars']['processing'][$bat_name] = $bat_name;
+					$form['alarm_wrapper'][$bat_name] = array(
+						'#type' => 'radios',
+						'#title' => t($bat_name),
+						'#group' => 'wrapper',
+						'#default_value' => $defaults_processing,
+						'#options' => array(
+							1 => 'Turn Processing on',
+							0 => 'Turn Processing off',
+						),
+					);
+				}
+			}
+		}
+	}
+
+	/**********Processing Section *************/
+
+
+	// This is the field fieldset.
+	$form['help_joy'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Help'),
+		'#collapsible' => FALSE,
+		'#description' => t('Help'),
+		'#group' => 'wrapper',
+		'#attributes' => array(
+			'class' => array('large-10', 'columns'),
+		),
+	);
+	// user uid
+	$form['uid'] = array(
+		'#type' => 'hidden',
+		'#title' => t('UID'),
+		'#default_value' => $uid,
+		'#group' => 'wrapper',
+	);
+	//user username
+	$form['username'] = array(
+		'#type' => 'hidden',
+		'#title' => t('Username'),
+		'#default_value' => $customer->user->name,
+		'#group' => 'wrapper',
+	);
+
+	//HELPER
+	$defaults['help'] = isset($data['help']) ? $data['help'] : 1;
+	$form['help_joy']['help_on_off'] = array(
+		'#type' => 'radios',
+		'#title' => t('Helper'),
+		'#group' => 'wrapper',
+		'#default_value' => $defaults['help'],
+		'#options' => array(
+			1 => 'On',
+			0 => 'Off',
+		),
+	);
+	//email settings
+	$form['email'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Email Prefrences'),
+		'#collapsible' => FALSE,
+		'#group' => 'wrapper',
+		'#attributes' => array(
+			'class' => array('large-10', 'columns'),
+		),
+	);
+	//email settings
+	$form['email']['email_prefrences'] = array(
+		'#type' => 'radios',
+		'#title' => t('Emails'),
+		'#group' => 'wrapper',
+		'#options' => array(
+			'1' => 'Turn All Emails Off',
+		),
+	);
+	//dvr settings
+	/*if($has_tours == TRUE){
+		$events = isset($data['tours']['events']) ? $data['tours']['events'] : 1;
+		$form['email']['events'] = array(
+			'#type' => 'radios',
+			'#title' => t('Events'),
+			'#group' => 'wrapper',
+			'#default_value' => $events,
+			'#options' => array(
+				'1' => 'Send an email for every Event Report done',
+				'0' => 'Do not send emails for Event Reports',
+			),
+		);
+		$incidents = isset( $data['tours']['incidents']) ?  $data['tours']['incidents'] : 1;
+		$form['email']['incidents'] = array(
+			'#type' => 'radios',
+			'#title' => t('Incident Reports'),
+			'#group' => 'wrapper',
+			'#default_value' => $incidents,
+			'#options' => array(
+				'1' => 'Send an email for every Incident Report done',
+				'0' => 'Do not send emails for Incident Reports',
+			),
+		);
+		$tours = isset( $data['tours']['tours']) ?  $data['tours']['tours'] : 1;
+		$form['email']['tours'] = array(
+			'#type' => 'radios',
+			'#title' => t('Virtual Tours'),
+			'#group' => 'wrapper',
+			'#default_value' => $tours,
+			'#options' => array(
+				'1' => 'Send an email for every Virtual Tour done',
+				'0' => 'Do not send emails for Virtual Tours',
+			),
+		);
+	}*/
+	/**********BUG Section *************/
+	$form['bug'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Submit A Bug'),
+		'#collapsible' => FALSE,
+		'#group' => 'wrapper',
+		'#attributes' => array(
+			'class' => array('large-10', 'columns'),
+			'id' => 'form-submit-bug',
+		),
+	);
+	$form['bug']['bug_text'] = array(
+		'#type' => 'textarea',
+		'#title' => t('Submit A Bug'),
+		'#rows' => '20',
+		'#cols' => 5,
+		'#group' => 'wrapper',
+		'#format' => 'plain_text',
+	);
+
+	$form['bug']['save'][] = array(
+		'#name' => 'send_bug',
+		'#type' => 'submit',
+		'#value' => 'Submit',
+		'#ajax' => array(
+			'callback' => 'fr_user_dash_form_submit_bug',
+			'wrapper' => 'pref-form',// 'form-submit-bug',
+		),
+	);
+	/**********BUG Section *************/
+
+
+
+	/**********DVR SETTINGS Section *************/
+
+	$form['dvr'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('DVR Settings'),
+		'#collapsible' => FALSE,
+		'#group' => 'wrapper',
+	);
+
+	$form['dvr']['dvr_auto_login'] = array(
+		'#type' => 'radios',
+		'#title' => t('DVR Auto Login'),
+		'#default_value' => !empty($data['dvr_auto_login']) ? $data['dvr_auto_login'] : '0',
+		'#group' => 'wrapper',
+		'#options' => array(
+			'0' => 'Do not automatically login to my DVRS when opened.',
+			'1' => 'Automatically login to my DVRS when opened.',
+		),
+	);
+
+
+
+
+
+	/**********DVR SETTINGS Section *************/
+
+	$form['submit'][] = array(
+		'#name' => 'save_pref',
+		'#type' => 'submit',
+		'#value' => 'Save',
+		'#ajax' => array(
+			'callback' => 'fr_groups_form_submit_pefrences',
+			'wrapper' => 'pref-form',
+			'method' => 'replace',
+			'effect' => 'fade',
+		),
+	);
+
+	$form['#prefix'] = '<div id="pref-form" class"pref-form">';
+	$form['#suffix'] = '</div>';
+
+
+	return $form;
+}
+
+
+
+
+function fr_groups_form_submit_pefrences($form, &$form_state){
+	$element = array();
+	$uid = $form_state['values']['uid'];
+	$customer_variables = fr_user_dash_query_customer_variables($uid);
+	$variables = array();
+	$variables['help'] = $form_state['values']['help_on_off'];
+
+
+
+	/**********DVR SETTINGS Section *************/
+	$variables['dvr_auto_login'] = !empty($form_state['values']['dvr_auto_login']) ? $form_state['values']['dvr_auto_login'] : '0';
+	/**********DVR SETTINGS Section *************/
+
+
+
+
+	/**********Processing Section *************/
+	$variables['account_name'] = $form_state['custom_vars']['account_name'];
+	if(!empty($form_state['custom_vars'])){
+		if(!empty($form_state['custom_vars']) && $form_state['custom_vars']['has_tours'] == TRUE){
+			$events = $form_state['values']['events'];
+			$tours = $form_state['values']['tours'];
+			$incidents = $form_state['values']['incidents'];
+			$variables['tours'] = array('events' => $events, 'tours' => $tours, 'incidents' => $incidents);
+		}
+		if(!empty($form_state['custom_vars']['processing'])){
+			foreach($form_state['custom_vars']['processing'] as $bat_name => $processing){
+				if(isset($form_state['values'][$bat_name])){
+					$value = $form_state['values'][$bat_name];
+					if($value == 1){
+						$variables['processing'][$bat_name] = array('status' => $value, 'processing_on_time' => strtotime(date('Y-m-d G:i:s')));
+					}
+				}
+			}
+		}
+	}
+	if(isset($form_state['values']['processing'])){
+		$value = $form_state['values']['processing'];
+		if($value == 1){
+			$variables['processing'][$form_state['custom_vars']['account_name']] = array('status' => $value, 'processing_on_time' => strtotime(date('Y-m-d G:i:s')));
+		}
+	}
+	/**********Processing Section *************/
+
+
+
+
+	if(!empty($customer_variables)){
+		$update_cust_variables = db_update('customer_variables')
+		->fields(array(
+				'data' => serialize($variables),
+			))
+		->condition('uid', $uid, '=')
+		->condition('delta', 0, '=')
+		->execute();
+		$element['message']['#markup'] = "Your preferences have been Updated.";
+	}else{
+		$insert = db_insert('customer_variables')
+		->fields(array(
+				'uid' => $uid,
+				'data' => serialize($variables),
+				'sessions' => '',
+				'delta' => 0,
+			))
+		->execute();
+		$element['message']['#markup'] = "Your preferences have been saved.";
+	}
+	return $element;
 }

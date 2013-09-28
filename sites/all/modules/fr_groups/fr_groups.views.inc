@@ -9,10 +9,10 @@ function fr_groups_views_query_alter(&$view, &$query) {
 	global $user;
 	switch($view->name){
 		case'view_virtual_tours':
-		case'view_inc_reports';
-		case'view_event_reports';
+		case'view_inc_reports':
+		case'view_event_reports':
 			$account_id = get_account_owner();
-			$query->where[1]['conditions'][3]['value'] = $account_id;
+			$query->where[1]['conditions'][3]['value'] =  ( int ) $account_id;
 		break;
 		
 		case'tours_today':
@@ -26,7 +26,7 @@ function fr_groups_views_query_alter(&$view, &$query) {
 			$query->where[1]['conditions'][4]['value'] = $account_id;
 		break;
 	}
-	return $query;
+	return $view;
 }
 
 function fr_groups_get_form(){
@@ -38,9 +38,10 @@ function fr_groups_get_form(){
 function get_account_owner(){
 	global $user;
 	$account_owner = 1;
+	$account_type = fr_groups_role_type($user);
 	$profile = profile2_load_by_user($user->uid, $type_name = NULL);
-	if(!empty($profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'])){
-		$account_owner = $profile['customer']->field_cust_alarm_group_owner['und'][0]['target_id'];
+	if(!empty($profile[$account_type]->field_cust_alarm_group_owner['und'][0]['target_id'])){
+		$account_owner = $profile[$account_type]->field_cust_alarm_group_owner['und'][0]['target_id'];
 	}
 	return $account_owner;
 }
