@@ -101,7 +101,7 @@ class IpdatatelAlarmProfile {
 					$account_users = $this->alarmDataWrapper($username, '', TRUE, FALSE, FALSE, 'fs-depth-2', 100);
 					$account_tools = $this->toolListTools();
 					$alarm_users = $this->listAlarmUsers($account_data, $username);
-					if(!empty($alarm_settings['recent_events']) && $alarm_settings['recent_events'] || $this->admin){
+					if(!empty($alarm_settings['recent_events']) && $alarm_settings['recent_events'] || $this->admin || $this->access){
 						$recent_events = $this->alarmDataWrapper('Recent Notifications', NULL, TRUE, FALSE, FALSE, 'fs-depth-3', 100);
 						$recent_events['inner']['markup'] = drupal_render($this->recentAlarmEvents($account_data, $this->uid));
 					}
@@ -127,7 +127,6 @@ class IpdatatelAlarmProfile {
 					$auth_data = array('username' => $username, 'uid' => $this->uid, 'pass' => $account_data['pass'], 'nid' => $account_data['node_id']);
 					$alarm_settings = $this->newPermissionsFunction($bat_settings, $admin_permission, $auth_data, $account_permissions);
 
-
 					$user_data = array();
 					if(!empty($users)){
 						unset($account_data['attatched_users']);
@@ -138,7 +137,10 @@ class IpdatatelAlarmProfile {
 					$account_users = $this->alarmDataWrapper($username, '', TRUE, FALSE, FALSE, 'fs-depth-2', 100);
 					$account_tools = $this->toolListTools();
 					$alarm_users = $this->listAlarmUsers($account_data, $username);
-					if(!empty($alarm_settings['recent_events']) && $alarm_settings['recent_events'] || $this->admin){
+					$alarm_users = !empty($alarm_users) ? $alarm_users : '';
+					
+					
+					if(!empty($alarm_settings['recent_events']) && $alarm_settings['recent_events'] || $this->admin || $this->access){
 						$recent_events = $this->alarmDataWrapper('Recent Notifications', NULL, TRUE, FALSE, FALSE, 'fs-depth-3', 100);
 						$recent_events['inner']['markup'] = drupal_render($this->recentAlarmEvents($account_data, $this->uid));
 					}
@@ -152,9 +154,7 @@ class IpdatatelAlarmProfile {
 					if(!empty($recent_events)){
 						$recent_events = drupal_render(fr_groups_accordion_fieldset($recent_events));
 					}
-
 					$account_users['inner']['markup'] .=  drupal_render($account_tools) . $alarm_users . $recent_events;
-
 					$account_wrapper['accounts_wrapper']['inner']['markup'] .= drupal_render(fr_groups_accordion_fieldset($account_users));
 
 					break;
@@ -444,13 +444,11 @@ class IpdatatelAlarmProfile {
 
 
 	private function listAlarmUsers($data, $username){
-
 		$user_list = array();
 		$block_settings = $this->cust_block_settings;
+		$user_list['users_wrapper'] = $this->alarmDataWrapper('Alarm Users', NULL, TRUE, FALSE, FALSE, 100);
 		if(!empty($data['attatched_users'])){
 			$attatched_users = $data['attatched_users'];
-			$user_list['users_wrapper'] = $this->alarmDataWrapper('Alarm Users', NULL, TRUE, FALSE, FALSE, 100);
-
 
 			$uid = $this->uid;
 			$options = array();
@@ -503,6 +501,9 @@ class IpdatatelAlarmProfile {
 				'#weight' => 100,
 			);
 			$user_list['users_wrapper']['inner']['markup'] = drupal_render($user_list_table);
+			$user_list = drupal_render(fr_groups_accordion_fieldset($user_list['users_wrapper']));
+		}else{
+			$user_list['users_wrapper']['inner']['markup'] = 'This Alarm System has no attatched users.';
 			$user_list = drupal_render(fr_groups_accordion_fieldset($user_list['users_wrapper']));
 		}
 

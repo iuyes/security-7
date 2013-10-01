@@ -5,7 +5,6 @@
 	
 		var dvrData = {};
 		dvrData.functions = {};
-		
 		/**
 		 * @ function for revealing and CMS modal and activating the first dvr
 		 *
@@ -40,6 +39,14 @@
   *
   */
 	dvrData.functions.openDvr = function(selector){
+		if( Drupal.settings.processingModal ){
+			$('#alarm-processing-table').addClass('fixed');
+			$('.close-dvr-object').show().addClass('open');
+		}
+		if( $(selector).closest('li').hasClass('alarm') ){
+			 $(selector).closest('li').removeClass('alarm');
+			Drupal.settings.activeAlarm = false;
+		}
 		$('#dvr-cms-container').html('');
 		dvrData.credentials = {};
 		dvrData.firstDvr = $(selector);
@@ -47,12 +54,26 @@
 		dvrData.credentials.dvrPass = dvrData.firstDvr.attr('data-dvr-password');
 		dvrData.dvrUrl = dvrData.firstDvr.attr('data-dvr-url');
 		dvrData.credentials.dvrRunFunction = 'OnLogin';
-		dvrData.dvrIframe = '<iframe seamless width="100%" height="700px" src="http://'+ dvrData.dvrUrl +'" id="dvr-cms-iframe"></iframe>';
+		dvrData.dvrIframe = '<iframe seamless width="100%" height="700px" src="http://'+ dvrData.dvrUrl +'" id="dvr-cms-iframe" class="loading-dvr-iframe"></iframe>';
+		var loadingIframe = '<div class="loading-dvr-iframe-image"><img src="../../sites/all/themes/fortified_dev/images/loading.gif"></div>';
 		$('#dvr-cms-container').html(dvrData.dvrIframe);
+		$('#dvr-cms-container').prepend(loadingIframe);
 		var trigElement = $(selector).closest('li');
 		dvrData.functions.updateTriggerElement(trigElement);
 		dvrData.window = document.querySelector("iframe").contentWindow;
 	}
+	
+	
+	/**
+  * @ Whiel the dvr iframe is loading
+  *
+  */
+	dvrData.functions.loadiframeImage = function(){
+		$('.loading-dvr-iframe-image').remove();
+		$('#dvr-cms-iframe').removeClass('loading-dvr-iframe').addClass('iframe-loaded');
+	}
+	
+	
 	
 	
 	/**
@@ -61,6 +82,7 @@
   */
 	dvrData.functions.updateTriggerElement = function(element){
 		$('.dvr-cms-list li').removeClass('active');
+		$('.dvr-processing-list li').removeClass('active');
 		$(element).addClass('active');
 	}
 	
@@ -69,7 +91,6 @@
   *
   */
 	dvrData.functions.changeDvr = $(document).on('click', '.dvr-object', function(){
-		//$('#alarm-processing-table').addClass('fixed');
 		dvrData.functions.openDvr(this);
 	});
 	
@@ -107,9 +128,10 @@
 		if(dvrData.dvrUrl){
 			dvrData.dvrUrl = 'http://'+dvrData.dvrUrl;
 		}
+		window.setTimeout(dvrData.functions.loadiframeImage, 500);
 		if ( e.data === "loaded" && e.origin == dvrData.dvrUrl && dvrData.credentials) {
 			// send the child a message.
-		  window.setTimeout(dvrData.functions.postMessage, 1500);
+		  window.setTimeout(dvrData.functions.postMessage, 1600);
 		}
 	});
 	

@@ -180,13 +180,25 @@ class IpdatatelProcessEvents {
 									}
 									
 									if($event_value == 'Bypass'){
-										$event_value = array($object->zone);
-										$matched_zone = array_intersect(array_keys($alarm_zone_aliases), array_values($event_value));
-										if(!empty($matched_zone[0])){
-											$zone = $alarm_zone_aliases[$matched_zone[0]];
-											$event_date = new DateTime($object->datetime);
-											$formated_event_date = strtotime($event_date->format('Y-m-d G:i:s'));
-											$this->unprocessed_alarms[$formated_event_date] = $zone;
+										$event_value = $object->zone;
+										foreach($alarm_zone_aliases as $zone => $array){
+											if($event_value == $zone){
+												$matched_zone[$zone] = $zone;
+											}else{
+												$matched_zone[$zone] = 'undefined';
+											}
+										}
+										if(!empty($matched_zone)){
+											foreach($matched_zone as $zone_num => $zone_num1){
+												$zone = !empty($alarm_zone_aliases[$zone_num]) ? $alarm_zone_aliases[$zone_num] : NULL;
+												$event_date = new DateTime($object->datetime);
+												$formated_event_date = strtotime($event_date->format('Y-m-d G:i:s'));
+												$this->unprocessed_alarms[$formated_event_date] = $zone;
+												$this->test[] = $this->unprocessed_alarms;
+											}
+								
+										}else{
+											//@todo unprocessed alarm zone is undefined, we still alarm them there is an alarm just cannot bring up the dvr.
 										}
 									}
 									
@@ -229,7 +241,6 @@ class IpdatatelProcessEvents {
 										  }
 										}
 									}
-									$this->test[] = $matched_zone;
 									break;
 								}
 							}
@@ -324,7 +335,7 @@ private function getDvrZoneInfo($nid){
 			'#empty' => t('No data yet...'),
 			'#group' => 'wrapper',
 			'#attributes' => array(
-				'class' => array('large-12', 'columns'),
+				'class' => array('large-12', 'large-centered-columns', 'columns'),
 				'id' => 'alarm-processing-table',
 			),
 		);

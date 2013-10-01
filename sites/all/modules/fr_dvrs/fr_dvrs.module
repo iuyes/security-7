@@ -45,7 +45,7 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 		$title = _fr_groups_markup('<h3>ALARM PROCESSING</h3>', 'dvr-cms-title', -100);
 		break;
 	}
-	
+
 	$content['wrapper'] = array(
 		'#type' => 'container',
 		'#attributes' => array(
@@ -71,19 +71,40 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 					$dvr .= $data->dvr_title;
 				}
 				$dvr .= '</div>';
-				$items[] = $dvr;
+				$items[] = array(
+					'data' => $dvr,
+					'class' => array(''),
+				);
 			}
 		}
-		$items[] = '<span class="close-dvr-object">Close DVR</span>';
+		if($extra_class == 'processing'){
+			$items[] = '<span class="close-dvr-object">Close DVR</span>';
+		}
 	}
-	$content['wrapper']['dvrs_list'] = array(
+
+	$dvr_list = array(
 		'#theme' => 'item_list',
 		'#items' => $items,
 		'#attributes' => array(
-			'class' => array('dvr-'.$extra_class.'-list', 'large-'.$list_width.'', 'columns'),
+			'class' => array('dvr-'.$extra_class.'-list', '', ''),
 		),
-		'#weight' => -99,
+		'#weight' => -100,
 	);
+
+	$list_wrapper = array(
+		'class' => 'dvr-'.$extra_class.'-list-wrapper',
+		'subclass' => 'account-static-section',
+		'title' => 'Available DVRs',
+		'actions' => '',
+		'status' => 'static',
+		'weight' => -99,
+		'inner' => array(
+			'status' => 'open',
+			'class' => 'dvr-'.$extra_class.'-markup-container',
+			'markup' => drupal_render($dvr_list),
+		),
+	);
+	$content['wrapper']['dvr_list'] = fr_groups_accordion_fieldset($list_wrapper);
 	$content['wrapper']['dvr_object'] = fr_groups_markup('<div id="dvr-cms-inner"></div>', 'dvr-'.$extra_class.'-container large-'.$iframe_size.' columns', 'dvr-cms-container');
 	return drupal_render($content);
 }
@@ -136,8 +157,9 @@ class FortifiedDvrSystems {
 				$this->account_information->dvr_information[$key] = $this->structureDvrData($data, $key, $permissions, $account_type);
 			}
 		}
-
-		return $this->account_information->dvr_information;
+		if(!empty($this->account_information->dvr_information)){
+			return $this->account_information->dvr_information;
+		}
 	}
 
 

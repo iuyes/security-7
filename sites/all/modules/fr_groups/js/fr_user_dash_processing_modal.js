@@ -11,6 +11,7 @@
      */
 		processingHtml.functions.revealProcessingModal = $(document).on('click', '.alarm-activate-modal', function(e){
 			e.preventDefault();
+			Drupal.settings.processingModal = true;
 			$('#processingModal').foundation('reveal', 'open');
 			processingHtml.table = $('.alarm-processing-inner').html();
 			$('#alarm-processing-table').remove();
@@ -18,7 +19,6 @@
 			if(processingHtml.processingId){
 				 processingHtml.functions.queryProcessingDvrs(processingHtml.processingId);
 			}
-			window.setTimeout(processingHtml.functions.insertProcessingText, 1500);
 		});
 		
 		
@@ -42,6 +42,7 @@
 			$('#dvr-cms-iframe').remove();
 			$('.dvr-cms-wrapper').remove();
 			$('#dvr-cms-container').html('');
+			$('#alarm-processing-table').removeClass('fixed');
 			processingHtml.functions.ChangeProcessingElements();
 		});
 		
@@ -88,6 +89,8 @@
 				success: function(data) {
 					if(data.html){
 						processingHtml.dvrHtml = data.html;
+						//window.setTimeout(processingHtml.functions.insertProcessingText, 1800);
+						processingHtml.functions.insertProcessingText();
 					}
 				},
 				complete: function(data) {}

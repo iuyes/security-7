@@ -412,7 +412,7 @@ function fr_groups_account_page($uid = NULL){
 						}
 						$fieldset['inner']['markup'] = $processing_fieldset . $alarm_markup;
 						$content['wrapper']['alarm'] = fr_groups_accordion_fieldset($fieldset);
-
+						
 					}
 					break;
 				}

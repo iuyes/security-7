@@ -418,7 +418,7 @@ function fr_val_user_form($form, &$form_state){
 }
 
 function fr_user_reg_form_submit($form, &$form_state){
-	if($form_state['values']['roles'][4]){
+	if($form_state['values']['roles'][4] || $form_state['values']['roles_change'][4]){
 		$redirect = 'customer';
 	}elseif(!empty($form_state['values']['roles'][9]) && $form_state['values']['roles'][9] == TRUE){
 		$redirect = 'account_manager';
@@ -727,7 +727,7 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 			'#description' => t('To map a DVR to an alarm zone, Select an alarm zone field and then click on one of the DVRs Below.'),
 		);
 
-		dpm($form);
+		//dpm($form);
 		//dpm($form_state);
 		$groups = &$form['#group_children'];
 		$groups += array('select_dvr_wrapper' => 'group_alarm_settings');
