@@ -482,7 +482,7 @@ function fr_groups_build_dash_menu($uid, $account_type){
 	$items['account'] = new stdClass();
 	$items['account']->type = 'account';
 	$items['account']->title = t("Edit My Account");
-	$items['account']->path = 'edit';
+	$items['account']->path = '../../user/'.$uid.'/edit';
 	$items['account']->query = '';
 	$items['account']->Class = array('button radius small');
 	$items['account']->id = '';

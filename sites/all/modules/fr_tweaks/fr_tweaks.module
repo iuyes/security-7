@@ -561,9 +561,16 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 				}
 			}
 		}
+		//for account managers so that they cant change there roll and can only asign the customer role to users they add
 		if(array_key_exists(9, $user->roles)){
 			$form['account']['roles_change']['#default_value'] = array(4);
 			$form['account']['roles_change']['#disabled'] = TRUE;
+			if(!empty($form['#user']->uid)){
+				if($form['#user']->uid == $user->uid){
+					unset($form['account']['roles_change']['#default_value']);
+					$form['account']['roles_change']['#disabled'] = TRUE;
+				}	
+			}
 		}
 		$form['#validate'][] = 'fr_val_user_form';
 		break;
