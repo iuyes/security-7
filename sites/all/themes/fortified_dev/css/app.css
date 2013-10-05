@@ -1132,6 +1132,15 @@ form {
 
 /*END*/
 /* For Virtual Tours*/
+.downloadVideo {
+  float: right; }
+
+.play-list {
+  padding: 10px !important; }
+
+.play-list.playing {
+  background: orange !important; }
+
 .vt-desc-wrapper {
   text-align: left !important; }
   .vt-desc-wrapper h2 {
@@ -1457,7 +1466,8 @@ a.leaf:hover {
   text-decoration: underline; }
 
 .close-modal {
-  float: right; }
+  float: right;
+  z-index: 100; }
 
 .close-modal:hover {
   background: #d0d0d0 !important; }

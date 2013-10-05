@@ -547,11 +547,24 @@ function fr_user_dash_download_callback(){
 	$getRequest = new getRequest();
 	$getRequest->loadUser();
 	$link = $getRequest->requestDownload($nid);
-	if(!empty($getRequest->status)){
-		$status = $getRequest->status;
-		drupal_json_output($getRequest->status);
-		drupal_exit();
-	}
+	$status = !empty($getRequest->status) ? $getRequest->status : array('status' => '0');
+	drupal_json_output($status);
+	drupal_exit();
+}
+
+
+
+
+
+/**
+ * @ function to load the video file being downloaded, change the filemime for download.
+ *
+ */
+function fr_user_dash_video_file_download($file){
+	$uri = file_create_url($file->uri);
+	$file->filemime = 'application/mp4';
+	file_save($file);
+	return array('uri' => $uri, 'other' => $file);
 }
 
 

@@ -4,17 +4,18 @@ class getRequest{
 
 	public function loadUser(){
 		global $user;
+		$this->user_account = $user;
 		$this->user = $user->uid;
 	}
 
 	public function requestDownload($nid){
-
+		drupal_add_http_header('Content-Transfer-Encoding', 'binary');
 		if(!empty($nid)){
 			$node = node_load($nid);
 			if(!empty($node)){
-
-				$this->customer = $node->field_vt_customer['und'][0]['target_id'];
-				if($this->customer == $this->user){
+				$this->customer = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
+				$account_info = fr_tweaks_load_user_profile2_account_id($this->user_account, 9);
+				if($account_info['account_node_id'] == $this->customer){
 					$get_files = explode(',', $node->field_vt_tour_files['und'][0]['upload_type']);
 					if(in_array('video', $get_files)){
 						$videos = $node->field_vt_tour_files['und'][0]['video_files'];
@@ -33,7 +34,8 @@ class getRequest{
 	private function downloadVideo($video_fid){
 		$load_file = file_load($video_fid);
 		$file_name = $load_file->filename;
-		$stream = file_create_url($load_file->uri);
+		$format = fr_user_dash_video_file_download($load_file);
+		$stream = $format['uri'];
 		$options = array();
 		return $stream;
 	}

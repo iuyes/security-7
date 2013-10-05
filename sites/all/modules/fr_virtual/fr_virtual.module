@@ -675,12 +675,14 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 	case 'fr_virtual_formatter':
 
 		drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.js', array('type' => 'file', 'scope' => 'footer'));
-
+		global $user;
 		$objects = array();
 		$customer_uid = $entity->field_cust_alarm_group_owner['und'][0]['target_id'];
-		global $user;
+		$auth = array(3 => 'administrator', 8 => 'supervisor', 9 => 'account_manager');
+		$account_type = array_intersect(array_keys($auth), array_keys($user->roles));
+		$account_info = fr_tweaks_load_user_profile2_account_id($user, 9);
 		$auth = array('administrator', 'supervisor', 'guard');
-		if($user->uid != $customer_uid && !array_intersect($auth, $user->roles)){
+		if($account_info['account_node_id'] != $customer_uid && !array_intersect($auth, $user->roles)){
 			$path = '../user';
 			$options = array('');
 			$http_response_code = 302;
@@ -704,7 +706,7 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 		
 		$objects['back_wrapper']['back'] = array(
 			'#type' => 'markup',
-			'#markup' => '<a class="button radius small" href="../user/'.$user->uid.'/dashboard">Back To My Account</a>',
+			'#markup' => '<a class="button radius small" href="../account">Back To My Account</a>',
 			//'#prefix' => '<a class="flowplayer eight columns" id="player" style="float:left">',
 			//'#suffix' => '</a>',
 			'#weight' => -100,
@@ -1043,6 +1045,13 @@ function fr_virtual_page_alter(&$page){
         		}
       		}
       		if(!empty($image)){
+      			$modal['image_wrapper']['close'] = array(
+      		    '#type' => 'markup',
+        			'#markup' => '&#215;',
+        			'#prefix' => '<div class="close-reveal-modal close-modal">',
+        			'#suffix' => '</div>',
+        			'#weight' => -101,
+      		  );
       		  $modal['image_wrapper']['left_button'] = array(
       		    '#type' => 'markup',
         			'#markup' => '',
@@ -1075,5 +1084,4 @@ function fr_virtual_page_alter(&$page){
       $page['modal'] = $modal;
     }
   }
-  return $page;
 }

@@ -30,23 +30,26 @@
 				});
 			}
 		});
-		$('.downloadFile').click(function() {
+		$('.downloadFile').click(function(e) {
+			e.preventDefault();
+			alert('Please wait while your files are prepared for download. This may take a minute if the files are large. Press Ok to start downloading your files.');
 			var nid = $(this).attr('id');
 			$.ajax({
 				type: 'POST',
 				url: '/fr_user_download',
 				dataType: 'json',
 				data: {
-					nids: nid
+					nids: nid,
 				},
 				success: function(data) {
 					var amount = data.length;
+					console.log(data);
 					for (var i = 0; i <= amount; i++) {
 						if (i == amount) {
 							$.fileDownload('../../node/' + nid + '/pdf');
 						} else {
 							$.fileDownload(data[i]).done(function() {
-								alert('File download a success!');
+								alert('All files have been downloaded!');
 							});
 						}
 					}

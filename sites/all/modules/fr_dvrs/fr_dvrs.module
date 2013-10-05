@@ -411,6 +411,8 @@ class FortifiedDvrSystems {
 		$account_information = $this->account_information;
 		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_modal_all_dvrs.js', array('type' => 'file', 'scope' => 'footer'));
 		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_reveal_cust_dvr.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_download.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash.js', array('type' => 'file', 'scope' => 'footer'));
 		$dvr_auto_login = !empty($this->account_information->account_prefrences['dvr_auto_login']) ? $this->account_information->account_prefrences['dvr_auto_login'] : NULL;
 		foreach($this->account_information->dvr_information as $nid => $data){
 			if(!empty($data) && isset($data)){

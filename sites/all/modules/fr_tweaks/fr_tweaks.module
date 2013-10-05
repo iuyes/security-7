@@ -734,8 +734,6 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 			'#description' => t('To map a DVR to an alarm zone, Select an alarm zone field and then click on one of the DVRs Below.'),
 		);
 
-		//dpm($form);
-		//dpm($form_state);
 		$groups = &$form['#group_children'];
 		$groups += array('select_dvr_wrapper' => 'group_alarm_settings');
 
