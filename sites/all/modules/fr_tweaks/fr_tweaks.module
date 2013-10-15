@@ -703,7 +703,7 @@ function fr_tweaks_form_alter(&$form, &$form_state, $form_id){
 			if($account_dvrs){
 				foreach($account_dvrs as $nid => $data){
 					if(!empty($data->dvr_title)){
-						$dvrs[$data->dvr_title.':'.$nid] = $data->dvr_title;
+						$dvrs[$data->dvr_title.':'.$nid.':'.$target_account] = $data->dvr_title;
 					}
 				}
 			}

@@ -199,7 +199,10 @@ function ip_datatel_ajax_alarm_notifications(){
 		$start_time = !empty($settings['start_time']) ? $settings['start_time'] : 0;
 		$new_events = !empty($settings['new_events']) ? $settings['new_events'] : NULL;
 		$ran_processor = !empty($settings['ran_processor']) ? $settings['ran_processor'] : NULL;
-		$return_data = $alarmProcessor->processConstruct($processing_accounts, $account_variables, $uid, $ajax, $session, $start_time, $new_events, $ran_processor);
+		$alarms = !empty($settings['alarms']) ? $settings['alarms'] : array();
+		$account_type = !empty($settings['type']) ? $settings['type'] : NULL;
+		$filters = !empty($settings['filters']) ? $settings['filters'] : NULL;
+		$return_data = $alarmProcessor->processConstruct($processing_accounts, $account_variables, $uid, $ajax, $session, $start_time, $new_events, $ran_processor, $account_type, $alarms, $filters);
 		$return = array('status' => $return_data);
 		drupal_json_output($return);
 		exit();
@@ -1181,7 +1184,7 @@ function ip_datatel_field_presave($entity_type, $entity, $field, $instance, $lan
 
 function _ip_datatel_process(&$items, $delta = 0, $field, $entity) {
 	$item = array();
-	if($items['wrapper']){
+	if(!empty($items['wrapper']) || isset($items['wrapper'])){
 		$all_items = current($items);
 		foreach($all_items as $field_name => $field_value){
 			$item[$field_name] = $field_value;

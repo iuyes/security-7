@@ -14,16 +14,17 @@
         
         //menu bar search expand
          $('.menu-wrapper li.last').click(function(){
-          $(this).animate({width:'13%'}, 'slow');
-          $(this).find('.search-block-input').attr('size', 250);
-					$(this).find('.form-submit').addClass('active');
-          $('.menu-wrapper li.last').focus();
-        });
-        
-        $('.menu-wrapper li.last').focusout(function(){
-          $(this).animate({width:'6%'}, 'slow');
+          $('.form-item-search-block-form').animate({minWidth:'180px'}, 'fast');
+         // $(this).find('.search-block-input').attr('size', 250);
+          $(this).find('.form-submit').addClass('active');
+          $(this).focus();
+          
+          $(this).off('focus').focusout(function(){
+          $('.form-item-search-block-form').animate({minWidth:'90px'}, 'slow');
           $(this).find('.form-submit').removeClass('active');
         });
+        });
+        
         
         
         

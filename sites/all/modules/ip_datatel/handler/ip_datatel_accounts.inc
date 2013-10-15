@@ -15,6 +15,8 @@ class ipDatatel{
 	public $user_profile;
 	public $query_perams = array();
 	private $entity_type;
+	public $central_station_profiles = array();
+	public $results = array();
 
 	public function loadAccountInformation($uid = NULL, $arg = NULL, $user = NULL){
 
@@ -35,10 +37,20 @@ class ipDatatel{
 		$custom_triggers = array();
 		//set up object query
 		$this->buildQueryPerams();
+		
 		if(!empty($this->entity_type)){
-			$result = $this->query->execute();
-			if(!empty($result[$this->entity_type])){
-				foreach($result[$this->entity_type] as $key => $node){
+			$this->results = $this->query->execute();
+			if(!empty($this->results[$this->entity_type])){
+				switch($this->entity_type){
+					case 'profile2':
+						foreach($this->results[$this->entity_type] as $pid => $data){
+							$this->central_station_profiles[$pid] = profile2_load($pid);
+						}
+						$this->results = $this->queryCentralStationAlarms($this->central_station_profiles);
+						break;
+				}
+				$results = !empty($this->results[$this->entity_type]) ? $this->results[$this->entity_type] : $this->results;
+				foreach($results as $key => $node){
 					$results = node_load($node->nid);
 					if(!empty($results->field_alarm_atatched_users['und'])){
 						foreach($results->field_alarm_atatched_users['und'] as $delta => $username){
@@ -98,6 +110,31 @@ class ipDatatel{
 		}
 		return $account_information;
 	}
+	
+	
+	/**
+	 * get all the alarm bates for this central station
+	 *
+	 */
+	private function queryCentralStationAlarms($profiles){
+		$bats = array();
+		foreach($profiles as $pid => $profile){
+			if(!empty($profile->field_cust_alarm_group_owner['und'][0]['target_id'])){
+				$account_id = $profile->field_cust_alarm_group_owner['und'][0]['target_id'];
+				$query = new EntityFieldQuery();
+				$query->entityCondition('entity_type', 'node')
+					->entityCondition('bundle', 'alarm')
+					->fieldCondition('field_cust_alarm_group_owner', 'target_id', $account_id, '=');
+					$results = $query->execute();
+					if(!empty($results['node'])){
+						foreach($results['node'] as $nid => $data){
+							$bats[$nid] = $data;
+						}
+					}
+			}
+		}
+		return $bats;
+	}
 
 
 	/**
@@ -122,11 +159,12 @@ class ipDatatel{
 		$zones = array();
 		foreach($aliases as $delta => $zone){
 			$format_zones = explode(':', $zone['value']);
-			if(count($format_zones) == 4 && $type == 'alarm'){
+			if(count($format_zones) == 5 && $type == 'alarm'){
 				$zones[$format_zones[1]] = array(
 					'zone_name' => $format_zones[0],
 					'dvr_nid' => $format_zones[3],
 					'dvr_zone' => $format_zones[2],
+					'account_owner' => $format_zones[4],
 				);
 			}elseif(count($format_zones) == 2 && $type == 'user'){
 				$zones[$format_zones[1]] = array(
@@ -204,8 +242,8 @@ class ipDatatel{
 			$this->buildQueryParams($this->query_perams, 'field_alarm_management', 'value', 'process_alarms', '=');
 			break;
 		case 'central_station':
-			$this->user_profile = profile2_load_by_user($user->uid, $type_name = NULL);
-			$this->account_id = $this->user_profile->pid;
+			$this->user_profile = profile2_load_by_user($this->uid, $type_name = NULL);
+			$this->account_id = $this->user_profile['central_station']->pid;
 			$this->query_perams->entity_type = 'profile2';
 			$this->query_perams->bundle = FALSE;
 			$this->buildQueryParams($this->query_perams, 'field_cust_central_station', 'target_id', $this->account_id, '=');

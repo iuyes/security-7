@@ -79,7 +79,7 @@ class IpdatatelAlarmProfile {
 		$tool_item['user_login'] = $this->toolsLogin();
 		$accounts = current($account_info);
 		$account_permissions = $this->account_permissions;
-		$account_wrapper['accounts_wrapper'] = $this->alarmDataWrapper('Alarm Accounts', '', TRUE, FALSE, FALSE, 100);
+		$account_wrapper['accounts_wrapper'] = $this->alarmDataWrapper('Alarm Accounts', NULL, FALSE, TRUE, TRUE, 100, 'account-static-section');
 		$account_users['accounts_wrapper']['inner']['markup'] = '';
 		$account_wrapper['tools'] = $this->alarmDataWrapper('Alarm Tools', NULL, TRUE, FALSE, FALSE, 'fs-depth-2', 100);
 		//loop
@@ -340,12 +340,13 @@ class IpdatatelAlarmProfile {
 	}
 
 
-	public function alarmDataWrapper($title, $class = NULL, $collapsible = TRUE, $status = FALSE, $inner_status = FALSE, $iclass = NULL, $weight = 100){
+	public function alarmDataWrapper($title, $class = NULL, $collapsible = TRUE, $status = FALSE, $inner_status = FALSE, $iclass = NULL, $weight = 100, $sub_class = ''){
 		$collapsible =  $collapsible == TRUE ? 'collapsible' : '';
-		$status = $status == FALSE ? 'closed' : 'active open';
+		$status = $status == FALSE ? 'closed' : 'static';
 		$inner_status = $inner_status == FALSE ? 'closed' : 'open';
 		return array(
 			'class' => $class,
+			'sub_class' => $sub_class,
 			'title' => $title,
 			'actions' => $collapsible,
 			'status' => $status,

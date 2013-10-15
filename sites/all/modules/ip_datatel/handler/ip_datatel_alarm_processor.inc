@@ -11,8 +11,13 @@ class IpdatatelProcessEvents {
 	public $new_events = array();
 	public $alarms = array();
 	public $unprocessed_alarms = array();
+	public $alarm = array();
+	public $filters;
 
-	public function processConstruct($processing_accounts, $account_variables, $uid, $ajax = FALSE, $session = FALSE, $session_start = NULL, $ajax_new_events = array(), $ran = 0){
+	public function processConstruct($processing_accounts, $account_variables, $uid, $ajax = FALSE, $session = FALSE, $session_start = NULL, $ajax_new_events = array(), $ran = 0, $type = NULL, $alarms = array(), $filters = NULL){
+		$this->alarms = $alarms;
+		$this->filters = $filters;
+		$this->checkProcessedAlarms($alarms);
 		$this->account_variables = $account_variables;
 		$this->queryable_accounts = $processing_accounts;
 		$this->uid = $uid;
@@ -24,7 +29,22 @@ class IpdatatelProcessEvents {
 		$events = $this->routEventTriggers($processing_accounts);
 		$return = $this->renderAllEvents();
 		$this->runAfterProcesses();
-		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran, 'alarms' => $this->alarms, 'test' => $this->test);
+		return array('start_time' => $this->sessionStartTime, 'content' => $return, 'new_events' => $this->new_events, 'ran' => $this->ran, 'alarms' => $this->alarms, 'test' => $this->test, 'type' => $type, 'filters' => $this->filters);
+	}
+	
+	
+	private function checkProcessedAlarms($alarms){
+		$new_alarms = array();
+		if(!empty($alarms)){
+			foreach($alarms as $delta => $alarm){
+					if($alarm['processed']){
+						unset($this->alarms[$delta]);
+					}else{
+						$new_alarms[] = $alarm;
+					}
+				}
+			}
+			$this->alarms = $new_alarms;
 	}
 
 
@@ -143,6 +163,7 @@ class IpdatatelProcessEvents {
 	private function firstProcessEvents($events, $ajax = FALSE){
 		$top_3 = array();
 		$new_events = array();
+		$filters = $this->filters;
 		$processed_events = array();
 		if(!empty($events)){
 			foreach($events as $account_name => $account_data){
@@ -153,6 +174,7 @@ class IpdatatelProcessEvents {
 						$user_zone_aliases = $values->user_zone_aliases;
 						$top_3 = array_slice($values->events, 0, 5, TRUE);
 						foreach($top_3 as $key => $object){
+							
 							$matches = 0;
 							foreach($object as $event_name => $event_value){
 								switch($event_name){
@@ -179,35 +201,8 @@ class IpdatatelProcessEvents {
 										}
 									}
 									
-									if($event_value == 'Bypass'){
-										$event_value = $object->zone;
-										foreach($alarm_zone_aliases as $zone => $array){
-											if($event_value == $zone){
-												$matched_zone[$zone] = $zone;
-											}else{
-												$matched_zone[$zone] = 'undefined';
-											}
-										}
-										if(!empty($matched_zone)){
-											foreach($matched_zone as $zone_num => $zone_num1){
-												$zone = !empty($alarm_zone_aliases[$zone_num]) ? $alarm_zone_aliases[$zone_num] : NULL;
-												$event_date = new DateTime($object->datetime);
-												$formated_event_date = strtotime($event_date->format('Y-m-d G:i:s'));
-												$this->unprocessed_alarms[$formated_event_date] = $zone;
-												$this->test[] = $this->unprocessed_alarms;
-											}
-								
-										}else{
-											//@todo unprocessed alarm zone is undefined, we still alarm them there is an alarm just cannot bring up the dvr.
-										}
-									}
-									
 									break;
 								case 'signal_code':
-								
-								
-									//@todo this is were we will do the alarm events
-									
 									
 									break;
 								case'extra':
@@ -216,31 +211,32 @@ class IpdatatelProcessEvents {
 									}
 									break;
 								case'zone':
-									if($custom_trigger->zone == 'all' || $event_value == $custom_trigger->zone){
+									if($custom_trigger->zone == 'all' || $pass = TRUE && $event_value == $custom_trigger->zone){
 										$matches++;
 									}
-									
-									
-									//matching the event zone with our zone aliase
-									$event_value = array($event_value);
-									$matched_zone = array_intersect(array_keys($alarm_zone_aliases), array_values($event_value));
-									if(!empty($matched_zone)){
-										$found_zone = array_values($matched_zone);
-										if(!empty($alarm_zone_aliases[$found_zone[0]])){
-											$zone = $alarm_zone_aliases[$found_zone[0]];
-											$object->zone = !empty($zone['zone_name']) ? $zone['zone_name'] : NULL;
+										//matching the event zone with our zone aliase
+										$event_value = array($event_value);
+										$matched_zone = array_intersect(array_keys($alarm_zone_aliases), array_values($event_value));
+										if(!empty($matched_zone)){
+											$found_zone = array_values($matched_zone);
+											if(!empty($alarm_zone_aliases[$found_zone[0]])){
+												$zone = $alarm_zone_aliases[$found_zone[0]];
+												$object->zone_number = $object->zone;
+												$object->zone = !empty($zone['zone_name']) ? $zone['zone_name'] : NULL;
+											}
 										}
-									}
-									if(empty($matched_zone)){
-									  $matched_zone = array_intersect(array_keys($user_zone_aliases), array_values($event_value));
-									  if(!empty($matched_zone)){
-									  	$found_zone = array_values($matched_zone);
-										  if(!empty($user_zone_aliases[$found_zone[0]])){
-										  	$zone = $user_zone_aliases[$found_zone[0]];
-										  	$object->zone = !empty($zone['user_aliase']) ? $zone['user_aliase'] : NULL;
-										  }
+										if(empty($matched_zone)){
+										  $matched_zone = array_intersect(array_keys($user_zone_aliases), array_values($event_value));
+										  if(!empty($matched_zone)){
+										  	$found_zone = array_values($matched_zone);
+											  if(!empty($user_zone_aliases[$found_zone[0]])){
+											  	$zone = $user_zone_aliases[$found_zone[0]];
+											  	$object->zone_number = $object->zone; 
+											  	$object->zone = !empty($zone['user_aliase']) ? $zone['user_aliase'] : NULL;
+											  }
+											}
 										}
-									}
+									
 									break;
 								}
 							}
@@ -248,7 +244,7 @@ class IpdatatelProcessEvents {
 								$account_variables = &$this->account_variables;
 								$event_date = new DateTime($object->datetime);
 								$formated_event_date = strtotime($event_date->format('Y-m-d G:i:s'));
-								$new_events[$formated_event_date] = $this->buildEventData($account_variables, $object, $custom_trigger, $ajax, $formated_event_date);
+								$new_events[$formated_event_date] = $this->buildEventData($account_variables, $object, $custom_trigger, $ajax, $formated_event_date, FALSE, $alarm_zone_aliases, $user_zone_aliases);
 							}
 						}
 					}
@@ -266,40 +262,47 @@ class IpdatatelProcessEvents {
 	private function sortNewEvents($new_events){
 		$this->new_events = $this->ajax_new_events;
 		if(!empty($new_events) && !empty($this->sessionStartTime)){
-			$test = array();
+			$alarms = new IpdatatelSignalCodes();
 			foreach($new_events as $new_event_date => $new_event){
 				if($new_event_date >= $this->sessionStartTime && !array_key_exists($new_event_date, $this->new_events)){
 					$this->new_events[$new_event_date] = $new_event;
-					if(!empty($this->unprocessed_alarms)){
-						foreach($this->unprocessed_alarms as $alarm_date => $alarm_data){
-							if($alarm_date >= $this->sessionStartTime && array_key_exists($alarm_date, $this->new_events)){
-								$this->alarms[] = $alarm_data;
-							}
+					$check_alarm = $alarms->alarmSignalCodes($new_event->signal_code);
+					
+					/****** FOR PROCESSING ALARMS ******/
+					$alarm_zone_aliases = $new_event->alarm_zone_aliases;
+					$zone_number = $new_event->zone_number;
+					if(!empty($check_alarm) && isset($check_alarm) && $check_alarm->alarm){
+						foreach($alarm_zone_aliases as $zone => $array){
+						  if($zone_number == $zone){
+						  	$matched_zone[$zone] = $zone;
+						  }
+						}
+						if(!empty($matched_zone)){
+						  foreach($matched_zone as $zone_num => $zone_num1){
+						  	$zone = !empty($alarm_zone_aliases[$zone_num]) ? $alarm_zone_aliases[$zone_num] : NULL;
+						  	$zone['processed'] = FALSE;
+						  	$this->alarms[] = $zone;
+						  }
 						}
 					}
-				}else{
-					//$this->new_events->$new_event_date = $new_event;
+					unset($new_event->alarm_zone_aliases);
+					unset($new_event->user_zone_aliases);
+					/****** FOR PROCESSING ALARMS ******/
+		
+		
+		
 				}
 			}
 			krsort($this->new_events, SORT_NUMERIC);
+			krsort($this->alarms, SORT_NUMERIC);
 		}
 	}
 	
-	
-	
-	/*
-private function getDvrZoneInfo($nid){
-		$node = node_laod($nid);
-		if($node){
-			$this->test = $node;
-		}
-	}
-*/
 
 
 
 
-	private function buildEventData(&$account_variables, $object, $custom_trigger, $ajax = FALSE, $return_data = NULL, $date = FALSE){
+	private function buildEventData(&$account_variables, $object, $custom_trigger, $ajax = FALSE, $return_data = NULL, $date = FALSE, $alarm_zone_aliases, $user_zone_aliases){
 		$new_events = array();
 		$data = new stdClass();
 		$account_name = $custom_trigger->account_name;
@@ -308,6 +311,8 @@ private function getDvrZoneInfo($nid){
 		$object->type = 'new';
 		$object->status = 'visible';
 		$return_data = $object;
+		$object->alarm_zone_aliases = $alarm_zone_aliases;
+		$object->user_zone_aliases = $user_zone_aliases;
 		return $return_data;
 	}
 
@@ -322,7 +327,7 @@ private function getDvrZoneInfo($nid){
 			'Signal',
 			'Zone',
 			'Type',
-			'View',
+			'Actions',
 		);
 
 		if(!empty($this->new_events)){
@@ -339,12 +344,14 @@ private function getDvrZoneInfo($nid){
 				'id' => 'alarm-processing-table',
 			),
 		);
-
+		
 		//buttons for processing block
-		$tools = '<div class="alarm-previous-sessions button star">';
+		$tools = '<div class="alarm-previous-sessions button next">';
 		$tools .= '<a class="f-tooltip top" data-callback="/ajax/prev-sessions" data-tooltip-yposition="top" data-tooltip-xposition="center" data-event="click" data-ajax="TRUE" data-query-data="'.$this->uid.'" data-tooltip-size="f-tooltip-auto" href="#">Previous Sessions';
 		$tools .= '</a></div>';
 		$tools .= '<div class="alarm-activate-modal button next"><a href="#">Open In Modal</a></div>';
+		$tools .= '<span class="ctools-modal-form">'._fr_dvrs_make_link('Processing Settings', 'fr_dvrs_processing_settings_form').'</span>';
+		$tools .= '<span class="ctools-modal-form">'._fr_dvrs_make_link('Processing Filters', 'fr_dvrs_processing_filter_form').'</span>';
 		$return_data = array('table' => drupal_render($content['table']), 'tools' => $tools);
 
 		return $return_data;
@@ -361,7 +368,7 @@ private function getDvrZoneInfo($nid){
 				$event_data = ( object ) $event_data;
 				if(!empty($event_data->datetime) && $event_data->session == $session && $ajax == TRUE || $ajax == FALSE){
 					$style = '';
-					$color = empty($event_data->clicked) ? 'background:'.$colors->signalCodes($event_data->signal_code).'; font-weight:bold;' : 'background:rgb(58, 209, 58); font-weight:bold;';
+					$color = empty($event_data->clicked) ? 'background:'.$colors->coolorSignalCodes($event_data->signal_code).'; font-weight:bold;' : 'background:rgb(58, 209, 58); font-weight:bold;';
 					if(!empty($event_data->status) && $event_data->status != 'removed'){
 						$rows[] = array(
 							'data' => array(
@@ -396,7 +403,7 @@ private function getDvrZoneInfo($nid){
 									'class' => array(''),
 								),
 								array(
-									'data' => '<div class="alarm-event-wrapper"><a data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-tooltip-yposition="top" data-tooltip-xposition="center" data-event="'.$event.'" class="f-tooltip view-event" href="#">View</a></div>',
+									'data' => '<div class="alarm-event-wrapper"><a data-callback="/ajax/alarm-processor-modal" data-arguments="'.$new_event_date.'" data-ajax="TRUE" data-drupal-settings="TRUE" data-drupal-setting="events" data-method="POST" data-tooltip-size="f-tooltip-medium" data-tooltip-yposition="top" data-tooltip-xposition="center" data-event="'.$event.'" class="f-tooltip view-event" href="#">View</a><br/><a href="#" class="processing-remove-event" data-remove-id="'.$new_event_date.'">Remove</a></div>',
 									'style' => array($color),
 									'class' => array('view-proccesed-link'),
 								),
@@ -405,7 +412,7 @@ private function getDvrZoneInfo($nid){
 					}
 				}
 			}
-			return $rows;
+		return $rows;
 	}
 
 } //end Class
@@ -448,7 +455,7 @@ class IpdatatelCustDatabaseManager{
 
 class IpdatatelSignalCodes{
 
-	public function signalCodes($signal){
+	public function coolorSignalCodes($signal){
 		$color = '';
 		$signal_codes = array(
 			'yellow' => array('E401', 'R401', 'E403', 'R403', 'E406', 'E570',),
@@ -461,6 +468,28 @@ class IpdatatelSignalCodes{
 			}
 		}
 		return $color;
+	}
+	
+	public function alarmSignalCodes($code){
+		$data = new stdClass();
+		switch($code){
+			case 'R131':
+				$data->event = 'Perimeter';
+				$data->signal = 'Restore';
+				$data->alarm = TRUE;
+				break;
+			case 'E131':
+				$data->event = 'Perimeter';
+				$data->signal = 'Restore';
+				$data->alarm = TRUE;
+				break;
+			case 'E570':
+				$data->event = 'Zone/Sensor bypass';
+				$data->signal = 'Bypass';
+				$data->alarm = TRUE; // only for testing purposes. this will need to be removed for production
+				break;
+		}
+		return $data;
 	}
 	
 }
@@ -489,9 +518,10 @@ class IpdatatelAlarmProcessor extends IpdatatelProcessEvents{
 			$this->account_variables = $account_variables;
 			$accounts = array_intersect_assoc($all_accounts, $account_variables['processing']);
 			$this->processing_accounts = !empty($accounts) ? $accounts : NULL;
-			if(empty($this->processing_accounts) && $this->args == 'admin'){
+			if(empty($this->processing_accounts) && $this->args == 'admin' || empty($this->processing_accounts) && $this->args == 'central-station'){
 				$this->processing_accounts = $all_accounts;
 			}
+			$this->account_type = $this->args;
 		}
 	}
 
@@ -500,16 +530,19 @@ class IpdatatelAlarmProcessor extends IpdatatelProcessEvents{
 		$eventProcessor = NULL;
 		$account_variables = $this->account_variables;
 		if($processing_accounts){
-			$eventProcessor = $this->processConstruct($processing_accounts, $account_variables, $this->uid);
-			drupal_add_js(array('ip_datatel' => array('processing_accounts' => serialize($processing_accounts), 'account_variables' => $account_variables, 'uid' => $this->uid)), 'setting');
+			$eventProcessor = $this->processConstruct($processing_accounts, $account_variables, $this->uid, FALSE, FALSE, NULL, array(), 0, $this->account_type, array());
+			drupal_add_js(array('ip_datatel' => array('processing_accounts' => serialize($processing_accounts), 'account_variables' => $account_variables, 'uid' => $this->uid, 'type' => $this->account_type)), 'setting');
 		}
 		return $eventProcessor;
 	}
 
 
 	private function loadJsSettings(){
-		drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_alarm_notifications.js', array('type' => 'file', 'scope' => 'header'));
+		drupal_add_js(drupal_get_path('module', 'ip_datatel') .'/js/ip_datatel_alarm_notifications.js', array('type' => 'file', 'scope' => 'footer'));
 		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_library('system', 'ui.draggable');
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
+		fr_dvrs_ctools_modal();
 	}
 
 }

@@ -13,11 +13,11 @@
 			e.preventDefault();
 			Drupal.settings.processingModal = true;
 			$('#processingModal').foundation('reveal', 'open');
-			processingHtml.table = $('.alarm-processing-inner').html();
-			$('#alarm-processing-table').remove();
+			processingHtml.table = $('.alarm-processing-inner');
 			processingHtml.processingId = $('#processingModal').attr('data-processing-id');
-			if(processingHtml.processingId){
-				 processingHtml.functions.queryProcessingDvrs(processingHtml.processingId);
+			processingHtml.processingRole = $('#processingModal').attr('data-processing-role');
+			if(processingHtml.processingId && processingHtml.processingRole){
+				 processingHtml.functions.queryProcessingDvrs(processingHtml.processingId, processingHtml.processingRole);
 			}
 		});
 		
@@ -27,8 +27,11 @@
      *
      */
 		processingHtml.functions.insertProcessingText = function(){
-			processingHtml.dvrHtml = processingHtml.dvrHtml + processingHtml.table;
-			$('.processing-modal').html(processingHtml.dvrHtml);
+			var $newElement = $("<div>", {id: "dvr-info"});
+			//$('.ctools-use-modal').trigger('click');
+			$newElement.html( $(processingHtml.dvrHtml) );
+			$newElement.appendTo('.processing-modal');
+			processingHtml.table.appendTo('.processing-modal');
 			$('.alarm-activate-modal').hide();
 		}
 		
@@ -52,7 +55,8 @@
      *
      */
 		processingHtml.functions.ChangeProcessingElements = function(){
-			$('.alarm-processing-inner').html(processingHtml.table);
+			processingHtml.table.appendTo('#alarm-processing-inner');
+			$('.alarm-activate-modal').show();
 		}
 		
 		
@@ -75,18 +79,22 @@
 		 * @ function for getting all the dvrs related to this account
      *
      */
-		processingHtml.functions.queryProcessingDvrs = function(processing_id){
+		processingHtml.functions.queryProcessingDvrs = function(processing_id, processing_role){
+			processingHtml.ajaxData = {};
+			processingHtml.ajaxData.uid = processing_id;
+			processingHtml.ajaxData.role = processing_role;
+			processingHtml.ajaxData.type = 'processing';
 			$.ajax({
 				beforeSend : function(){
-					$('.processing-modal').append('<div class="tooltip-throbber"</div>');
+					$('.processing-modal').append( $('<div class="tooltip-throbber"></div>') );
 				},
 				type: 'POST',
 				url: '/ajax/dvr-reveal-modals',
 				data: { 
-					uid: processing_id,
-					argument: 'processing',
+					data:processingHtml.ajaxData,
 				},
 				success: function(data) {
+					$('.tooltip-throbber').remove();
 					if(data.html){
 						processingHtml.dvrHtml = data.html;
 						//window.setTimeout(processingHtml.functions.insertProcessingText, 1800);

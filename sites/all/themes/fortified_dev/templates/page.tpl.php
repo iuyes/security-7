@@ -2,7 +2,7 @@
 <nav class="top-bar">
   <ul class="title-area">
     <li class="name"><h3 class="site-title"><a href='http://www.fortifiedsecurityservices.com'><img src='http://www.fortifiedsecurityservices.com/sites/default/files/fort_vector.png' width="250px" height="80px" class="site-logo"></a><?php print '<div class="site-name">'.$linked_site_name.'</div><span class="pone"> | (520) 886-6419</span>'; ?></h3></li>
-    <li class="toggle-topbar menu-icon"><a href="#"><span>Menu</span></a></li>
+    <li class="toggle-topbar menu-icon"><a href="#"><span></span></a></li>
   </ul>
   
   <div class="top-bar-section">

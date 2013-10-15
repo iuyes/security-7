@@ -11,15 +11,18 @@
 		 */
 		dvrData.functions.modalTrigger = $('.dvr-cms-reveal').click(function(){
 			dvrData.uid = $(this).attr('data-user-id');
+			dvrData.ajaxData = {};
+			dvrData.ajaxData.uid = dvrData.uid;
+			dvrData.ajaxData.role = $(this).attr('data-cms-role');
+			dvrData.ajaxData.type = 'cms';
 			if(dvrData.uid){
 				$.ajax({
 				type: 'POST',
 				url: '/ajax/dvr-reveal-modals',
 				data: { 
-					uid: dvrData.uid,
-					argument: 'cms',
+					data: dvrData.ajaxData,
 				},
-				success: function(data, text, xhqr) {
+				success: function(data) {
 					if(data.html){
 						$('body').after(data.html);
 						$('#dvr-cms-modal').foundation('reveal', 'open');
@@ -32,6 +35,8 @@
 			
 		});
 		
+		
+		
 	
 	
 	/**
@@ -39,13 +44,15 @@
   *
   */
 	dvrData.functions.openDvr = function(selector){
+		//for the processing modal
 		if( Drupal.settings.processingModal ){
-			$('#alarm-processing-table').addClass('fixed');
-			$('.close-dvr-object').show().addClass('open');
+			$('#alarm-processing-table').addClass('fixed').appendTo('body');
+			$('#alarm-processing-table').draggable();
+			$('.close-dvr-object').addClass('open').parent().addClass('active').removeClass('last');
 		}
 		if( $(selector).closest('li').hasClass('alarm') ){
 			 $(selector).closest('li').removeClass('alarm');
-			Drupal.settings.activeAlarm = false;
+			 Drupal.settings.activeAlarm = false;
 		}
 		$('#dvr-cms-container').html('');
 		dvrData.credentials = {};

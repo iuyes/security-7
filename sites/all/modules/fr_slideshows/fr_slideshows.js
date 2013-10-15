@@ -80,10 +80,10 @@
 			var math = (8.44444 / 100) * (dataWidth) - (num_of_items * 25.5);
 			maxWidth = math * num_of_items;
 			$('.li-featured-content').css({
-				maxWidth: (windowWidth - 50) + 'px'
+				maxWidth: (windowWidth / ( num_of_items - 1 ) - 15) + 'px'
 			});
-			currentWidth = (16.8888 / 100) * (dataWidth) - (num_of_items * 20.5);
-			slideDistace = (16.8888 / 100) * (dataWidth) - (num_of_items * 1);
+			currentWidth = (16.5 / 100) * (dataWidth) - (num_of_items * 20.5);
+			slideDistace = (16.5 / 100) * (dataWidth) - (num_of_items * 1);
 		} else if (num_of_items >= 4) {
 			var over = (num_of_items - 3) * 550; //435
 			maxWidth = (currentWidth * 1) + over;

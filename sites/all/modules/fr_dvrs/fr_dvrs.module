@@ -1,17 +1,357 @@
 <?php
 
 
-
 /**
  * Implements hook_menu()
  *
  */
 function fr_dvrs_menu() {
+	$items = array();
+	node_type_cache_reset();
 	$items['ajax/dvr-reveal-modals'] = array(
 		'page callback' => 'fr_groups_dvr_modal_callback',
 		'type' => MENU_CALLBACK,
 		'access callback' => TRUE,
 	);
+	$items['ajax/alarm-proccessor-dvr'] = array(
+		'page callback' => 'alarm_processing_query_dvr',
+		'type' => MENU_CALLBACK,
+		'access callback' => TRUE,
+	);
+	$items['fr_dvrs/processing-filters'] = array(
+		'page callback' => 'fr_dvrs_process_filters',
+		'type' => MENU_CALLBACK,
+		'access callback' => TRUE,
+		'page arguments' => array(1),
+	);
+  $items['fr_dvrs/%/%ctools_js'] = array(
+    'page callback' => 'fr_dvrs_callback',
+    'page arguments' => array(1, 2),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+	return $items;
+}
+
+
+
+/**
+ * @ callback for handling the alarm processing filters
+ *
+ */
+function fr_dvrs_process_filters($data = NULL){
+
+global $user;
+	$return_data = array('html' => 'Sorry, filters are available at this time');
+	$uid = !empty($_POST['arguments']['data']) ? $_POST['arguments']['data'] : NULL;
+	if(!empty($uid) && $user->uid == $uid){
+		$form = drupal_get_form('fr_dvrs_processing_filter_form');
+		$form = drupal_render($form);
+		$return_data = array('html' => $form);
+	}
+  
+		drupal_json_output($return_data);
+		drupal_exit();
+
+}
+
+
+
+
+/**
+ * Ctools functions to ad the necessary jsvascript librarys
+ */
+function fr_dvrs_ctools_modal() {
+  // Load the modal library and add the modal javascript.
+  ctools_include('modal');
+  ctools_modal_add_js();
+}
+
+
+
+
+
+/**
+ * Ctools Ajax menu callback.
+ */
+function fr_dvrs_callback($form = NULL, $ajax) {
+  if ($ajax) {
+    ctools_include('ajax');
+    ctools_include('modal');
+    
+    switch($form){
+	    case 'fr_dvrs_processing_settings_form':
+	    	$title = 'Alarm Processing Settings';
+	    	break;
+	    case 'fr_dvrs_processing_filter_form':
+	    	$title = 'Alarm Processing Filters';
+	    	break;
+    }
+ 
+    $form_state = array(
+      'ajax' => TRUE,
+      'title' => t($title),
+    );
+ 
+    // Use ctools to generate ajax instructions for the browser to create
+    // a form in a modal popup.
+    $output = ctools_modal_form_wrapper($form, $form_state);
+ 
+    // If the form has been submitted, there may be additional instructions
+    // such as dismissing the modal popup.
+    if (!empty($form_state['ajax_commands'])) {
+      $output = $form_state['ajax_commands'];
+    }
+ 
+    // Return the ajax instructions to the browser via ajax_render().
+    print ajax_render($output);
+    drupal_exit();
+  }
+  else {
+    return drupal_get_form($form);
+  }
+}
+
+
+
+
+/**
+ * Ctools Helper function to make a link.
+ */
+function _fr_dvrs_make_link($link_text = NULL, $form = NULL) {
+  // Set a default value if no text in supplied.
+  if (empty($link_text)) {
+    $link_text = 'Filters';
+  }
+  return '<div class="button edit">' . l($link_text, 'fr_dvrs/'.$form.'/nojs', array('attributes' => array('class' => 'ctools-use-modal'))) . '</div>';
+}
+
+
+
+
+
+/**
+ * @ function hook_form_alter()
+ * @ form that appears in the processing modal
+ */
+function fr_dvrs_processing_settings_form($form, &$form_state){
+	$form = array();
+	
+	$form['wrapper'] = array(
+		'#type' => 'vertical_tabs',
+	);
+	$form['alarm_adio'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Alarm Audio'),
+		'#collapsible' => FALSE,
+		'#group' => 'wrapper',
+		'#attributes' => array(
+			'class' => array('large-12', 'columns'),
+		),
+	);
+	
+	$form['alarm_adio']['audio'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Turn the alarm audio off'),
+		'#options' => array(
+			'0' => 'Off',
+ 		),
+ 		//'#default_value' => array(1),
+		'#ajax' => array(
+			'callback' => 'fr_dvrs_processing_settings_form_submit',
+			'wrapper' => '',
+			'method' => 'replace',
+			'effect' => 'fade',
+		),	
+	);
+	
+	return $form;
+}
+
+
+
+
+function fr_dvrs_processing_settings_form_submit($form, &$form_state){
+	//for filters
+	$value = $form_state['triggering_element']['#value'];
+	drupal_add_js(array('processingSettings' => array('audio' => $value)), 'setting');
+	//for settings
+	$id = $form_state['triggering_element']['#name'];
+	drupal_add_js(array('processingCache' => array('element' => array('id' => $id, 'value' => $value))), 'setting');
+	return $form_state['triggering_element']; 
+}
+
+/**
+ * @ function hook_form_alter()
+ * @ form that appears in the processing modal
+ */
+function fr_dvrs_processing_filter_form($node, &$form_states){
+	drupal_add_css(drupal_get_path('module', 'fr_groups') .'/css/fr_groups_tableset.css', array('type' => 'file', 'scope' => 'footer'));
+	$form = array();
+	$options = array();
+	//get account, alarm, and dvr info
+	$account = new FortifiedGroups();
+	$dvrs = fr_tweaks_query_dvrs($account->account_id);
+	$alarms = $account->QueryAlarms();
+	$alarms = $account->account_information->alarm_information;
+	$alarms = !empty($alarms) ? current($alarms) : NULL;
+	
+	//build the form
+	if(!empty($alarms)){
+		$header = array('Open', 'Restore', 'Close', 'Alarm', 'Bypass');
+		//filter vertical tab
+		
+		$form['update'] = array(
+			'#type' => 'markup',
+			'#markup' => '',
+			'#attributes' => array(
+				'id' => 'update-filters',
+			),
+			'#weight' => -100,
+		);
+		
+		if(!empty($form_state['values'])){
+			$form['update'] = array(
+				'#type' => 'markup',
+				'#markup' => '',
+				'#attributes' => array(
+					'id' => 'update-filters',
+					'class' => array('update-filters'),
+				),
+				'#weight' => -100,
+		);
+		}
+		
+		if(!empty($alarms)){
+		$default_value = array(1, 2, 3, 4, 5);
+			foreach($alarms as $batname => $batdata){
+				$options = array();
+				if(!empty($batdata['zone_aliases'])){
+					$options = array();
+					foreach($batdata['zone_aliases'] as $zone_num => $zonedata){
+						for( $i = 1; $i <= 5; $i++ ){
+							$options[$i] = '';
+						}
+						$form['zones'][$zone_num] = array(
+								'#type' => 'checkboxes',
+								'#title' => $zonedata['zone_name'].'<br/><span class="filter-desc">( '.$batname.' )</span>',
+								'#options' => $options,
+								'#attributes' => array(
+									'class' => array('filter-checkbox-wrapper'),
+								),
+								'#default_value' => $default_value,
+								'#ajax' => array(
+						      'callback' => 'fr_dvrs_processing_filter_form_submit',
+						      'wrapper' => 'update-filters',
+						      'method' => 'replace',
+						      'effect' => 'fade',
+						    ),
+						);
+					}
+				}
+			}
+		}
+	}
+	
+	
+/*
+	$form['submit'][] = array(
+		'#name' => 'save_pref',
+		'#type' => 'submit',
+		'#value' => 'Save',
+		'#ajax' => array(
+			'callback' => 'fr_dvrs_processing_filter_form_submit',
+			'wrapper' => 'pref-formm',
+			'method' => 'replace',
+			'effect' => 'fade',
+		),
+	);
+*/
+
+	
+	$form['#theme'] = 'fr_groups';
+	$form['#prefix'] = '<div id="pref-formm" class"pref-formm">';
+	$form['#suffix'] = '</div>';
+	
+	return $form;
+}
+
+
+/**
+ * form submit handler for our processing filter form
+ *
+ */
+function fr_dvrs_processing_filter_form_submit($form, &$form_state){
+	//for filters
+	$value = $form_state['triggering_element']['#value'];
+	$zone = $form_state['triggering_element']['#parents'][0];
+	$signal_code = $form_state['triggering_element']['#parents'][1];
+	drupal_add_js(array('processingFilters' => array('filters' => array('value' => $value, 'zone' => $zone, 'signal_node' => $signal_code))), 'setting');
+	//for chache
+	$id = $form_state['triggering_element']['#name'];
+	drupal_add_js(array('processingCache' => array('element' => array('id' => $id, 'value' => $value))), 'setting');
+	return $form_state['triggering_element'];
+
+}
+
+
+/**
+ * ajax callback function for admins / central stations to bring up clients dvrs on alarm
+ *
+ */
+function alarm_processing_query_dvr(){
+	$account_id = $_POST['account'];
+	if($account_id){
+		$account_dvrs = fr_tweaks_query_dvrs($account_id);
+		$format_dvrs = _fr_dvrs_helper_modal_data($account_dvrs, 12, 'admin');
+		$dvr_list = array(
+			'#theme' => 'item_list',
+			'#items' => $format_dvrs,
+			'#attributes' => array(
+				'class' => array('dvr-processing-list', '', ''),
+			),
+			'#weight' => -100,
+		);
+	}
+	drupal_json_output(array('html' => drupal_render($dvr_list)));
+	drupal_exit();
+}
+
+
+
+
+function _fr_dvrs_helper_modal_data($dvrs, $li_size = NULL, $type){
+	$items = array();
+	foreach($dvrs as $nid => $data){
+		if(!empty($data) && isset($data)){
+			$dvr = '<div ';
+			switch($type){
+			case 'user':
+				if(!empty($data->dvr_credentials)){
+					$user_name = !empty($data->dvr_credentials['dvr_username']) ? $data->dvr_credentials['dvr_username'] : NULL;
+					$password = !empty($data->dvr_credentials['dvr_password']) ? $data->dvr_credentials['dvr_password'] : NULL;
+					$dvr .= 'data-dvr-user="'.$user_name.'" data-dvr-password="'.$password.'" data-dvr-id="'.$nid.'" class="dvr-object large-'.$li_size.' columns" ';
+				}
+				break;
+			case 'admin':
+				$password = !empty($data->field_dvr_master_password) ? $data->field_dvr_master_password : NULL;
+				$user_name = !empty($data->field_dvr_master_username) ? $data->field_dvr_master_username : NULL;
+				$dvr .= 'data-dvr-user="'.$user_name.'" data-dvr-password="'.$password.'" data-dvr-id="'.$nid.'" class="dvr-object large-'.$li_size.' columns" ';
+				break;
+			}
+			if(!empty($data->dvr_url)){
+				$dvr .= 'data-dvr-url="'.$data->dvr_url.'">';
+			}
+			if(!empty($data->dvr_title)){
+				$dvr .= $data->dvr_title;
+			}
+			$dvr .= '</div>';
+			$items[] = array(
+				'data' => $dvr,
+				'class' => array(''),
+			);
+		}
+	}
 	return $items;
 }
 
@@ -21,7 +361,10 @@ function fr_dvrs_menu() {
  * ajax callback function to open all dvrs up in a modal
  *
  */
-function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
+function fr_dvrs_build_all_dvr_modal($dvrs, $arg, $uid = NULL){
+	ctools_include('modal');
+  ctools_include('ajax');
+  ctools_modal_add_js();
 	$items = array();
 	$content = array();
 
@@ -33,7 +376,7 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 		$extra_class = 'cms';
 		$li_size = '12';
 		$iframe_size = '10';
-		$title = _fr_groups_markup('<h3>DVR SYSTEMS</h3>', 'dvr-cms-title', -100);
+		/* $title = _fr_groups_markup('<div>DVR SYSTEMS</div>', 'dvr-cms-title row', -100); */
 		break;
 	case 'processing':
 		$wrapper_class = array('dvr-cms-wrapper', 'large-12', 'columns');
@@ -42,7 +385,7 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 		$extra_class = 'processing';
 		$li_size = '2';
 		$iframe_size = '12';
-		$title = _fr_groups_markup('<h3>ALARM PROCESSING</h3>', 'dvr-cms-title', -100);
+		/* $title = _fr_groups_markup('<div class="modal-title">ALARM PROCESSING</div>', 'dvr-cms-title large-12 large-centered columns', -100); */
 		break;
 	}
 
@@ -53,32 +396,15 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 			'id' => 'dvr-'.$arg.'-modal',
 		),
 	);
+
+
 	$content['wrapper']['close_modal'] = $close_modal;
-	$content['wrapper']['title'] = $title;
+/* 	$content['wrapper']['title'] = $title; */
+
 	if(!empty($dvrs)){
-		foreach($dvrs as $nid => $data){
-			if(!empty($data) && isset($data)){
-				$dvr = '<div ';
-				if(!empty($data->dvr_credentials)){
-					$user_name = !empty($data->dvr_credentials['dvr_username']) ? $data->dvr_credentials['dvr_username'] : NULL;
-					$password = !empty($data->dvr_credentials['dvr_password']) ? $data->dvr_credentials['dvr_password'] : NULL;
-					$dvr .= 'data-dvr-user="'.$user_name.'" data-dvr-password="'.$password.'" data-dvr-id="'.$nid.'" class="dvr-object large-'.$li_size.' columns" ';
-				}
-				if(!empty($data->dvr_url)){
-					$dvr .= 'data-dvr-url="'.$data->dvr_url.'">';
-				}
-				if(!empty($data->dvr_title)){
-					$dvr .= $data->dvr_title;
-				}
-				$dvr .= '</div>';
-				$items[] = array(
-					'data' => $dvr,
-					'class' => array(''),
-				);
-			}
-		}
+		$items = _fr_dvrs_helper_modal_data($dvrs, $li_size, 'user');
 		if($extra_class == 'processing'){
-			$items[] = '<span class="close-dvr-object">Close DVR</span>';
+			$items[] = '<a href="#" class="close-dvr-object">Close DVR</a>';
 		}
 	}
 
@@ -88,7 +414,7 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 		'#attributes' => array(
 			'class' => array('dvr-'.$extra_class.'-list', '', ''),
 		),
-		'#weight' => -100,
+		'#weight' => -99,
 	);
 
 	$list_wrapper = array(
@@ -97,7 +423,7 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 		'title' => 'Available DVRs',
 		'actions' => '',
 		'status' => 'static',
-		'weight' => -99,
+		'weight' => -98,
 		'inner' => array(
 			'status' => 'open',
 			'class' => 'dvr-'.$extra_class.'-markup-container',
@@ -106,6 +432,48 @@ function fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg){
 	);
 	$content['wrapper']['dvr_list'] = fr_groups_accordion_fieldset($list_wrapper);
 	$content['wrapper']['dvr_object'] = fr_groups_markup('<div id="dvr-cms-inner"></div>', 'dvr-'.$extra_class.'-container large-'.$iframe_size.' columns', 'dvr-cms-container');
+	return drupal_render($content);
+}
+
+
+
+/**
+ * ajax callback function for admins and central stations
+ *
+ */
+function fr_dvrs_build_admin_dvr_modal($type){
+	$content = array();
+	switch($type){
+	case 'processing':
+
+		break;
+	case 'cms':
+
+		break;
+	}
+
+	$content['wrapper'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'id' => 'dvr-'.$type.'-modal',
+		),
+	);
+
+	$list_wrapper = array(
+		'class' => 'dvr-'.$type.'-list-wrapper',
+		'subclass' => 'account-static-section',
+		'title' => 'Available DVRs',
+		'actions' => '',
+		'status' => 'static',
+		'weight' => -99,
+		'inner' => array(
+			'status' => 'open',
+			'class' => 'dvr-'.$type.'-markup-container',
+			'markup' => 'DVRs will populate here on an alarm event',
+		),
+	);
+	$content['wrapper']['dvr_fieldset'] = fr_groups_accordion_fieldset($list_wrapper);
+	$content['wrapper']['dvr_object'] = fr_groups_markup('<div id="dvr-cms-inner"></div>', 'dvr-'.$type.'-container large-12 columns', 'dvr-cms-container');
 	return drupal_render($content);
 }
 
@@ -120,8 +488,6 @@ class FortifiedDvrSystems {
 	public $dvrData;
 
 	public function __construct($profile = NULL, $account_information = NULL){
-		//dpm($account_information);
-		//dpm($profile);
 		$this->account_information = $account_information;
 		$this->account_profile = $profile;
 	}
@@ -327,10 +693,9 @@ class FortifiedDvrSystems {
 					'status' => 'open',
 				),
 			);
-
 			//cms section
-			$attributes = 'data-user-id="'.$this->account_information->uid.'"';
-			$cms_button = '<span class="cms-description">Access all of your DVRs inside one area with our</span><div '.$attributes.' class="dvr-cms-reveal button star">CMS MODAL</div>';
+			$attributes = 'data-user-id="'.$this->account_information->uid.'" data-cms-role="'.$this->account_information->account_type.'"';
+			$cms_button = '<span class="cms-description">Access all of your DVRs inside one area with our</span><div '.$attributes.' class="dvr-cms-reveal button next">CMS MODAL</div>';
 			$class = 'user-dash-cms large-12 large-centered columns';
 			$camera_fieldset['inner']['markup'] = drupal_render(fr_groups_markup($cms_button, $class, NULL, $attributes));
 

@@ -51,11 +51,15 @@ function fr_user_dash_account_redirect(){
  */
 class FortifiedAdminAccounts extends FortifiedDashboardMarkup{
 
-	public function __construct($uid = NULL){
-		global $user;
-		$this->uid = $user->uid;
-		$this->user = $user;
-		$this->user_role = $this->Authenticate();
+	public function __construct($uid = NULL, $auth = TRUE, $user = TRUE){
+		if($user){
+			global $user;
+			$this->uid = $user->uid;
+			$this->user = $user;
+			if($auth = TRUE){
+				$this->user_role = $this->Authenticate();
+			}
+		}
 	}
 
 	public function Authenticate(){
@@ -112,11 +116,14 @@ class FortifiedAdminAccounts extends FortifiedDashboardMarkup{
  * @ Function for constructing our custom fieldsets
  *
  */
-	public function dashboardFieldset($title, $class = NULL, $collapsible = TRUE, $status = FALSE, $inner_status = FALSE, $iclass = NULL, $subclass = NULL, $weight = 100){
+	public static function dashboardFieldset($title, $class = NULL, $collapsible = TRUE, $status = NULL, $inner_status = FALSE, $iclass = NULL, $subclass = NULL, $weight = 100){
 		$subclass = $subclass ? 'account-static-section' : '';
 		$collapsible =  $collapsible == TRUE ? 'collapsible' : '';
+		$inner_status = $inner_status == FALSE ? 'closed' : ' active open';
 		$status = $status == FALSE ? 'closed' : 'static';
-		$inner_status = $inner_status == FALSE ? 'closed' : 'open';
+		if($inner_status == 'active open' && $status != 'open'){
+			$status = 'active open';
+		}
 		return array(
 			'class' => $class,
 			'subclass' => $subclass,
@@ -139,7 +146,7 @@ class FortifiedAdminAccounts extends FortifiedDashboardMarkup{
  * @ Helper function for insert markup into our fieldsets array
  *
  */
-	public function insertFieldsetMarkup($fieldset, $markup, $render = TRUE){
+	public static function insertFieldsetMarkup($fieldset, $markup, $render = TRUE){
 		$markup = $render ? drupal_render($markup) : $markup;
 		$fieldset['inner']['markup'] = $markup;
 		$complete_fieldset = fr_groups_accordion_fieldset($fieldset);
@@ -166,6 +173,17 @@ class FortifiedDashboardMarkup{
 			),
 		);
 	}
+		
+		
+	public function dashMarkup($markup = '', $class = '', $weight = 100){
+		return array(
+			'#type' => 'markup',
+			'#markup' => $markup,
+			'#prefix' => '<div class="'.$class.'">',
+			'#suffix' => '</div>',
+			'#weight' => $weight,
+		);
+	}
 
 }
 
@@ -181,6 +199,7 @@ class FortifiedDashboardMarkup{
  */
 function fr_user_dash_admin($uid){
 	// if the user is not registered denie them
+	$user_id = NULL;
 	if(empty($uid)){
 		drupal_access_denied();
 		drupal_exit();
@@ -195,42 +214,177 @@ function fr_user_dash_admin($uid){
 	}
 	//if has access
 	if($authenticated){
+	
+		switch($uid){
+		case 'admin':
+			$user_id = 1;
+			break;
+		case 'central-station':
+			global $user;
+			$user_id = $user->uid;
+			break;
+	}
+	
 		// add all necessary dashboard javascript files
 		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
 		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_modal_all_dvrs.js', array('type' => 'file', 'scope' => 'footer'));
 		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal_cust.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_search_alarm_accounts.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_user_dash_processing_modal.js', array('type' => 'file', 'scope' => 'footer'));
+
 		//admin tools class
 		$tools = new DashboardTools();
 		$content['wrapper'] = $dashboard->dashboardWrapper();
-		/*** SHORTCUST ***/
+		
+		/*************** SHORTCUST ***************/
 		$tools_fieldset = $dashboard->dashboardFieldset('Shortcuts', NULL, FALSE, TRUE, TRUE, NULL, TRUE -100);
 		$tools_markup = $tools->basicTools();
 		$content['wrapper']['tools'] = $dashboard->insertFieldsetMarkup($tools_fieldset, $tools_markup);
-		/*** ACOUNT MANAGER VIEW ***/
+		/************* END SHORTCUTS *************/
+		
+		/******* ACCOUNT MANAGER VIEW FORM ******/
 		$account_manager_fieldset = $dashboard->dashboardFieldset('Account Manager', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -99);
 		$account_manager_markup = views_embed_view('admin_users_dash', $display_id = 'block');
 		$content['wrapper']['account_manager'] = $dashboard->insertFieldsetMarkup($account_manager_fieldset, $account_manager_markup, FALSE);
-		/*** RECENT NOTIFICATIONS ***/
+		/***** END ACCOUNT MANAGER VIEW FORM ****/
+		
+		/******** RECENT NOTIFICATIONS *********/
 		$recent_notifications_fieldset = $dashboard->dashboardFieldset('Recent Alarm Notifications', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -98);
 		$recent_notifications_markup = ip_datatel_load_alarm_notifications($dashboard->uid);
-		/*** TOURS TODAY ***/
 		$content['wrapper']['alarm_notifications'] = $dashboard->insertFieldsetMarkup($recent_notifications_fieldset, $recent_notifications_markup);
+		/****** END RECENT NOTIFICATIONS ********/
+		
+		/************* TOURS TODAY *************/
 		$tours_today_fieldset = $dashboard->dashboardFieldset('Tours Today', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -98);
 		$tours_today_markup = fr_times_load_customers();
 		$content['wrapper']['tours_today'] = $dashboard->insertFieldsetMarkup($tours_today_fieldset, $tours_today_markup);
-		/*** BUGS  ***/
-		$bugs_fieldset = $dashboard->dashboardFieldset('Pending Bugs', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -97);
+		/********** END TOURS TODAY ***********/
+		
+		/********* Alarm Accounts ***********/
+		$alarm_accounts_fieldset = $dashboard->dashboardFieldset('Alarm Systems', 'alarm-accounts', FALSE, TRUE, TRUE, NULL, TRUE, -97);
+		$search_accounts_form = drupal_render(drupal_get_form('fr_user_dash_search_alarm_accounts_form'));
+		$alarm_accounts_markup = ip_datatel_load_alarm_profile(1, 'all');
+		$alarm_accounts_html = $search_accounts_form . $alarm_accounts_markup;
+		$content['wrapper']['alarm_accounts'] = $dashboard->insertFieldsetMarkup($alarm_accounts_fieldset, $alarm_accounts_html, FALSE);
+		/****** END Alarm Accounts **********/
+		
+		
+		/********* Alarm Processing ***********/
+		$processing_fieldset = $dashboard->dashboardFieldset('Alarm Processing', 'alarm-processing', FALSE, TRUE, TRUE, 'alarm-processing-inner', TRUE, -97);
+		$processing_markup = ip_datatel_process_alarm_notifications($user_id, 'admin');
+		$alarm_data = $processing_markup['content']['tools'];
+		$alarm_data .= $processing_markup['content']['table'];
+		$content['wrapper']['alarm_processing'] = $dashboard->insertFieldsetMarkup($processing_fieldset, $alarm_data, FALSE);
+		/****** END Alarm Processing **********/
+		
+		/*************** BUGS  ***************/
+		$bugs_fieldset = $dashboard->dashboardFieldset('Pending Bugs', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -96);
 		$bugs_class = new FortifiedBugs();
 		$bugs_class->queryBugs();
 		$bugs_markup = $bugs_class->renderBugs();
 		$content['wrapper']['bugs'] = $dashboard->insertFieldsetMarkup($bugs_fieldset, $bugs_markup, FALSE);
-	//if user is registered but not admin deny them access
+		/************END BUGS  **************/
+		
+		
 	}else{
+		//if user is registered but not admin deny them access
 		drupal_access_denied();
 		drupal_exit();
 	}
+	
 	return $content;
 
+}
+
+
+
+/**
+ * implements hook_form
+ * @ form for searching alarm accounts
+ */
+function fr_user_dash_search_alarm_accounts_form($node, &$form_state){
+	$form = array();
+	$form['wrapper'] = array(
+		'#type' => 'container',
+		'#attributes' => array(
+			'id' => 'fr-dash-alarm-accounts-form',
+		),
+	);
+	
+	$form['wrapper']['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Account Name'),
+		'#description' => t('Search for an alarm bat'),
+	);
+	
+	$form['wrapper']['type'] = array(
+		'#type' => 'radios',
+		'#title' => t('Search Type'),
+		'#options' => array(
+			'bat' => 'Bat Name',
+			'account' => 'Account Name',
+		),
+		'#default_value' => 'bat',
+	);
+	
+	$form['wrapper']['submit'][] = array(
+		'#name' => 'search_accounts',
+		'#type' => 'submit',
+		'#value' => 'Search',
+		'#ajax' => array(
+			'callback' => '_fr_user_dash_search_accounts_callback',
+			'wrapper' => 'fr-dash-alarm-accounts-form',
+			'method' => 'replace',
+			'effect' => 'fade',
+		),
+	);
+
+	return $form;
+}
+
+
+
+
+
+/**
+ * @ submit handler
+ *  @ form fr_user_dash_search_alarm_accounts_form
+ */
+function _fr_user_dash_search_accounts_callback($form, &$form_state){
+	$content = array();
+	$results = NULL;
+	$content['message']['#markup'] = 'Please input a name';
+	if(!empty($form_state['values']['name'])){
+		$search_name = $form_state['values']['name'];
+		$search_type = $form_state['values']['type'];
+		$query = new EntityFieldQuery();
+		switch($search_type){
+			case 'bat':
+				$query->entityCondition('entity_type', 'node')
+					->entityCondition('bundle', 'alarm')
+					->propertyCondition('title', $search_name, '=');
+				break;
+			case 'account':
+				$query->entityCondition('entity_type', 'node')
+					->entityCondition('bundle', 'customer_group')
+					->propertyCondition('title', $search_name, '=');
+				break;
+		}
+		$result = $query->execute();
+		$results = !empty($result['node']) ? $result['node'] : '';
+		$fieldsets = new FortifiedAdminAccounts(NULL, FALSE, FALSE);
+		if(isset($results)){
+			$nids = array_keys($results);
+			foreach($nids as $delta => $nid){
+				$node = node_load($nid);
+				$title = $node->title;
+				$alarm_accounts_fieldset = $fieldsets->dashboardFieldset($title, NULL, TRUE, FALSE, TRUE, NULL, FALSE, -100);
+				$alarm_account_markup = $fieldsets->dashMarkup($title);
+				$content['fieldset'] = $fieldsets->insertFieldsetMarkup($alarm_accounts_fieldset, $alarm_account_markup);
+			}
+		}
+	}
+	return $content;
 }
 
 
@@ -240,13 +394,93 @@ function fr_user_dash_admin($uid){
  *
  */
 function fr_user_dash_central_station($uid){
+	// if the user is not registered denie them
+	$user_id = NULL;
 	if(empty($uid)){
 		drupal_access_denied();
 		drupal_exit();
-	}else{
-		$dashboard = new FortifiedAdminAccounts($uid);
 	}
-	return '';
+	$content = array();
+	$authenticated = FALSE;
+	//dashboard class
+	$dashboard = new FortifiedAdminAccounts($uid);
+	//authenticate the user
+	if(!empty($dashboard->user_role['role'])){
+		$authenticated = TRUE;
+	}
+	//if has access
+	if($authenticated){
+	
+		switch($uid){
+		case 'admin':
+			$user_id = 1;
+			break;
+		case 'central-station':
+			global $user;
+			$user_id = $user->uid;
+			break;
+	}
+	
+		// add all necessary dashboard javascript files
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_custom_tooltips.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_groups_modal_all_dvrs.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_reveal_cust.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_user_dash') .'/js/fr_user_dash_search_alarm_accounts.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_user_dash_processing_modal.js', array('type' => 'file', 'scope' => 'footer'));
+
+		//admin tools class
+		$tools = new DashboardTools();
+		$content['wrapper'] = $dashboard->dashboardWrapper();
+		
+		/*************** SHORTCUST ***************/
+		$tools_fieldset = $dashboard->dashboardFieldset('Shortcuts', NULL, FALSE, TRUE, TRUE, NULL, TRUE -100);
+		$tools_markup = $tools->basicTools();
+		$content['wrapper']['tools'] = $dashboard->insertFieldsetMarkup($tools_fieldset, $tools_markup);
+		/************* END SHORTCUTS *************/
+		
+		/******* ACCOUNT MANAGER VIEW FORM ******/
+		$account_manager_fieldset = $dashboard->dashboardFieldset('Account Manager', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -99);
+		$account_manager_markup = views_embed_view('admin_users_dash', $display_id = 'block');
+		$content['wrapper']['account_manager'] = $dashboard->insertFieldsetMarkup($account_manager_fieldset, $account_manager_markup, FALSE);
+		/***** END ACCOUNT MANAGER VIEW FORM ****/
+		
+		/******** RECENT NOTIFICATIONS *********/
+		$recent_notifications_fieldset = $dashboard->dashboardFieldset('Recent Alarm Notifications', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -98);
+		$recent_notifications_markup = ip_datatel_load_alarm_notifications($dashboard->uid);
+		$content['wrapper']['alarm_notifications'] = $dashboard->insertFieldsetMarkup($recent_notifications_fieldset, $recent_notifications_markup);
+		/****** END RECENT NOTIFICATIONS ********/
+		
+		/************* TOURS TODAY *************/
+		$tours_today_fieldset = $dashboard->dashboardFieldset('Tours Today', NULL, FALSE, TRUE, TRUE, NULL, TRUE, -98);
+		$tours_today_markup = fr_times_load_customers();
+		$content['wrapper']['tours_today'] = $dashboard->insertFieldsetMarkup($tours_today_fieldset, $tours_today_markup);
+		/********** END TOURS TODAY ***********/
+		
+		/********* Alarm Accounts ***********/
+		$alarm_accounts_fieldset = $dashboard->dashboardFieldset('Alarm Systems', 'alarm-accounts', FALSE, TRUE, TRUE, NULL, TRUE, -97);
+		$search_accounts_form = drupal_render(drupal_get_form('fr_user_dash_search_alarm_accounts_form'));
+		$alarm_accounts_markup = ip_datatel_load_alarm_profile(1, 'all');
+		$alarm_accounts_html = $search_accounts_form . $alarm_accounts_markup;
+		$content['wrapper']['alarm_accounts'] = $dashboard->insertFieldsetMarkup($alarm_accounts_fieldset, $alarm_accounts_html, FALSE);
+		/****** END Alarm Accounts **********/
+		
+		
+		/********* Alarm Processing ***********/
+		$processing_fieldset = $dashboard->dashboardFieldset('Alarm Processing', 'alarm-processing-inner', FALSE, TRUE, TRUE, NULL, TRUE, -97);
+		$processing_markup = ip_datatel_process_alarm_notifications($user_id, 'central-station');
+		$alarm_data = $processing_markup['content']['tools'];
+		$alarm_data .= $processing_markup['content']['table'];
+		$content['wrapper']['alarm_processing'] = $dashboard->insertFieldsetMarkup($processing_fieldset, $alarm_data, FALSE);
+		/****** END Alarm Processing **********/
+		
+		
+		
+	}else{
+		//if user is registered but not admin deny them access
+		drupal_access_denied();
+		drupal_exit();
+	}
+	return $content;
 }
 
 
@@ -281,6 +515,11 @@ function fr_user_dash_menu() {
 	$items['fr_user_delete'] = array(
 		'access callback' => TRUE,
 		'page callback' => 'fr_user_dash_delete_callback',
+		'type' => MENU_CALLBACK
+	);
+	$items['ajax/fr_user_dash_prefrences'] = array(
+		'access callback' => TRUE,
+		'page callback' => 'fr_user_dash_prefrences',
 		'type' => MENU_CALLBACK
 	);
 	$items['fr_user_download'] = array(
@@ -324,6 +563,39 @@ function fr_user_dash_menu() {
 		'type' => MENU_CALLBACK
 	);
 	return $items;
+}
+
+
+
+function fr_user_dash_page_alter(&$page){
+	$arg = arg();
+	if(!empty($arg[1])){
+		if($arg[0] == 'account' && $arg[1] == 'admin' || $arg[1] == 'central-station'){
+			//prefrences modal
+			$modal = '<div class="close-reveal-modal close-modal">&#215;</div><br/><div>'.drupal_render(drupal_get_form('fr_groups_prefrences_form')).'</div>';
+			$id = 'admin-prefrences-form';
+			$class = 'reveal-modal xlarge';
+			$page['modal']['default'] = fr_groups_markup($modal, $class, $id, NULL);
+			//processing modal
+			$page['modal']['alarm_processing'] = array(
+					'#type' => 'markup',
+					'#markup' => '<div class="close-modal close-processing-modal">&#215;</div><div class="processing-modal"></div>',
+					'#prefix' => '<div id="processingModal" data-processing-id="'.$arg[2].'" data-processing-role="admin" class="reveal-modal xlarge">',
+					'#suffix' => '</div>',
+				);
+		}
+	}
+}
+
+
+function fr_user_dash_prefrences(){
+	$form = '';
+	$auth = $_POST['arguments'];
+	if($auth){
+		$form = drupal_render(drupal_get_form('fr_groups_prefrences_form'));
+	}
+	drupal_json_output(array('html' => $form));
+	drupal_exit();
 }
 
 

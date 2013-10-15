@@ -65,7 +65,7 @@ class DashboardTools{
 		$path = array('admin/people/create', 'admin/people', '../../user', '../../node/add/alarm', '#');
 		$query = array('', '', 'window.refresh();', '', '');
 		$class = array('add', 'edit', 'next', 'add', 'next');
-		$id = array('', '', '', '', 'myPrefrences');
+		$id = array('', '', '', '', 'admin-prefrences-form');
 		$loop = count($type) - 1;
 		for($i = 0; $i<=$loop; $i++){
 			$data_reveal = empty($id[$i]) ? 'none' : 'data-reveal-id';

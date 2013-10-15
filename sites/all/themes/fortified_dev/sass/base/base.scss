@@ -81,6 +81,12 @@
 	background: #fff url(../images/throbber.gif) no-repeat 70% 70%;
 	display:inline;
 	//background-attachment:fixed;
+	text-align: center;
+}
+
+
+.big-tooltip-throbber{
+	background: #fff url("../images/loading.gif") no-repeat 70% 70%;
 }
 
 .close-tooltip {
@@ -866,11 +872,15 @@ a.leaf:hover{
 	text-decoration: underline;
 }
 .close-modal {
-	float:right;
-	z-index: 100;
+	z-index: 999;
+	font-size: 18px;
+	position: absolute;
+	top: 10px;
+	right: 15px;
+	cursor: pointer;
 }
 .close-modal:hover{
-	background: #d0d0d0 !important;
+	font-weight: bold;
 }
 
 
@@ -923,8 +933,6 @@ a.leaf:hover{
 	font-size:13px;
 }
 
-.html {
-}
 
 .sf-menu {
 	margin-bottom:0!important;
@@ -1536,7 +1544,7 @@ area.active {
 .dvr-cms-wrapper{
 	padding-left:5px !important;
 	padding-right:5px !important;
-	padding-top:5px !important;;
+	padding-top:15px !important;
 	.dvr-cms-list-wrapper{
 		padding-left: 5px;
 		.fs-accordion-fieldset-title{
@@ -1546,11 +1554,16 @@ area.active {
 	}
 	.dvr-cms-title{
 		text-align:center;
-		h3{
-			font-family: Impact, Charcoal, sans-serif;
-			font-weight: 200;
-			font-size:19px;
-			margin-top:0px !important;
+		font-family: Impact, Charcoal, sans-serif;
+		font-weight: 200;
+		font-size:23px;
+		margin-top:5px !important;
+		.modal-title{
+			margin-left: auto;
+			margin-right: auto;
+			max-width: 50%;
+			font:normal normal 16px "klavika-web", "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+			text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.76);
 		}
 	}
 	.dvr-cms-list-wrapper{
@@ -1566,6 +1579,7 @@ area.active {
 			border-radius:3px;
 			display: inline-table;
 			width: 90%;
+			border:1px solid #d0d0d0;
 			.dvr-object{
 				font: 1em/1.5em Arial, Helvetica;
 				cursor: pointer;
@@ -1596,6 +1610,9 @@ area.active {
 			border-bottom: 10px solid transparent; 
 			border-left:10px solid #999;
 		}
+		li.last{
+			border:none;
+		}
 	}
 	.dvr-cms-container{
 		width:76.33333% !important;
@@ -1606,13 +1623,14 @@ area.active {
 
 
 .close-dvr-object{
-	display: none;
+	display: table-cell !important;
+	display:inline
 }
 .close-dvr-object.open{
 	display: table-cell !important;
 	cursor: pointer;
 	text-transform: uppercase;
-	font-weight: bold;
+	/* background: #e4f0f8; */
 }
 	
 			
@@ -2614,8 +2632,35 @@ area.active {
 
 /****************************************************/
 
+.processing-settings-ul{
+	list-style-type: none;
+	margin-top: 10px !important;
+	li{
+		float:left;
+		display: inline-block;
+		font: 1em/1.5em Arial, Helvetica;
+		display: inline-block;
+		text-align: center;
+		margin:0px !important;
+		padding:8px 8px 8px 8px !important;
+		border-radius:3px;
+		a{
+			z-index: 999;
+		}
+	}
+}
+
+.processing-remove-event{
+	display: none;
+}
+.remove-event-button{
+	display: none;
+}
+
 #processingModal{
+	z-index: 996;
 	padding:5px !important;
+	margin-top:100px;
 	.dvr-processing-list-wrapper{
 		.fs-accordion-fieldset-title{
 			text-align: center;
@@ -2629,6 +2674,7 @@ area.active {
 		list-style-type: none;
 		text-align: center;
 		li{
+			display: inline-block;
 			font: 1em/1.5em Arial, Helvetica;
 			display: inline-block;
 			text-align: center;
@@ -2642,27 +2688,33 @@ area.active {
 				color: black;
 				text-transform: uppercase;
 				width:100%;
+				font-weight: bold;
 			}
 		}
 		li.active{
 			box-shadow: 0px 0px 5px 3px #777;
 			background: #e4f0f8;
+			border:0px;
 			.dvr-object{
 				font-weight:bold;
 			}
 		}
 		li:hover{
 			background: #e4f0f8;
-			font-weight: bold;
+			border:0px;
 		}
 		li.alarm{
-			/*
--webkit-animation: alarm 2s alternate infinite;
+			-webkit-animation: alarm 2s alternate infinite;
 			animation: alarm 2s alternate infinite;
-*/
 			.dvr-object{
 				
 			}
+		}
+		li.last{
+			display:none;
+		}
+		li.last.active{
+			display: inline-block !important;
 		}
 	}
 	.dvr-processing-container{
@@ -2676,13 +2728,17 @@ area.active {
 	left:0px;
 	width:90%;
 	left:5%;
+	z-index:995;
+	overflow:scroll;
+	max-height:230px !important;
 }
 
-.stop-alarm-audio{
+#stop-alarm-audio{
 	float:right;
 	padding:10px;
-	color:#999;
-	border:1px solid #d0d0d0;
+	cursor: pointer;
+	display: table-cell !important;
+	font: 1em/1.5em Arial, Helvetica;
 	
 }
 
@@ -2693,87 +2749,16 @@ area.active {
 
 
 @keyframes alarm {
-0% {background-color:red;} 
-25% {background-color:#060;} 
-50% {background-color:#CC3200;} 
-75% {background-color:#603;} 
+50% {background-color:red;} 
+50% {background-color:#cc3300;} 
 } 
 
 @-webkit-keyframes alarm { 
-0% {background-color:#006;} 
-25% {background-color:#060;} 
-50% {background-color:#CC3200;} 
-75% {background-color:#603;} 
+50% {background-color:red;} 
+50% {background-color:#cc3300;} 
 }
 	
 	
-	
-	
-	
-	/*
-
-
-.dvr-cms-wrapper{
-	padding-left:5px !important;
-	padding-right:5px !important;
-	padding-top:5px !important;;
-	
-	.dvr-cms-title{
-		text-align:center;
-		h3{
-			font-family: Impact, Charcoal, sans-serif;
-			font-weight: 200;
-			font-size:19px;
-			margin-top:0px !important;
-			
-		}
-	}
-	.dvr-cms-list{
-		list-style-type: none;
-		margin-top:0.1em;
-		width:21.5% !important;
-		li{
-			font: bold 1em/1.5em Arial, Helvetica;
-			display: inline-block;
-			width:100%;
-			text-align: center;
-			padding-top:5px;
-			padding-bottom:5px;
-			border-width: 1px;
-			border-style: solid;
-			border-color: #fff #ccc #999 #eee;
-			background: #c1c1c1;
-			background: -moz-linear-gradient(#f5f5f5, #c1c1c1);
-			background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#c1c1c1));
-			background: -webkit-linear-gradient(#f5f5f5, #c1c1c1);
-			background: -o-linear-gradient(#f5f5f5, #c1c1c1);
-			background: -ms-linear-gradient(#f5f5f5, #c1c1c1);
-			background: linear-gradient(#f5f5f5, #c1c1c1);
-			.dvr-object{
-				padding-left:10px;
-				cursor: pointer;
-				text-decoration: none;
-				color: #555;
-				text-shadow: 0 1px 0 rgba(255,255,255,.5);
-				font: bold 1.1em/1 'trebuchet MS', Arial, Helvetica;
-				letter-spacing: 1px;
-				text-transform: uppercase;
-			}
-		}
-		li.first{
-			
-		}
-		li.active{
-			//box-shadow: 0 0 5px 5px #D4E8FE;
-		}
-*/
-	
-	
-	
-	
-	
-	
-
 	
 
 .alarm-event-wrapper{

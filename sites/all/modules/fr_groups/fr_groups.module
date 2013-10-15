@@ -24,13 +24,28 @@ function fr_groups_menu() {
  *
  */
 function fr_groups_dvr_modal_callback(){
-	$uid = $_POST['uid'];
-	global $user;
-	if($user->uid == $uid){
-		$arg = $_POST['argument'];
-		$groups = new FortifiedGroups();
-		$dvrs = $groups->AccountDvrs->queryDvrs();
-		$return_data = array('html' => fr_dvrs_build_all_dvr_modal($groups, $dvrs, $arg));
+	$return_data = array('html' => '');
+	$data = !empty($_POST['data']) ? $_POST['data'] : NULL;
+	if(isset($data)){
+		global $user;
+		$uid = !empty($data['uid']) ? $data['uid'] : NULL;
+		$role = !empty($data['role']) ? $data['role'] : NULL;
+		$type = $data['type'];
+		if($user->uid == $uid && isset($uid) && isset($role)){
+			switch($role){
+			case 'account_manager':
+			case 'customer':
+				$groups = new FortifiedGroups();
+				$dvrs = $groups->AccountDvrs->queryDvrs();
+				$return_data = array('html' => fr_dvrs_build_all_dvr_modal($dvrs, $type, $user->uid));
+				break;
+			case 'admin':
+			case 'central_station':
+			case 'administrator':
+				$return_data = array('html' => fr_dvrs_build_admin_dvr_modal($type));
+				break;
+			}
+		}
 	}
 	drupal_json_output($return_data);
 	drupal_exit();
@@ -63,7 +78,7 @@ class FortifiedGroups{
 		if(empty($user)){
 			global $user;
 		}
-		
+
 		$this->user = $user;
 		$this->uid = $user->uid;
 		$this->user_profile = profile2_load_by_user($user->uid, $type_name = NULL);
@@ -204,7 +219,7 @@ class FortifiedGroups{
 	 *
 	 */
 	public function QueryAlarms(){
-		$this->account_information->alarm_information = ip_datatel_return_alarm_account_information($this->uid);
+		$this->account_information->alarm_information = ip_datatel_return_alarm_account_information($this->user);
 	}
 
 
@@ -215,14 +230,25 @@ class FortifiedGroups{
 	 */
 	public function roleType($user){
 		$role = '';
-		foreach($user->roles as $int => $role_name){
+		$role_keys = array_keys($user->roles);
+		$roles = array($role_keys[1] => $role_keys[1]);
+		foreach($roles as $int => $role_name){
 			switch($int){
+			case 3:
+				$role = 'admin';
+				break;
 			case 4:
 				$role = 'customer';
 				$this->account_permissions = $this->buildCustomerPermissions();
 				break;
 			case 9:
 				$role = 'account_manager';
+				break;
+			case 11:
+				$role = 'central_station';
+				break;
+			default:
+				$role = 'customer';
 				break;
 			}
 		}
@@ -260,6 +286,7 @@ class FortifiedGroups{
  */
 function fr_groups_role_type($user){
 	$role = '';
+
 	foreach($user->roles as $int => $role_name){
 		switch($int){
 		case 4:
@@ -307,6 +334,9 @@ function fr_groups_accordion_fieldset($fieldset){
 						switch($attr){
 						case 'class':
 							$custom_fieldset['#markup'] .= '<div class="fs-accordion-fieldset-inner '.$inner_status.' '.$val.'">';
+							break;
+						case 'id':
+							$custom_fieldset['#markup'] .= '<div class="fs-accordion-fieldset-inner '.$inner_status.'" id="'.$val.'">';
 							break;
 						case 'markup':
 							$custom_fieldset['#markup'] .= $val.'</div></div>';
@@ -409,10 +439,11 @@ function fr_groups_account_page($uid = NULL){
 
 						if(!empty($account_information->alarm_permissions)){
 							$processing_fieldset = drupal_render(fr_groups_build_alarm_processing_fiedlset($user->uid));
+
 						}
 						$fieldset['inner']['markup'] = $processing_fieldset . $alarm_markup;
 						$content['wrapper']['alarm'] = fr_groups_accordion_fieldset($fieldset);
-						
+
 					}
 					break;
 				}
@@ -422,6 +453,7 @@ function fr_groups_account_page($uid = NULL){
 		drupal_access_denied();
 		drupal_exit();
 	}
+
 	return drupal_render($content);
 }
 
@@ -432,7 +464,7 @@ function fr_groups_build_alarm_processing_fiedlset($uid){
 	$content = '';
 	$alarm_processing = ip_datatel_process_alarm_notifications($uid, 'user');
 	if(!empty($alarm_processing['content'])){
-		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_user_dash_processing_modal.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_js(drupal_get_path('module', 'fr_groups') .'/js/fr_user_dash_processing_modal.js', array('type' => 'file', 'scope' => 'header'));
 		$alarm_data = '<div class="alarm-processing-inner large-12 columns">';
 		$alarm_data .= $alarm_processing['content']['tools'];
 		$alarm_data .= $alarm_processing['content']['table'];
@@ -446,7 +478,7 @@ function fr_groups_build_alarm_processing_fiedlset($uid){
 			'weight' => 100,
 			'inner' => array(
 				'status' => 'open',
-				'class' => 'alarm-processing-inner',
+				'id' => 'alarm-processing-inner',
 				'markup' => $alarm_data,
 			),
 		);
@@ -669,11 +701,6 @@ function fr_groups_views_pre_render(&$view){
 			}
 		}
 		break;
-		/*
-	case'admin_users_dash':
-		dpm($view);
-		break;
-*/
 	case'view_virtual_tours':
 	case'view_inc_reports':
 	case'view_event_reports':
@@ -722,32 +749,6 @@ function fr_groups_page_alter(&$page){
 	$uid = $user->uid;
 	$arg = arg();
 
-	//dpm($_SERVER);
-	//main redirect functionality to direct the user to there dashboard.
-	/*
-if(!empty($arg[0]) && $arg[0] != 'account' && $arg[0] == 'user' && !empty($arg[1]) && $arg[1] == $uid){
-		$admins = array(3 => 'administrator', 9 => 'central station');
-		$authenticate = array_intersect_assoc($admins, $user->roles);
-		if(!empty($authenticate) && is_array($authenticate)){
-			foreach($authenticate as $role_num => $role_name){
-				switch($role_num){
-					case 3:
-						$path = 'account/admin/'.$uid.'';
-						drupal_goto($path);
-						break;
-					case 9:
-						$path = 'account/central-station/'.$uid.'';
-						drupal_goto($path);
-						break;
-				}
-			}
-		}else{
-			$path = 'account/dashboard/'.$uid.'';
-			drupal_goto($path);
-		}
-	}
-*/
-
 	if(!empty($arg[0]) && $arg[0] == 'account' && !empty($arg[1]) && $arg[1] == 'dashboard' && !empty($arg[2]) && $arg[2] == $uid){
 		$groups = new FortifiedGroups($user);
 		if($groups->account_type){
@@ -786,12 +787,35 @@ if(!empty($arg[0]) && $arg[0] != 'account' && $arg[0] == 'user' && !empty($arg[1
 			$page['modal']['alarm_processing'] = array(
 				'#type' => 'markup',
 				'#markup' => '<div class="close-modal close-processing-modal">&#215;</div><div class="processing-modal"></div>',
-				'#prefix' => '<div id="processingModal" data-processing-id="'.$groups->uid.'" class="reveal-modal xlarge">',
+				'#prefix' => '<div id="processingModal" data-processing-id="'.$groups->uid.'" data-processing-role="'.$groups->account_type.'" class="reveal-modal xlarge">',
 				'#suffix' => '</div>',
 			);
 		}
 	}
 }
+
+
+
+
+
+
+/**
+ * @ function hook_form_alter()
+ * @ form that appears in the processing modal
+ */
+function _checkbox_helper(){
+	return array(
+		'#type' => 'checkbox',
+		'#options' => array(
+			1 => 1,
+		),
+		'#attributes' => array(
+			'checked' => 'checked',
+		),
+		'#default_value' => TRUE,
+	);
+}
+
 
 
 
@@ -869,7 +893,119 @@ function fr_groups_edit_user_form($node, &$form_state){
 
 
 
+
+
+
+
+/*
+function fr_groups_element_info() {
+
+  $types['fr_tableset'] = array(
+    '#input' => TRUE,
+    '#element_validate' => array('fr_tableset_validate'),
+    '#process' => array('form_process_fr_tableset'),
+    '#theme' => 'date',
+    '#theme_wrappers' => array('form_element'),
+  );
+
+  return $types;
+}
+function fr_tableset_validate($element) {
+
+}
+function form_process_fr_tableset($element) {
+	dpm($element);
+
+  $element['#tree'] = TRUE;
+
+
+  return $element;
+}
+*/
+
+
+
+function fr_groups_form_element(&$variables){
+	dpm($variables);
+}
+
+function fr_groups_theme($existing, $type, $theme, $path){
+	$types = array(
+		'fr_groups' => array(
+			'render element' => 'form',
+		),
+	);
+	return $types;
+}
+
+
+function theme_fr_groups(&$variables){
+	//['filters']['table']
+	$rows = array();
+	//dpm($variables);
+	if(!empty($variables['form']['filters']['zones'])){
+		$base = &$variables['form']['filters']['zones'];
+	}elseif(!empty($variables['form']['zones'])){
+		$base = &$variables['form']['zones'];
+	}else{
+		$base = NULL;
+	}
+	if($base){
+		$zones = element_children($base);
+		$headers = array('Zone', 'Open', 'Restore', 'Close', 'Alarm', 'Bypass');
+		$data = '<div class="filter-table-wrapper">';
+		$data .= '<div class="filter-table-th-wrapper">';
+		foreach($headers as $delta => $header){
+			switch($delta){
+				case 0:
+					$data .= '<span class="filter-table-th first">'.$header.'</span>';
+					break;
+				default:
+					$data .= '<span class="filter-table-th">'.$header.'</span>';
+					break;
+			}
+		}
+		$data .= '</div>';
+		foreach($zones as $delta => $value){
+			$zone = &$base[$value];
+			$children = element_children($zone);
+			foreach($children as $delt => $key){
+				$zone[$key]['#attributes']['class'] = array('filter-checkbox');
+			}
+			$title = $zone['#title'];
+			unset($zone['#title']);
+			$data .= '<div class="filter-table-row">';
+			$data .= '<span class="filter-table-zone">'.$title.'</span>';
+			$data .= '<span class="filter-table-checkboxes">'.drupal_render($zone).'</span>';
+			$data .= '</div>';
+		}
+		$data .= '</div>';
+		
+		$base = array(
+			'#type' => 'item',
+			'#markup' => $data,
+		);
+	}
+	
+	return drupal_render_children($variables['form']);
+}
+
+
+
+
+
+
+
+
+
+
+
 function fr_groups_prefrences_form($node, &$form_state){
+	drupal_add_css(drupal_get_path('module', 'fr_groups') .'/css/fr_groups_tableset.css', array('type' => 'file', 'scope' => 'footer'));
+
+	
+	
+	
 	$customer = new FortifiedGroups();
 	$uid = $customer->user->uid;
 	$modals = FALSE;
@@ -881,9 +1017,7 @@ function fr_groups_prefrences_form($node, &$form_state){
 	$form_state['custom_vars']['has_alarms'] = FALSE;
 	$form_state['custom_vars']['account_name'] = $customer->user->name;
 	$service_type = !empty($customer->account_information) ? $customer->account_information : NULL;
-
-	$role = !in_array('administrator', $customer->user->roles) || !in_array('supervisor', $customer->user->roles) ? 'user' : 'admin';
-
+	$role = $customer->roleType($customer->user);
 	$form_state['custom_vars']['role'] = $role;
 	if(!empty($service_type)){
 		foreach($service_type as $key => $value){
@@ -898,13 +1032,17 @@ function fr_groups_prefrences_form($node, &$form_state){
 		'#type' => 'vertical_tabs',
 	);
 
-	$customer_variables = $customer->account_information->account_prefrences;
-	$data = isset($customer_variables) && !empty($customer_variables) ? $customer_variables : array();
-
-	/**********Processing Section *************/
-
 	if($role == 'admin'){
-		$default_proc_val = !empty($data['processing'][$customer->name]['status']) ? $data['processing'][$customer->name]['status'] : 0;
+		$customer_variables = fr_user_dash_query_customer_variables($uid);
+		$data = isset($customer_variables) && !empty($customer_variables) ? $customer_variables : array();
+		$username = $customer->user->name;
+	}else{
+		$customer_variables = !empty($customer->account_information->account_prefrences) ? $customer->account_information->account_prefrences : NULL;
+		$data = isset($customer_variables) && !empty($customer_variables) ? $customer_variables : array();
+	}
+	/**********Processing Section *************/
+	if($role == 'admin'){
+		$default_proc_val = !empty($data['processing'][$username]['status']) ? $data['processing'][$username]['status'] : 0;
 		$form['alarm_wrapper'] = array(
 			'#type' => 'fieldset',
 			'#title' => t('Alarm Processing'),
@@ -920,14 +1058,13 @@ function fr_groups_prefrences_form($node, &$form_state){
 			'#group' => 'wrapper',
 			'#default_value' => $default_proc_val,
 			'#options' => array(
-				1 => 'Processing On',
-				0 => 'Processing off',
+				1 => 'On',
+				0 => 'Off',
 			),
 		);
 	}
 
-
-	if($alarm && $role != 'admin'){
+	if($alarm == TRUE && $role != 'admin'){
 		$form_state['custom_vars']['processing'] = array();
 		$set_permissions = array(
 			'permissions' => 'process_alarms',
@@ -972,12 +1109,64 @@ function fr_groups_prefrences_form($node, &$form_state){
 	/**********Processing Section *************/
 
 
+
+
+	/**********Processing filters *************/
+	/*
+$customer->QueryAlarms();
+	$data = $customer->account_information->alarm_information;
+	$options = array();
+	
+	if(!empty($data)){
+		$header = array('Open', 'Restore', 'Close', 'Alarm', 'Bypass');
+		//filter vertical tab
+		$form['filters'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('Alarm Processing Filters'),
+			'#collapsible' => FALSE,
+			'#group' => 'wrapper',
+			'#attributes' => array(
+				'class' => array('large-10', 'columns'),
+			),
+		);
+		$alarms = !empty($data) ? current($data) : NULL;
+		if(!empty($alarms)){
+		$default_value = array(1, 2, 3, 4, 5);
+			foreach($alarms as $batname => $batdata){
+				$options = array();
+				if(!empty($batdata['zone_aliases'])){
+					$options = array();
+					foreach($batdata['zone_aliases'] as $zone_num => $zonedata){
+						for( $i = 1; $i <= 5; $i++ ){
+							$options[$i] = '';
+						}
+						$form['filters']['zones'][$zone_num] = array(
+								'#type' => 'checkboxes',
+								'#title' => $zonedata['zone_name'].'<br/><span class="filter-desc">( '.$batname.' )</span>',
+								'#options' => $options,
+								'#title_display' => 'invisible',
+								'#attributes' => array(
+									'class' => array('filter-checkbox-wrapper'),
+								),
+								'#default_value' => $default_value,
+							);
+					}
+				}
+			}
+		}
+
+	}
+*/
+
+
+	/********** END Processing filters *************/
+
+
 	// This is the field fieldset.
 	$form['help_joy'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Help'),
 		'#collapsible' => FALSE,
-		'#description' => t('Help'),
 		'#group' => 'wrapper',
 		'#attributes' => array(
 			'class' => array('large-10', 'columns'),
@@ -1002,13 +1191,14 @@ function fr_groups_prefrences_form($node, &$form_state){
 	$defaults['help'] = isset($data['help']) ? $data['help'] : 1;
 	$form['help_joy']['help_on_off'] = array(
 		'#type' => 'radios',
-		'#title' => t('Helper'),
+		'#title' => t('Help'),
 		'#group' => 'wrapper',
 		'#default_value' => $defaults['help'],
 		'#options' => array(
 			1 => 'On',
 			0 => 'Off',
 		),
+		'#disabled' => TRUE,
 	);
 	//email settings
 	$form['email'] = array(
@@ -1029,42 +1219,7 @@ function fr_groups_prefrences_form($node, &$form_state){
 			'1' => 'Turn All Emails Off',
 		),
 	);
-	//dvr settings
-	/*if($has_tours == TRUE){
-		$events = isset($data['tours']['events']) ? $data['tours']['events'] : 1;
-		$form['email']['events'] = array(
-			'#type' => 'radios',
-			'#title' => t('Events'),
-			'#group' => 'wrapper',
-			'#default_value' => $events,
-			'#options' => array(
-				'1' => 'Send an email for every Event Report done',
-				'0' => 'Do not send emails for Event Reports',
-			),
-		);
-		$incidents = isset( $data['tours']['incidents']) ?  $data['tours']['incidents'] : 1;
-		$form['email']['incidents'] = array(
-			'#type' => 'radios',
-			'#title' => t('Incident Reports'),
-			'#group' => 'wrapper',
-			'#default_value' => $incidents,
-			'#options' => array(
-				'1' => 'Send an email for every Incident Report done',
-				'0' => 'Do not send emails for Incident Reports',
-			),
-		);
-		$tours = isset( $data['tours']['tours']) ?  $data['tours']['tours'] : 1;
-		$form['email']['tours'] = array(
-			'#type' => 'radios',
-			'#title' => t('Virtual Tours'),
-			'#group' => 'wrapper',
-			'#default_value' => $tours,
-			'#options' => array(
-				'1' => 'Send an email for every Virtual Tour done',
-				'0' => 'Do not send emails for Virtual Tours',
-			),
-		);
-	}*/
+
 	/**********BUG Section *************/
 	$form['bug'] = array(
 		'#type' => 'fieldset',
@@ -1091,7 +1246,7 @@ function fr_groups_prefrences_form($node, &$form_state){
 		'#value' => 'Submit',
 		'#ajax' => array(
 			'callback' => 'fr_user_dash_form_submit_bug',
-			'wrapper' => 'pref-form',// 'form-submit-bug',
+			'wrapper' => 'pref-form',
 		),
 	);
 	/**********BUG Section *************/
@@ -1139,7 +1294,8 @@ function fr_groups_prefrences_form($node, &$form_state){
 	$form['#prefix'] = '<div id="pref-form" class"pref-form">';
 	$form['#suffix'] = '</div>';
 
-
+	//$form['#theme'] = 'fr_groups';
+	//dpm($form);
 	return $form;
 }
 
@@ -1213,5 +1369,14 @@ function fr_groups_form_submit_pefrences($form, &$form_state){
 		->execute();
 		$element['message']['#markup'] = "Your preferences have been saved.";
 	}
-	return $element;
+	//return $element;
+	return dpm($form_state);
 }
+
+
+
+
+
+
+
+

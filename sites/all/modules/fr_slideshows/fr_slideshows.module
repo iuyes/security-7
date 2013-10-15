@@ -74,7 +74,7 @@ function fr_slideshow_render_images($images){
      '#theme' => 'item_list',
       '#items' => $images,
       '#type' => 'ul',
-      '#attributes' => array('data-orbit' => '', 'class' => array('slideshow-wrapper', 'large-8', 'small-12', 'columns')),
+      '#attributes' => array('data-orbit' => '', 'data-options' => 'animation:fade;', 'class' => array('slideshow-wrapper', 'large-8', 'small-12', 'columns')),
     );
     return $content;
 }
