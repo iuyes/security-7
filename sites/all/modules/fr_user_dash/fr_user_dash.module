@@ -85,6 +85,7 @@ class FortifiedAdminAccounts extends FortifiedDashboardMarkup{
 					$path = '../../account/admin/'.$uid.'';
 					$redirect['path'] = $path;
 					$redirect['role'] = $role_num;
+					$redirect['account_type'] = TRUE;
 					return $redirect;
 					break;
 				case 4:
@@ -92,12 +93,14 @@ class FortifiedAdminAccounts extends FortifiedDashboardMarkup{
 					$path = '../../account/dashboard/'.$uid.'';
 					$redirect['path'] = $path;
 					$redirect['role'] = $role_num;
+					$redirect['account_type'] = FALSE;
 					return $redirect;
 					break;
 				case 11:
 					$path = '../../account/central-station/'.$uid.'';
 					$redirect['path'] = $path;
 					$redirect['role'] = $role_num;
+					$redirect['account_type'] = TRUE;
 					return $redirect;
 					break;
 				}
@@ -209,7 +212,7 @@ function fr_user_dash_admin($uid){
 	//dashboard class
 	$dashboard = new FortifiedAdminAccounts($uid);
 	//authenticate the user
-	if(!empty($dashboard->user_role['role'])){
+	if(!empty($dashboard->user_role['role']) && !empty($dashboard->user_role['account_type'])){
 		$authenticated = TRUE;
 	}
 	//if has access
@@ -286,8 +289,10 @@ function fr_user_dash_admin($uid){
 		/************END BUGS  **************/
 		
 		
-	}else{
+	}elseif(!empty($dashboard->user_role['path'])){
 		//if user is registered but not admin deny them access
+		drupal_goto($dashboard->user_role['path']);
+	}else{
 		drupal_access_denied();
 		drupal_exit();
 	}
@@ -405,7 +410,7 @@ function fr_user_dash_central_station($uid){
 	//dashboard class
 	$dashboard = new FortifiedAdminAccounts($uid);
 	//authenticate the user
-	if(!empty($dashboard->user_role['role'])){
+	if(!empty($dashboard->user_role['role']) && !empty($dashboard->user_role['account_type'])){
 		$authenticated = TRUE;
 	}
 	//if has access
@@ -475,8 +480,10 @@ function fr_user_dash_central_station($uid){
 		
 		
 		
-	}else{
+	}elseif(!empty($dashboard->user_role['path'])){
 		//if user is registered but not admin deny them access
+		drupal_goto($dashboard->user_role['path']);
+	}else{
 		drupal_access_denied();
 		drupal_exit();
 	}

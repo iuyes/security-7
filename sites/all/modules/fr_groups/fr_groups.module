@@ -1369,8 +1369,7 @@ function fr_groups_form_submit_pefrences($form, &$form_state){
 		->execute();
 		$element['message']['#markup'] = "Your preferences have been saved.";
 	}
-	//return $element;
-	return dpm($form_state);
+	return $element;
 }
 
 
