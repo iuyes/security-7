@@ -5,6 +5,7 @@
 	
 		var dvrData = {};
 		dvrData.functions = {};
+		dvrData.autoLogin = false;
 		/**
 		 * @ function for revealing and CMS modal and activating the first dvr
 		 *
@@ -61,15 +62,31 @@
 		dvrData.credentials.dvrPass = dvrData.firstDvr.attr('data-dvr-password');
 		dvrData.dvrUrl = dvrData.firstDvr.attr('data-dvr-url');
 		dvrData.credentials.dvrRunFunction = 'OnLogin';
-		dvrData.dvrIframe = '<iframe seamless width="100%" height="700px" src="http://'+ dvrData.dvrUrl +'" id="dvr-cms-iframe" class="loading-dvr-iframe"></iframe>';
+		dvrData.dvrIframe = '<iframe seamless scrolling="yes" width="100%" height="700px" src="http://'+ dvrData.dvrUrl +'" id="dvr-cms-iframe" class="loading-dvr-iframe"></iframe>';
 		var loadingIframe = '<div class="loading-dvr-iframe-image"><img src="../../sites/all/themes/fortified_dev/images/loading.gif"></div>';
 		$('#dvr-cms-container').html(dvrData.dvrIframe);
 		$('#dvr-cms-container').prepend(loadingIframe);
 		var trigElement = $(selector).closest('li');
 		dvrData.functions.updateTriggerElement(trigElement);
 		dvrData.window = document.querySelector("iframe").contentWindow;
+		window.setTimeout(dvrData.functions.defaultDvr, 1600);
+		dvrData.autoLogin = false;
 	}
 	
+	
+	
+	
+	/**
+  * @ function to bring up the dvr login screen if it doesnt have autologin
+  *
+  */
+	dvrData.functions.defaultDvr = function(){
+		if(!dvrData.autoLogin){
+			dvrData.functions.loadiframeImage();
+		}else{
+			dvrData.autoLogin = false;
+		}
+	}
 	
 	/**
   * @ Whiel the dvr iframe is loading
@@ -135,8 +152,10 @@
 		if(dvrData.dvrUrl){
 			dvrData.dvrUrl = 'http://'+dvrData.dvrUrl;
 		}
+		
 		window.setTimeout(dvrData.functions.loadiframeImage, 500);
 		if ( e.data === "loaded" && e.origin == dvrData.dvrUrl && dvrData.credentials) {
+			dvrData.autoLogin = true;
 			// send the child a message.
 		  window.setTimeout(dvrData.functions.postMessage, 1600);
 		}

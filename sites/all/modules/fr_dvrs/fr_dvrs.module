@@ -7,7 +7,6 @@
  */
 function fr_dvrs_menu() {
 	$items = array();
-	node_type_cache_reset();
 	$items['ajax/dvr-reveal-modals'] = array(
 		'page callback' => 'fr_groups_dvr_modal_callback',
 		'type' => MENU_CALLBACK,
