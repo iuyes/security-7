@@ -38,7 +38,7 @@ function pdf_using_mpdf_generate_pdf($node) {
     $view = node_view($node, 'PDF');
     $html = drupal_render($view);
 
-    _pdf_using_mpdf_generator($html, $pdf_using_mpdf_pdf_filename);
+    _pdf_using_mpdf_generator($html, $pdf_using_mpdf_pdf_filename, FALSE);
   }
   else {
     drupal_set_message(t('mPDF library is not included. Please check your "sites/all/libraries" directory or " /sites/your-domain-name/libraries/ directory " or "!default_module_path" directory.', array(

@@ -359,10 +359,12 @@ function fr_tweaks_query_dvrs($account_id){
 
 
 function ip_datatel_user_type($account_user, $account_type){
-	if(array_key_exists(1, $account_type)){
-		$arg = arg();
-		if(!empty($arg[1])){
-			$account_user = user_load($arg[1]);
+	if(is_array($account_type)){
+		if(array_key_exists(1, $account_type)){
+			$arg = arg();
+			if(!empty($arg[1])){
+				$account_user = user_load($arg[1]);
+			}
 		}
 	}
 	return $account_user;

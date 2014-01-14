@@ -95,8 +95,9 @@ function _pdf_using_mpdf_attributes_access($node) {
  * @param string $filename
  *   name of the PDF file to be generated.
  */
-function _pdf_using_mpdf_generator($html, $filename = NULL) {
+function _pdf_using_mpdf_generator($html, $filename = NULL, $save = FALSE, $nid = NULL) {
   // International Paper Sizes ( width x height).
+  $save = !empty($_GET['id']) ? $_GET['id'] : $save;
   $paper_size = array(
     '4A0' => array('w' => 1682, 'h' => 2378),
     '2A0' => array('w' => 1189, 'h' => 1682),
@@ -276,15 +277,19 @@ function _pdf_using_mpdf_generator($html, $filename = NULL) {
   $mpdf->WriteHTML($html);
 
   // Generating PDF File.
-  if (variable_get('pdf_using_mpdf_pdf_save_option') == '0') {
+  if (variable_get('pdf_using_mpdf_pdf_save_option') == '0' && !$save) {
     // Open in same browser.
     $mpdf->Output($filename . '.pdf', 'I');
     exit;
   }
-  else {
+  else if(!$save){
     // Dialog box for Download as PDF.
     $mpdf->Output($filename . '.pdf', 'D');
     exit;
+  }else{
+  	dpm($nid);
+  	$folder = strtolower($filename);
+	  $mpdf->Output('sites/default/files/fortified/'.$folder.'/pdf/'. $filename .'.'. $nid .'.pdf', 'F');
   }
   return TRUE;
 }
@@ -301,13 +306,16 @@ function _pdf_using_mpdf_generator($html, $filename = NULL) {
  * @return bool
  *   TRUE if PDF is successfully generated and FALSE if it isn't.
  */
-function pdf_using_mpdf_api($html, $pdf_using_mpdf_pdf_filename = NULL) {
+function pdf_using_mpdf_api($html, $pdf_using_mpdf_pdf_filename = NULL, $nid = NULL) {
+	$save = FALSE;
   if (pdf_using_mpdf_library_exist() == TRUE) {
     if ($pdf_using_mpdf_pdf_filename === NULL) {
       $filename = explode(variable_get('pdf_using_mpdf_pdf_filename'), '[site:name]');
       $pdf_using_mpdf_pdf_filename = token_replace($filename[0]);
+    }else{
+	    $save = TRUE;
     }
-    _pdf_using_mpdf_generator($html, $pdf_using_mpdf_pdf_filename);
+    _pdf_using_mpdf_generator($html, $pdf_using_mpdf_pdf_filename, $save, $nid);
   }
   else {
     drupal_set_message(t('No mPDF Library Found in "sites/all/libraries" or "!default_module_path". Please download PHP mPDF PDF generation tool from <a href="http://www.mpdf1.com/">mPDF1.com</a>', array(

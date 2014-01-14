@@ -46,6 +46,7 @@
 			$('.dvr-cms-wrapper').remove();
 			$('#dvr-cms-container').html('');
 			$('#alarm-processing-table').removeClass('fixed');
+			$('#alarm-processing-table').appendTo('.alarm-processing-inner');
 			processingHtml.functions.ChangeProcessingElements();
 		});
 		
