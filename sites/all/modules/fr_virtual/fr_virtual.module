@@ -672,8 +672,7 @@ class fortified{
 		$mail->Subject = 'You have a new Fortified '.$type.'';
 		$mail->Body = $body;
 		$mail->IsHTML(true);
-		//$mail->AddAddress($customer->mail);
-		$mail->AddAddress('csechols38@gmail.com');
+		$mail->AddAddress($customer->mail);
 		$mail->AddAddress('info@fortifiedsecurityservices.com');
 		if(!empty($title)){
 			$folder = strtolower($title);
@@ -742,10 +741,10 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 		global $user;
 		$objects = array();
 		$customer_uid = $entity->field_cust_alarm_group_owner['und'][0]['target_id'];
-		$auth = array(3 => 'administrator', 8 => 'supervisor', 9 => 'account_manager');
+		$auth = array(3 => 'administrator', 8 => 'supervisor', 9 => 'account_manager', 'central station');
 		$account_type = array_intersect(array_keys($auth), array_keys($user->roles));
 		$account_info = fr_tweaks_load_user_profile2_account_id($user, 9);
-		$auth = array('administrator', 'supervisor', 'guard');
+		$auth = array('administrator', 'supervisor', 'guard', 'central station');
 		if($account_info['account_node_id'] != $customer_uid && !array_intersect($auth, $user->roles)){
 			$path = '../user';
 			$options = array('');
