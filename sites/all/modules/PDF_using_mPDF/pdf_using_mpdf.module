@@ -288,6 +288,7 @@ function _pdf_using_mpdf_generator($html, $filename = NULL, $save = FALSE, $nid 
     exit;
   }else{
   	$folder = strtolower($filename);
+  	$filename = str_ireplace(" ", "_", $folder);
 	  $mpdf->Output('sites/default/files/fortified/'.$folder.'/pdf/'. $filename .'.'. $nid .'.pdf', 'F');
   }
   return TRUE;
