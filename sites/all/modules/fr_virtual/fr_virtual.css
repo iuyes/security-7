@@ -1,0 +1,20 @@
+.ajax-tour-files .ajax-tour-file{
+	float:left;
+	padding:5px;
+}
+
+.ajax-remove{
+	text-align: center;
+}
+
+
+.tours-ajax-remove-wrapper{
+	padding:10px;
+}
+
+#tour-ajax-replace-files{
+	width:100% !important;
+	float:left;
+}
+
+

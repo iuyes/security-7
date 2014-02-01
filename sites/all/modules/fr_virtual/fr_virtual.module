@@ -1,5 +1,6 @@
 <?php
 
+
 /**
  * hook_field_info
  *
@@ -16,26 +17,33 @@ function fr_virtual_field_info() {
 }
 
 
+function fr_virtual_menu(){
+	$items = array();
+	$items['ajax/files/%/%/%/%'] = array(
+		'page callback' => '_fr_virtual_ajax_load_files',
+		'page arguments' => array(2, 3, 4, 5),
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
+
+	return $items;
+}
 
 
 
-
-
-
-function fr_vitual_select_dvr($form, $form_state){
-	//$form_state['rebuild'] = TRUE;
+function fr_vitual_select_dvr($form, &$form_state){
+	$cuid = $form_state['values']['field_cust_alarm_group_owner']['und'][0]['target_id'];
+	$get_dvrs = _find_customer_dvrs($cuid);
+	$options = !empty($get_dvrs) ? $get_dvrs : array( 1 => 'There are not any DVRS for this customer!');
+	$info = field_info_field('field_vt_dvr');
+	$info['settings']['allowed_values'] += $options;
+	field_update_field($info);
+	$form['field_vt_dvr']['und']['#options'] = $options;
 	return $form['field_vt_dvr'];
 }
 
 
-function _load_customer_data(&$form, $form_state){
-	return $form['field_vt_customer'];
-}
-
-
-
-
-
+//get all dvrs belonging to a customer
 function _find_customer_dvrs($uid){
 	$dvr_data = array();
 	$query = new EntityFieldQuery;
@@ -50,6 +58,74 @@ function _find_customer_dvrs($uid){
 		}
 	}
 	return $dvr_data;
+}
+
+
+
+
+
+
+function _load_customer_data(&$form, $form_state){
+	return $form['field_vt_customer'];
+}
+
+
+
+//ajax load tour files callback
+function _fr_virtual_ajax_load_files($ajax = 'ajax', $file_type = NULL, $remove = FALSE, $filename = NULL){
+	if($ajax == 'ajax'){
+		$tmp = FALSE;
+		if($remove == 'remove' && $filename && $file_type){
+			switch($file_type){
+			case 'image':
+				$unlink = unlink('public://tmp/tour_images/'.$filename.'');
+				$tmp = TRUE;
+				break;
+			case 'video':
+				unlink('public://tmp/tour_videos/'.$filename.'');
+				break;
+			}
+		}
+		$files = _fr_virtual_ajax_load_file_directory($tmp);
+		$commands[] = ajax_command_replace('#tour-ajax-replace-files', $files);
+		//return the commands
+		$page = array('#type' => 'ajax', '#commands' => $commands);
+		ajax_deliver($page);
+	}else{
+		$output = t("Please enable javascript in your browser and refresh the form.");
+		return $output;
+	}
+}
+
+
+
+function _fr_virtual_ajax_load_file_directory($tmp = FALSE){
+	$upload = new FortifiedAjaxTourFiles($tmp);
+	$tmp = !$temp ? $upload->uploadFiles() : $upload->loadTmpFiles();
+	if(empty($upload->errors)){
+		$files = '<div class="ajax-tour-files" id="tour-ajax-replace-files">';
+		if(!empty($upload->files) && isset($upload->files)){
+			foreach($upload->files as $type => $values){
+				switch($type){
+				case 'tour_images/':
+					if(is_array($values) && !empty($values)){
+						foreach($values as $delta => $file){
+							$path = file_create_url($file->uri);
+							$remove = '<a href="/ajax/files/nojs/image/remove/' . $file->filename . '" class="ajax-remove-image use-ajax">Remove</a>';
+							$files .= '<div class="ajax-tour-file">';
+							$files .= '<img src="'. $path .'" class="ajax-tour-image" />';
+							$files .= '<div class="ajax-remove">' . $remove . '</div>';
+							$files .= '</div>';
+						}
+					}
+					break;
+
+				}
+			}
+		}
+	}
+	$files .= '</div>';
+	return $files;
 }
 
 
@@ -95,46 +171,35 @@ function fr_virtual_field_widget_info() {
  *
  */
 function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+	$element = array();
 	//Default values
 	switch ($instance['widget']['type']) {
 	case 'fr_virtual_widget':
-		//dpm($element);
 		$field_name = 'field_vt_tour_files';
-
 		$default_values = _fr_virtual_build_default_values($items, $delta);
-
-		if(isset($_GET['cust'])){
-			$cust = $_GET['cust'];
-			//$profile_load = profile2_load_by_user($cust, $type_name = NULL);
-			$user = user_load($cust);
-			$name = $user->name;
-			$default_values['image_file_path'] = strtolower($user->name);
-			$default_values['video_file_path'] = strtolower($user->name);
-		}
-
 		$manager = new stdClass;
 
 		if(!empty($form_state['build_info']['args'][0]->field_vt_tour_files['und'][0])){
 
 			drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual_files.js', array('type' => 'file', 'scope' => 'footer'));
 			drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.js', array('type' => 'file', 'scope' => 'footer'));
+			
 			$show_files = array();
 			$form_state['build_info']['args'][0]->field_vt_tour_files['und'][0]['upload_type'] = array('image', 'video');
 			$current = $form_state['build_info']['args'][0]->field_vt_tour_files['und'][0]['upload_type'];
 			$current_files = $form_state['build_info']['args'][0]->field_vt_tour_files['und'][0];
 			$element['current_files'] = array(
 				'#type' => 'fieldset',
-				'#title' => 'Current Tour Files',
-				'#collapsed' => FALSE,
-				'#collapsible' => FALSE,
-				'#tree' => TRUE,
+				'#title' => t("Edit file ID's (ADVANCED)"),
+				'#collapsed' => TRUE,
+				'#collapsible' => TRUE,
 				'#weight' => -100,
 			);
 			$element['files'] = array(
 				'#type' => 'fieldset',
-				'#title' => 'Current Tour Files',
+				'#title' => t('Current Tour Files'),
 				'#collapsed' => FALSE,
-				'#collapsible' => FALSE,
+				'#collapsible' => TRUE,
 				'#tree' => TRUE,
 				'#weight' => -100,
 			);
@@ -147,11 +212,9 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 				foreach($manager->$files as $key => $file){
 					if($file != 0){
 						$load_file = file_load($file);
-						//dpm($load_file);
 						$file_name = $load_file->filename;
 						$stream = file_create_url($load_file->uri);
 						$view_file = fr_virtual_file_view($load_file->fid);
-						//dpm($view_file);
 						$view = $view_file['image'];
 						switch($load_file->filemime){
 						case'image/jpg':
@@ -180,8 +243,6 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 		    				  <label style="width:30%; float:left;">Video id #'.$file.'</label>
 		    				  <div style="width:30%;"><strong>Remove</strong> <input type="checkbox" class="managed_video_files" value="'.$file.'"/></div>'.$video.'</div>',
 							);
-
-
 							flowplayer_add(''.$file.''.$key.'', array(
 									'clip' => array(
 										'autoPlay' => FALSE, // Turn autoplay off
@@ -207,18 +268,19 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 				$element['current_files'][$key] = array(
 					'#type' => 'textfield',
 					'#maxlength' => 900,
-					'#title' => ''.$value.' Files',
+					'#title' => t($value .' Files'),
 					'#value_callback' => 'map_files_value',
 					'#default_value' => implode(',', $manager->$value),
+					'#weight' => 10000,
 				);
 			}
 		}
-
+		
 		$element['tour_files'] = array(
 			'#type' => 'fieldset',
-			'#title' => 'Tour Files',
-			'#collapsed' => FALSE,
-			'#collapsible' => FALSE,
+			'#title' => t('Edit Tour Folder Paths (ADVANCED)'),
+			'#collapsed' => TRUE,
+			'#collapsible' => TRUE,
 			'#tree' => TRUE,
 			'#weight' => -100,
 		);
@@ -232,29 +294,24 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 				'pic' => 'Snap / Picture',
 			),
 		);
-
-
-
 		$element['tour_files']['image_file_path'] = array(
 			'#type' => 'textfield',
 			'#title' => t('Picture(s)'),
 			'#weight' => '-90',
-			'#description' => t('This customers folder'),
-			'#default_value' => $default_values['image_file_path'],
+			'#description' => t('The folder in which this customers images lie. Please do not change this if you do not know what your doing :)'),
+			'#default_value' => !empty($default_values['image_file_path']) ? $default_values['image_file_path'] : 'tour_images/',
 			'#states' => array(
 				'visible' => array(
 					':input[name="'.$field_name.'[und][0][tour_files][upload_type]"]' => array('value' => 'pic'),
 				),
 			),
 		);
-
-
 		$element['tour_files']['video_file_path'] = array(
 			'#type' => 'textfield',
 			'#title' => t('Video(s)'),
 			'#weight' => '-90',
-			'#description' => t('This customers folder'),
-			'#default_value' => $default_values['video_file_path'],
+			'#description' => t('The folder in which this customers video lie. Please do not change this if you do not know what your doing :)'),
+			'#default_value' => !empty($default_values['video_file_path']) ? $default_values['video_file_path'] : 'tour_videos/',
 			'#states' => array(
 				'visible' => array(
 					':input[name="'.$field_name.'[und][0][tour_files][upload_type]"]' => array('value' => 'video'),
@@ -262,9 +319,6 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 			),
 		);
 	}
-
-	$form['#submit'][] = 'fr_virtual_submit';
-
 
 	return $element;
 
@@ -280,28 +334,23 @@ function test_validate($element, &$form_state){
 
 
 
-function _populate_tour_fields($form, $cust){
+function _populate_tour_fields(&$form, $cust){
 	//$profile_load = profile2_load_by_user($cust, $type_name = NULL);
 	$user = user_load($cust);
 	$name = $user->name;
-	/*foreach($profile_load as $key => $profile){
-				dpm($profile);
-				$profile_name = $profile->field_cust_name['und'][0]['safe_value'];
-			}*/
 	$profile = current(profile2_load_by_user($cust, $type_name = NULL));
 	$pid = !empty($profile->pid) ? $profile->pid : NULL;
 	if(!empty($pid)){
 		$group_id = !empty($profile->field_cust_alarm_group_owner['und'][0]['target_id']) ? $profile->field_cust_alarm_group_owner['und'][0]['target_id'] : NULL;
 		$form['field_cust_alarm_group_owner']['und'][0]['target_id']['#default_value'] = $name.' ('.$group_id.')';
+		$cust_dvrs = _find_customer_dvrs($group_id);
+		$form['field_vt_dvr']['und']['#options'] = !empty($cust_dvrs) ? $cust_dvrs : array(1 => 'No DVR Found');
 	}
 	$time = date('Y-m-d h:i:s');
 	$form['title']['#default_value'] = $name;
 	$form['field_vt_customer']['und'][0]['target_id']['#default_value'] = $name.' ('.$user->uid.')';
 	$form['field_vt_folder_title']['und'][0]['value']['#default_value'] = $name;
-	//$form['title'] = ''.$name.' - '.$time.'';
-	//dpm($form);
 	return array(
-		'form' => $form,
 		'uid' => $cust,
 		'group' => $group_id,
 	);
@@ -310,28 +359,33 @@ function _populate_tour_fields($form, $cust){
 
 
 function fr_virtual_form_alter(&$form, &$form_state, $form_id){
-	//dpm($form_id);
 	switch($form_id){
 	case'fortified_incident_reports_node_form':
 	case'fortified_events_node_form':
 	case'fortified_virtual_tours_node_form':
-
+		//include ajax
+		drupal_add_library('system', 'drupal.ajax');
+		drupal_add_library('system', 'jquery.form');
+		$form['#attatched'][] = drupal_add_library('system', 'drupal.ajax');
+		$form['#attatched'][] = drupal_add_library('system', 'jquery.form');
 
 		if(isset($_GET['cust'])){
 			$cust_data = _populate_tour_fields($form, $_GET['cust']);
 			$cust = !empty($cust_data['uid']) ? $cust_data['uid'] : NULL;
 			$group_id = !empty($cust_data['group']) ? $cust_data['group'] : NULL;
-			$form = !empty($cust_data['form']) ? $cust_data['form'] : $form;
+			//$form = !empty($cust_data['form']) ? $cust_data['form'] : $form;
 		}
 
 		drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual_select_dvr.js', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_css(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.css', array('type' => 'file', 'scope' => 'footer'));
+
 		$form['field_vt_dvr']['und']['#states'] = array(
 			'visible' => array(
 				':input[name="field_cust_alarm_group_owner[und][0][target_id]"]' => array('empty' => FALSE),
 			),
 		);
 
-		$form['field_vt_tour_saved_status']['und'][0]['value']['#type'] = 'hidden';
+		hide($form['field_vt_tour_saved_status']);
 		$form['field_vt_dvr']['und']['#prefix'] = '<div id="select-dvr" >';
 		$form['field_vt_dvr']['und']['#suffix'] = '</div>';
 		$form['field_vt_dvr']['und']['#after_build'][] = 'test_validate';
@@ -349,18 +403,6 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 			'method' => 'replace',
 			'effect' => 'fade',
 		);
-
-		$has_cust_value_edit = isset($form['#node']->field_cust_alarm_group_owner['und'][0]['target_id']) ? $form['#node']->field_cust_alarm_group_owner['und'][0]['target_id'] : '';
-		$has_cust_value = !empty($group_id) ? $group_id : $has_cust_value_edit;
-
-		if(!empty($has_cust_value) && empty($form_state['values'])){
-			$uid = $has_cust_value;
-			$get_dvrs = _find_customer_dvrs($uid);
-			$options = array(1 => 'There are not any DVRS for this customer!'); //!empty($get_dvrs) ? $get_dvrs : array(1 => 'There are not any DVRS for this customer!');
-			$default = !empty($form['#node']->field_vt_dvr['und'][0]['value']) ? $form['#node']->field_vt_dvr['und'][0]['value'] : '';
-			$form['field_vt_dvr']['und']['#options'] = $options;
-			$form['field_vt_dvr']['und']['#default_value'] = $default;
-		}
 
 
 		if(!empty($form_state['values']['field_vt_customer'])){
@@ -393,21 +435,6 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 				exit;
 			}
 		}
-		
-		if(!empty($form_state['values']['field_cust_alarm_group_owner']) || !empty($group_id)){
-			$uid = $form_state['values']['field_cust_alarm_group_owner']['und'][0]['target_id'];
-			$get_dvrs = _find_customer_dvrs($uid);
-			$options = !empty($get_dvrs) ? $get_dvrs : array(1 => 'There are not any DVRS for this customer!');
-			$info = field_info_field('field_vt_dvr');
-			//if(!array_intersect($options, $info['settings']['allowed_values'])){
-				// Get a reference to the values
-				//$values = &$info['settings']['allowed_values'];
-				// Manipulate the values in some way, e.g.
-				$info['settings']['allowed_values'] += $options;
-				field_update_field($info);
-			//}
-			$form['field_vt_dvr']['und']['#options'] = $options;
-		}
 
 		if(!empty($form['field_vt_tour_date']['und'][0]['#default_value']['value'])){
 			$dates = $form['field_vt_tour_date']['und'][0]['#default_value']['value'];
@@ -420,9 +447,22 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 			$new = strtotime($correct_dates);
 			$form['field_vt_tour_date']['und'][0]['value'] = $new;
 		}
-		
 
-		//dpm($form);
+		//to be replace with our ajax files
+		$form['field_vt_tour_files']['und'][0]['temp_files'] = array(
+			'#type' => 'markup',
+			'#markup' => '',
+			'#weight' => -100,
+			'#prefix' => '<div id="tour-ajax-replace-files">',
+			'#suffix' => '</div>',
+		);
+		//for our ajax upload
+		$form['field_vt_tour_files']['und'][0]['ajax_files'] = array(
+			'#type' => 'markup',
+			'#markup' => '<div class="tours-ajax-remove-wrapper">
+			<a href="/ajax/files/nojs/FALSE/FALSE/FALSE" class="form-submit fr-virtual-ajax-upload use-ajax">Upload Files</a></div>',
+			'#weight' => -101,
+		);
 		break;
 	}
 }
@@ -433,9 +473,7 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
  *
  */
 function _fr_virtual_build_default_values($items, $delta) {
-	//dpm($delta);
 	$default_values = array();
-	//dpm($items);
 	if(empty($items[$delta])){ return NULL; }else{
 		foreach($items[$delta] as $field => $value){
 			$default_values[$field] = $value;
@@ -471,12 +509,10 @@ function _fr_virtual_process(&$item, $delta = 0, $field, $entity) {
 }
 
 function _fr_virtual_flatten_values ($item, $entity) {
-	//dpm($entity);
 	$customer = $entity->field_cust_alarm_group_owner['und'][0]['target_id'];
-	$tour_files = new fortified($item);
+	$tour_files = new fortifiedTours($item);
 	$tour_files->field_types();
 	$tour_files->save_user_files($customer, $entity);
-	//dpm($tour_files);
 	$video_list = $tour_files->updated_files['videos'];
 	$image_list = $tour_files->updated_files['images'];
 	$video_list = empty($video_list) ? 0 : $video_list;
@@ -489,8 +525,6 @@ function _fr_virtual_flatten_values ($item, $entity) {
 	unset($item['tour_files']);
 	unset($item['current_files']);
 
-
-	//dpm($item);
 	return $item;
 }
 
@@ -499,12 +533,12 @@ function _fr_virtual_flatten_values ($item, $entity) {
  * Class for bulding the files
  *
  */
+class fortifiedTours{
 
-class fortified{
+	const TMP_DIRECTORY = 'public://tmp/';
+	public $directory;
 
 	function __construct($item){
-		//dpm($item);
-
 		//set up the image and video current file sand paths
 		$this->current_images = !empty($item['current_files'][0]) ? $item['current_files'][0] : 0;
 		$this->current_videos = !empty($item['current_files'][1]) ? $item['current_files'][1] : 0;
@@ -517,14 +551,12 @@ class fortified{
 
 		$current_images = array($this->current_images);
 		$current_videos = array($this->current_videos);
-
 		$image_path = $this->image_file_path;
 		$video_path = $this->video_file_path;
-
 		$this->new_files['videos'] = empty($video_path) ? $current_videos : $this->get_files($video_path, 'videos');
 		$this->new_files['images'] = empty($image_path) ? $current_images : $this->get_files($image_path, 'images');
-
 		$new_files = !empty($this->files) ? $this->files : NULL;
+
 		if(!empty($new_files)){
 			$update_files = array();
 			foreach($new_files as $type => $file){
@@ -562,22 +594,17 @@ class fortified{
 	}
 	// function for saving the images and videos FID to the user
 	private function get_files($path, $type){
-		$subpath = './sites/default/files/fortified/'.$path.'/'.$type.'';
-		$base = './sites/default/files/fortified/'.$path.'/';
-		$old_umask = umask(0);
-		chmod($base, 0777);
-		chmod($subpath, 0777);
-		$this->directory = $subpath;
+		$this->directory = self::TMP_DIRECTORY . $path;
 		if(!empty($this->directory)){
 			$this->scan = array_diff(scandir($this->directory), array('..', '.'));
 			if(!empty($this->scan)){
 				foreach($this->scan as $file){
 					if (isset($file)) {
-						$contents = file_get_contents(''.$this->directory.'/'.$file.'');
+						$contents = file_get_contents($this->directory . $file);
 						$this->file_temp = file_save_data($contents, 'private://' . $file, FILE_EXISTS_RENAME);
 						$this->files[$type][] = $this->file_temp->fid;
 						if($this->file_temp){
-							unlink(''.$this->directory.'/'.$file.'');
+							unlink($this->directory . $file);
 						}
 					}
 				}
@@ -631,30 +658,17 @@ class fortified{
 		}
 	}
 
-	/*public static function sendEmail(){
-		$email = system('echo "From Web"| mutt -s "From Web, From: Fortified Security Services" csechols38@gmail.com 2>&1');
-		dpm(shell_exec('echo "From Web" | mutt csechols38@gmail.com 2>&1'));
-		//dpm(shell_exec('echo hello '));
-		dpm($email);
-		if($email){
-			$success = 'Customer has been notified';
-		}else{
-			$success = 'Failed to notify Customer';
-		}
-		return $success;
-	}*/
 	public static function sendEmail($to, $type, $nid, $title){
 		$customer = user_load($to);
 
 		$body = '<html>
 			<body>
 				<p>A new Fortified '.$type.' has been submitted For <strong>'.$customer->name.'</strong> - '.date('Y-m-d').'.</p><br/>
-				<p>Click <a href="http://www.fortifiedsecurityservices.com/node/'.$nid.'">here</a> to login and view this '.$type.'.</p><br/>
 				<p>If this email does not pertain to you, please delete it and contact us immediately.</p>
 				<p>For Any Questions or technical support call Fortified Security Services at (520) 886-6419 or email us at info@fortifiedsecurityservices.com.</p>
 			</body>
 		</html>';
-		//dpm($customer);
+		//<p>Click <a href="http://www.fortifiedsecurityservices.com/node/'.$nid.'">here</a> to login and view this '.$type.'.</p><br/>
 		define('GUSER', 'no-reply@fortifiedsecurityservices.com'); // GMail username
 		define('GPWD', 'FortifieD!'); // GMail password
 		global $error;
@@ -676,7 +690,7 @@ class fortified{
 		if(!empty($title)){
 			$folder = strtolower($title);
 			$title = str_ireplace(" ", "_", $folder);
-			$mail->AddAttachment('sites/default/files/fortified/'.$folder.'/pdf/'. $title .'.'. $nid .'.pdf');
+			$mail->AddAttachment('sites/default/files/fortified/tour_pdfs/'. $title .'.'. $nid .'.pdf');
 		}
 		if(!$mail->Send()) {
 			$error = 'Mail error: '.$mail->ErrorInfo;
@@ -685,7 +699,6 @@ class fortified{
 			$error = 'Message sent!';
 			$success = 'Customer has been notified';
 		}
-		//dpm($error);
 		return $error;
 	}
 }
@@ -693,14 +706,84 @@ class fortified{
 
 
 
+//our ajax upload class
+//handles uploading images and videos
+//to our temporary directory
+class FortifiedAjaxTourFiles{
+
+	private $directories = array();
+	public $errors = array();
+	public $files;
+	const TMP_DIRECTORY = 'public:///tmp/';
+	const TOUR_IMAGE_DIR = 'tour_images/';
+	const TOUR_VIDEO_DIR = 'tour_videos/';
+	const TOUR_PDF_DIR = 'tour_pdfs';
+	//cant use public:// i dont know why
+	const TOUR_DIRECTORY = './sites/default/files/fortified/';
+	public $tour_directory;
+
+	//construct
+	public function __construct($tmp = FALSE){
+		$this->tour_directory = $tmp ? self::TMP_DIRECTORY : self::TOUR_DIRECTORY;
+		$this->directories = array(
+			self::TOUR_IMAGE_DIR => $this->tour_directory . self::TOUR_IMAGE_DIR,
+			self::TOUR_VIDEO_DIR => $this->tour_directory . self::TOUR_VIDEO_DIR,
+		);
+		if(!$tmp){
+			$this->chmodDir($this->directories);
+		}
+	}
+
+
+	//function for giving us the correct permissions to write to files
+	private function chmodDir($directories = array()){
+		foreach($directories as $type => $path){
+			$old_umask = umask(0);
+			if(!$chmod = chmod($path, 0777)){
+				$this->errors[$type] = t('Cannot chmod ' . $path);
+			}
+		}
+	}
+
+
+	//function to grab the desired files and move them
+	//to a temporary folder
+	public function uploadFiles(){
+		$this->files = new StdClass();
+		foreach($this->directories as $type => $path){
+			$scan_files = array_diff(scandir($path), array('..', '.'));
+			if(!empty($scan_files)){
+				foreach($scan_files as $delta => $file){
+					if (isset($file)) {
+						$file_contents = file_get_contents($path . $file);
+						$upload_file = file_unmanaged_save_data($file_contents, self::TMP_DIRECTORY . $type . $file, FILE_EXISTS_REPLACE);
+						if($upload_file){
+							$this->files->{$type}[$delta]->uri = $upload_file;
+							$this->files->{$type}[$delta]->filename = $file;
+						}else{
+							$this->errors['upload'][$path] = t('Cannot move ' . $path . ' to ' . self::TOUR_DIRECTORY .'');
+						}
+					}
+				}
+			}
+		}
+	}
 
 
 
-/**
- * For taking the directory provided by the user and uploading all the files inside of it.
- *
- */
+	public function loadTmpFiles(){
+		foreach($this->directories as $type => $path){
+			$scan_files = array_diff(scandir($path), array('..', '.'));
+			if(!empty($scan_files)){
+				foreach($scan_files as $delta => $file){
+					$this->files->{$type}[$delta]->uri = self::TMP_DIRECTORY . $type . $file;
+					$this->files->{$type}[$delta]->filename = $file;
+				}
+			}
+		}
+	}
 
+}
 
 
 
@@ -736,7 +819,7 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 
 	switch ($display['type']) {
 	case 'fr_virtual_formatter':
-		
+
 		drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.js', array('type' => 'file', 'scope' => 'footer'));
 		global $user;
 		$objects = array();
@@ -782,32 +865,28 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 			),
 			'#weight' => -97,
 		);
-		
+
 		if(!empty($items[0]['current_files'][0])){
 			$items[0]['image_files'] = $items[0]['current_files'][0];
 		}
 		foreach($items as $delta => $fields){
 			foreach($fields as $item => $value){
 				switch($item){
-				
+
 				case 'current_files':
-/*
-					if(!empty($value[0])){
-						dpm($value[0]);
-						dpm($items);
-						$items[$delta]['image_files'] = $value[0];
-					}
-*/
-				break;
+
+
+
+					break;
 
 				case'image_files':
 					if(!empty($value)){
 						$explode_images = explode(',', $value);
 						foreach($explode_images as $key => $fid){
-							$view_file = _load_file_by_fid($fid);
+							$view_file = fr_virtual_file_view($fid);
 							$view = $view_file['image'];
-
-							$objects['tour_images']['tour_pic_'.$key.''] = array(
+							$stream = $view_file['stream'];
+							$objects['tour_images'][$key] = array(
 								'#theme' => 'link',
 								'#text' => $view,
 								'#path' => $stream,
@@ -821,7 +900,6 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 					break;
 
 				case'video_files':
-
 					drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/flowplayer.playlist-3.2.10.js',
 						array('type' => 'file', 'scope' => 'header', 'weight' => 2));
 					if($value){
@@ -855,8 +933,6 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 						$objects['video_activate_wrapper']['video_activate'] = array(
 							'#type' => 'markup',
 							'#markup' => '<a data-reveal-id="myVideoModal" class="reveal-link activate-button button radius small">Start Video</a>',
-							//'#prefix' => '<div class="start-video row twelve columns">',
-							//'#suffix' => '</div>',
 						);
 					}
 					break;
@@ -939,46 +1015,19 @@ function fr_virtual_file_view($value){
 	$uri = file_load($value);
 	$url = $uri->uri;
 	$file = fr_virtual_file_download($url);
-	if($file == -1){
-	}else{
-		$file['path'] = $url;
-		$view_file = theme('image', $file);
-	}
-	return array('image' => $view_file);
+	$stream = file_create_url($url);
+	$file['path'] = $url;
+	$view_file = theme('image', $file);
+	return array('image' => $view_file, 'stream' => $stream);
 }
+
 
 
 /**
  * function for loading files from the private directory for previewing.
  *
-
- function fr_virtual_file_edit_view($value){
- $uri = file_load($value);
- $url = $uri->uri;
- $file = fr_virtual_file_download($url);
- if($file == -1){
- drupal_access_denied();
- exit();
- }else{
- $variables = array(
- 'path' => image_style_url('origional', $url),
- 'alt' => '',
- );
- $img =  theme('image', $variables);
-
- }
- return array('image' => $img);
- }/*
-
-
-
-
- /**
- * function for loading files from the private directory for previewing.
- *
  */
 function fr_virtual_file_download($uri) {
-
 	$file = file_load(fr_virtual_get_fid_by_uri($uri));
 	$headers = file_get_content_headers($file);
 	return $headers;
@@ -987,7 +1036,7 @@ function fr_virtual_file_download($uri) {
 
 
 function _load_file_by_fid($fid){
-	$load_file = file_load($val);
+	$load_file = file_load($fid);
 	$file_name = $load_file->filename;
 	$stream = file_create_url($load_file->uri);
 	$view_file = fr_virtual_file_view($fid);
@@ -1009,12 +1058,10 @@ function fr_virtual_get_fid_by_uri($uri) {
 	foreach ($result as $record) {
 		return $record->fid;
 	}
-	return -1;
 }
 
 
 function fr_virtual_node_submit($node, $form, &$form_state){
-	//dpm($node);
 	if($node->nid){
 		switch($node->type){
 		case 'fortified_virtual_tours':
@@ -1026,15 +1073,8 @@ function fr_virtual_node_submit($node, $form, &$form_state){
 				$type = _get_type($node->type);
 				//generate pdf
 				pdf_using_mpdf_api(drupal_render(node_view($node, 'full')), $node->title, $node->nid);
-				$send_email = fortified::sendEmail($to, $type, $nid, $node->title);
-				dpm($send_email);
+				$send_email = fortifiedTours::sendEmail($to, $type, $nid, $node->title);
 			}
-			/*$date = $node->field_vt_tour_date['und'][0]['value'];
-			$new_date = fortified::formatDate($date);
-			$form_state['values']['field_vt_tour_date']['und'][0]['value'] = $date;
-			$form_state['values']['field_vt_tour_date']['und'][0]['offset'] = 0;
-			$form_state['values']['field_vt_tour_date']['und'][0]['offset2'] = 0;
-			//dpm($node);*/
 			break;
 		}
 	}
@@ -1063,7 +1103,6 @@ function _get_type($tour_type){
  * hook_node_insert()
  *
  */
-
 function fr_virtual_node_insert($node){
 	if($node->nid){
 		$positions = array();
@@ -1074,15 +1113,14 @@ function fr_virtual_node_insert($node){
 			$pages = ($node->field_vt_tour_files[$node->language]) ? $node->field_vt_tour_files[$node->language] : NULL ;
 			if($pages){
 				$customer = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
-				$test = fortified::save_user_files_insert($customer, $pages, $node);
+				$test = fortifiedTours::save_user_files_insert($customer, $pages, $node);
 				if(!empty($node->field_vt_notifications['und'][0]['value']) && $node->field_vt_notifications['und'][0]['value'] == 'email'){
 					$nid = $node->nid;
 					$type = _get_type($node->type);
 					//generate pdf
 					pdf_using_mpdf_api(drupal_render(node_view($node, 'full')), $node->title, $node->nid);
 					$to = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
-					$send_email = fortified::sendEmail($to, $type, $nid, $node->title);
-					dpm($send_email);
+					$send_email = fortifiedTours::sendEmail($to, $type, $nid, $node->title);
 				}
 			}
 			break;
@@ -1091,20 +1129,6 @@ function fr_virtual_node_insert($node){
 }
 
 
-function fr_virtual_submit($form, &$form_state){
-	/*$dates = $form_state['values']['field_vt_tour_date']['und'][0]['value'];
-	$tz = new DateTimeZone('America/Phoenix');
-	$date = $dates;
-	$date_offset = $tz->getOffset(new DateTime($date));
-	$new_date = strtotime($date) + $date_offset;
-	$datetime2 = date('Y-m-d H:i:s', $new_date);
-	$correct_dates = $datetime2;
-	$form_state['values']['field_vt_tour_date']['und'][0]['value'] = $correct_dates;
-	//$form_state['values']['field_vt_tour_date']['und'][0]['value2'] = $correct_dates;
-	$form_state['values']['field_vt_tour_date']['und'][0]['offset'] = 0;
-	$form_state['values']['field_vt_tour_date']['und'][0]['offset2'] = 0;*/
-	return $form_state;
-}
 
 function fr_virtual_page_alter(&$page){
 	if(!empty($page['content']['system_main']['nodes'])){
@@ -1171,4 +1195,5 @@ function fr_virtual_page_alter(&$page){
 			$page['modal'] = $modal;
 		}
 	}
+	return $page;
 }
