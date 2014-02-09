@@ -1,7 +1,15 @@
-.tour-images img{
-	float:left;
-	width:400px;
-	height:300px;
+.tour-customer{
+	text-align: center;
+}
+.tour-date{
+	text-align: center;
+}
+.tour-description{
+	padding:15px;
+	text-align: left;
+}
+.node{
+	padding-top:100px;
 }
 
 .button{
@@ -13,5 +21,32 @@
 
 .vt-desc-wrapper{
 	padding:15px;
-	text-align: right;
+	text-align: left;
+}
+
+.tour-image{
+	padding:5px;
+}
+
+.tour-video{
+	display:none;
+}
+
+.play-list{
+	display:none;
+}
+.http{
+	display:none;
+}
+.flowplayer{
+	display:none;
+}
+.clips{
+	display:none;
+}
+.reveal-link{
+	display:none;
+}
+.tour-video{
+	display:none;
 }

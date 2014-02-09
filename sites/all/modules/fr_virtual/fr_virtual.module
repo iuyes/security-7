@@ -82,7 +82,8 @@ function _fr_virtual_ajax_load_files($ajax = 'ajax', $file_type = NULL, $remove 
 				$tmp = TRUE;
 				break;
 			case 'video':
-				unlink('public://tmp/tour_videos/'.$filename.'');
+				$unlink = unlink('public://tmp/tour_videos/'.$filename.'');
+				$tmp = TRUE;
 				break;
 			}
 		}
@@ -101,25 +102,18 @@ function _fr_virtual_ajax_load_files($ajax = 'ajax', $file_type = NULL, $remove 
 
 function _fr_virtual_ajax_load_file_directory($tmp = FALSE){
 	$upload = new FortifiedAjaxTourFiles($tmp);
-	$tmp = !$temp ? $upload->uploadFiles() : $upload->loadTmpFiles();
+	$tmp = !$tmp ? $upload->uploadFiles() : $upload->loadTmpFiles();
 	if(empty($upload->errors)){
 		$files = '<div class="ajax-tour-files" id="tour-ajax-replace-files">';
 		if(!empty($upload->files) && isset($upload->files)){
 			foreach($upload->files as $type => $values){
 				switch($type){
 				case 'tour_images/':
-					if(is_array($values) && !empty($values)){
-						foreach($values as $delta => $file){
-							$path = file_create_url($file->uri);
-							$remove = '<a href="/ajax/files/nojs/image/remove/' . $file->filename . '" class="ajax-remove-image use-ajax">Remove</a>';
-							$files .= '<div class="ajax-tour-file">';
-							$files .= '<img src="'. $path .'" class="ajax-tour-image" />';
-							$files .= '<div class="ajax-remove">' . $remove . '</div>';
-							$files .= '</div>';
-						}
-					}
+					$files .= _fr_virtual_ajax_format_file_display($values, 'image');
 					break;
-
+					case 'tour_videos/':
+						$files .= _fr_virtual_ajax_format_file_display($values, 'video');
+					break;
 				}
 			}
 		}
@@ -128,6 +122,38 @@ function _fr_virtual_ajax_load_file_directory($tmp = FALSE){
 	return $files;
 }
 
+
+
+
+//helper function  format the ajax uploaded files
+function _fr_virtual_ajax_format_file_display($values, $type){
+	$files = '';
+	if(is_array($values) && !empty($values)){
+		foreach($values as $delta => $file){
+			$path = file_create_url($file->uri);
+			$remove = '<a href="/ajax/files/nojs/'. $type .'/remove/' . $file->filename . '" class="ajax-remove-image use-ajax">Remove</a>';
+			$files .= '<div class="ajax-tour-file">';
+			switch($type){
+				case 'image':
+					$files .= '<img src="'. $path .'" class="ajax-tour-image" />';
+				break;
+				case 'video':
+					drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/flowplayer.playlist-3.2.10.js', array('type' => 'file', 'scope' => 'header', 'weight' => 2));
+					 $files .= '<a href="'. $path .'" class="ajax-tour-video flowplayer" class="flowplayer"></a>';
+				  flowplayer_add('.ajax-tour-video', array(
+				    'clip' => array(
+				      'autoPlay' => FALSE, // Turn autoplay off
+				      'linkUrl' => $path, // When clicked on
+				    ),
+				  ));
+				break;
+			}
+			$files .= '<div class="ajax-remove">' . $remove . '</div>';
+			$files .= '</div>';
+		}
+	}
+	return $files;
+}
 
 
 
@@ -183,7 +209,7 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 
 			drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual_files.js', array('type' => 'file', 'scope' => 'footer'));
 			drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.js', array('type' => 'file', 'scope' => 'footer'));
-			
+
 			$show_files = array();
 			$form_state['build_info']['args'][0]->field_vt_tour_files['und'][0]['upload_type'] = array('image', 'video');
 			$current = $form_state['build_info']['args'][0]->field_vt_tour_files['und'][0]['upload_type'];
@@ -225,9 +251,13 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 
 							$element['files'][$file] = array(
 								'#type' => 'markup',
-								'#markup' => '<label style="width:30%; float:left;">Picture id #'.$file.'</label>
-		    				  <div style="width:30%;"><strong>Remove</strong> <input type="checkbox" class="managed_image_files" value="'.$file.'"/></div>'.$view.'',
-								'#prefix' => '<div class="" id="'.$file.'"style="border:1px solid #999;border-bottom:none;padding:10px;">',
+								'#markup' => '<label float:left;">Picture id #'.$file.'</label>
+		    				  <div>
+		    				  	<strong>Remove</strong>
+										<input type="checkbox" class="managed_image_files" value="'.$file.'"/>
+									</div>
+		    				  <div class="preview-image">'.$view.'</div>',
+								'#prefix' => '<div id="'.$file.'" style="max-width:30em; clear:both;">',
 								'#suffix' => '</div>',
 							);
 
@@ -243,7 +273,7 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 		    				  <label style="width:30%; float:left;">Video id #'.$file.'</label>
 		    				  <div style="width:30%;"><strong>Remove</strong> <input type="checkbox" class="managed_video_files" value="'.$file.'"/></div>'.$video.'</div>',
 							);
-							flowplayer_add(''.$file.''.$key.'', array(
+							flowplayer_add($file . $key, array(
 									'clip' => array(
 										'autoPlay' => FALSE, // Turn autoplay off
 										'linkUrl' => $stream, // When clicked on
@@ -275,7 +305,7 @@ function fr_virtual_field_widget_form(&$form, &$form_state, $field, $instance, $
 				);
 			}
 		}
-		
+
 		$element['tour_files'] = array(
 			'#type' => 'fieldset',
 			'#title' => t('Edit Tour Folder Paths (ADVANCED)'),
@@ -363,6 +393,7 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 	case'fortified_incident_reports_node_form':
 	case'fortified_events_node_form':
 	case'fortified_virtual_tours_node_form':
+	
 		//include ajax
 		drupal_add_library('system', 'drupal.ajax');
 		drupal_add_library('system', 'jquery.form');
@@ -377,7 +408,7 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 		}
 
 		drupal_add_js(drupal_get_path('module', 'fr_virtual') .'/fr_virtual_select_dvr.js', array('type' => 'file', 'scope' => 'footer'));
-		drupal_add_css(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.css', array('type' => 'file', 'scope' => 'footer'));
+		drupal_add_css(drupal_get_path('module', 'fr_virtual') .'/fr_virtual.css', array('type' => 'file', 'scope' => 'header'));
 
 		$form['field_vt_dvr']['und']['#states'] = array(
 			'visible' => array(
@@ -536,6 +567,7 @@ function _fr_virtual_flatten_values ($item, $entity) {
 class fortifiedTours{
 
 	const TMP_DIRECTORY = 'public://tmp/';
+	const DROPBOX_DIRECTORY = './sites/default/files/fortified/';
 	public $directory;
 
 	function __construct($item){
@@ -605,9 +637,21 @@ class fortifiedTours{
 						$this->files[$type][] = $this->file_temp->fid;
 						if($this->file_temp){
 							unlink($this->directory . $file);
+							unlink(self::DROPBOX_DIRECTORY . $path . $file);
 						}
 					}
 				}
+			}
+		}
+		$this->clearDropboxFolder($path);
+	}
+	
+	
+	private function clearDropboxFolder($path){
+		$scan = array_diff(scandir(self::DROPBOX_DIRECTORY . $path), array('..', '.'));
+		if(!empty($scan)){
+			foreach($scan as $file){
+				$unlink = unlink(self::DROPBOX_DIRECTORY . $path . $file);
 			}
 		}
 	}
@@ -714,7 +758,7 @@ class FortifiedAjaxTourFiles{
 	private $directories = array();
 	public $errors = array();
 	public $files;
-	const TMP_DIRECTORY = 'public:///tmp/';
+	const TMP_DIRECTORY = 'public://tmp/';
 	const TOUR_IMAGE_DIR = 'tour_images/';
 	const TOUR_VIDEO_DIR = 'tour_videos/';
 	const TOUR_PDF_DIR = 'tour_pdfs';
@@ -731,6 +775,21 @@ class FortifiedAjaxTourFiles{
 		);
 		if(!$tmp){
 			$this->chmodDir($this->directories);
+			$this->clearTmpDirectory();
+		}
+	}
+
+
+	//function for clearing all the files in the tmp directory
+	private function clearTmpDirectory(){
+		$sub_dir = array(self::TOUR_IMAGE_DIR, self::TOUR_VIDEO_DIR);
+		foreach($sub_dir as $delta => $dir){
+			$scan_files = array_diff(scandir(self::TMP_DIRECTORY . $dir), array('..', '.'));
+			if(!empty($scan_files)){
+				foreach($scan_files as $key => $file){
+					$unlink = unlink(self::TMP_DIRECTORY . $dir . $file);
+				}
+			}
 		}
 	}
 
@@ -785,12 +844,6 @@ class FortifiedAjaxTourFiles{
 
 }
 
-
-
-
-
-
-
 /**
  * hook_field_elementatter_info()
  *
@@ -804,11 +857,6 @@ function fr_virtual_field_formatter_info() {
 		),
 	);
 }
-
-
-
-
-
 
 /**
  * hook_field_formatter_view()
@@ -971,7 +1019,7 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 				'#type' => 'markup',
 				'#markup' => '<a class="downloadVideo" href="#">Download video: '.$number.'</a>
 					<input type="hidden" id="download-'.$delta.'" class="download-video" value="'.$stream.'"/>',
-				'#prefix' => '<div class="large-8 columns" style="float:right">',
+				'#prefix' => '<div class="tour-video large-8 columns" style="float:right">',
 				'#suffix' => '</div>',
 				'#weight' => 100,
 			);
@@ -995,7 +1043,6 @@ function fr_virtual_field_formatter_view($entity_type, $entity, $field, $instanc
 				//'playlist' => 'playlist'
 			));
 	}
-
 	$element[] = $objects;
 	return $element;
 }
@@ -1017,6 +1064,9 @@ function fr_virtual_file_view($value){
 	$file = fr_virtual_file_download($url);
 	$stream = file_create_url($url);
 	$file['path'] = $url;
+	$file['attributes'] = array(
+		'class' => array('tour-image'),
+	);
 	$view_file = theme('image', $file);
 	return array('image' => $view_file, 'stream' => $stream);
 }
@@ -1119,6 +1169,7 @@ function fr_virtual_node_insert($node){
 					$type = _get_type($node->type);
 					//generate pdf
 					pdf_using_mpdf_api(drupal_render(node_view($node, 'full')), $node->title, $node->nid);
+					dpm(node_view($node, 'full'));
 					$to = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
 					$send_email = fortifiedTours::sendEmail($to, $type, $nid, $node->title);
 				}
