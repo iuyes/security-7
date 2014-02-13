@@ -12,13 +12,7 @@ stylesheets[all][] = css/normalize.css
 ; Foundation framework stylesheets
 stylesheets[all][] = css/foundation.min.css
 
-; Uncompressed uncomment for dev or as a reference
-;stylesheets[all][] = css/foundation.css
-
 ; Base theme specific CSS
-stylesheets[all][] = css/app.css
-
-; Theme specific CSS
 stylesheets[all][] = css/app.css
 
 ; Modernizr acts as a shim for HTML5 elements for older browsers

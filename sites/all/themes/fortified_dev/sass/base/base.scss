@@ -1951,6 +1951,13 @@ area.active {
 }
 
 
+/* hide default menu links */
+@media only screen and (max-width: 940px) {
+	.default-menu{
+		display:none !important;
+	}
+
+}
 
 /*     480 Media query     */
 @media only screen and (max-width: 480px) {
@@ -2082,9 +2089,11 @@ area.active {
 
 @media only screen and (max-width: 1220px){
 
+/*
   .menu-base-menu{
     display:none !important;
   }
+*/
   .breadcrumbs{
     //display:none;
   }
@@ -2095,7 +2104,8 @@ area.active {
     overflow: hidden;
   }
   
-  .top-bar-search{
+  /*
+.top-bar-search{
     visibility: visible;
     position:absolute;
     right:5px;
@@ -2112,6 +2122,7 @@ area.active {
       }
     }
   }
+*/
 
   .middle-head-menu{
     margin-left:auto !important;

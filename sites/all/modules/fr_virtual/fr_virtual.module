@@ -1169,7 +1169,6 @@ function fr_virtual_node_insert($node){
 					$type = _get_type($node->type);
 					//generate pdf
 					pdf_using_mpdf_api(drupal_render(node_view($node, 'full')), $node->title, $node->nid);
-					dpm(node_view($node, 'full'));
 					$to = $node->field_cust_alarm_group_owner['und'][0]['target_id'];
 					$send_email = fortifiedTours::sendEmail($to, $type, $nid, $node->title);
 				}

@@ -78,7 +78,8 @@ class IpdatatelJson{
         'max_redirects' => 0,
         'headers' => array('Content-Type' => 'application/json', 'Accept' => 'application/json'))
     );
-    return json_decode($response->data);
+    $data = !empty($response->data) ? $response->data : '';
+    return json_decode($data);
   }
 
 }
