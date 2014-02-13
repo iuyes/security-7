@@ -32,6 +32,13 @@ function fr_virtual_menu(){
 
 
 function fr_vitual_select_dvr($form, &$form_state){
+	return $form['field_vt_dvr'];
+}
+
+
+
+
+function _fr_virtual_ajax_update_cust_dvr(&$form, $form_state){
 	$cuid = $form_state['values']['field_cust_alarm_group_owner']['und'][0]['target_id'];
 	$get_dvrs = _find_customer_dvrs($cuid);
 	$options = !empty($get_dvrs) ? $get_dvrs : array( 1 => 'There are not any DVRS for this customer!');
@@ -39,7 +46,6 @@ function fr_vitual_select_dvr($form, &$form_state){
 	$info['settings']['allowed_values'] += $options;
 	field_update_field($info);
 	$form['field_vt_dvr']['und']['#options'] = $options;
-	return $form['field_vt_dvr'];
 }
 
 
@@ -466,8 +472,15 @@ function fr_virtual_form_alter(&$form, &$form_state, $form_id){
 				exit;
 			}
 		}
-
-		if(!empty($form['field_vt_tour_date']['und'][0]['#default_value']['value'])){
+		
+		
+		if(!empty($form_state['values'])){
+			_fr_virtual_ajax_update_cust_dvr($form, $form_state);
+		}
+	
+		
+		
+		if(!empty($form['field_vt_tour_date']['und'][0]['#default_value']['value']) && empty($form_state['values']['field_cust_alarm_group_owner']['und'][0]['target_id'])){
 			$dates = $form['field_vt_tour_date']['und'][0]['#default_value']['value'];
 			$tz = new DateTimeZone('America/Phoenix');
 			$date = $dates;
